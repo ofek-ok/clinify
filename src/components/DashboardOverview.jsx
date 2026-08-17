@@ -44,20 +44,20 @@ const DashboardOverview = ({ navigate }) => {
 
   const translateStatus = (status) => {
     const statusMap = {
-      'scheduled': t('Scheduled', 'נקבע'),
-      'completed': t('Completed', 'הושלם'),
+      'scheduled': t('Scheduled', 'מתוכנן'),
+      'completed': t('Completed', 'בוצע'),
       'cancelled': t('Cancelled', 'בוטל')
     };
     return statusMap[status] || status;
   };
 
   const translatePriority = (priority) => {
-    const map = { 'high': t('High', 'גבוה'), 'medium': t('Medium', 'בינוני'), 'low': t('Low', 'נמוך') };
+    const map = { 'high': t('High', 'דחוף'), 'medium': t('Medium', 'בינוני'), 'low': t('Low', 'רגיל') };
     return map[priority] || priority;
   };
 
   const translateSource = (source) => {
-    const map = { 'Facebook': t('Facebook', 'פייסבוק'), 'Website': t('Website', 'אתר'), 'WhatsApp': t('WhatsApp', 'ווטסאפ'), 'Direct': t('Direct', 'ישיר') };
+    const map = { 'Facebook': t('Facebook', 'פייסבוק'), 'Website': t('Website', 'אתר הקליניקה'), 'WhatsApp': t('WhatsApp', 'ווטסאפ'), 'Direct': t('Direct', 'המלצה / ישיר') };
     return map[source] || source;
   };
 
@@ -67,8 +67,8 @@ const DashboardOverview = ({ navigate }) => {
       {/* Executive Clean Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">{t('Master Dashboard', 'דשבורד ניהול ראשי')}</h2>
-          <p className="text-slate-500 text-sm mt-1">{t('Clinic operations overview for today.', 'סקירת פעילות הקליניקה להיום.')}</p>
+          <h2 className="text-2xl font-bold text-slate-800">{t('Therapy Management Center', 'מרכז ניהול הקליניקה והטיפולים')}</h2>
+          <p className="text-slate-500 text-sm mt-1">{t('Overview of today\'s sessions, client follow-ups, and clinic tasks.', 'מבט כולל על מפגשי היום, מעקבי מטופלים ומשימות הקליניקה.')}</p>
         </div>
 
         {/* View Mode Switcher */}
@@ -81,7 +81,7 @@ const DashboardOverview = ({ navigate }) => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {t('Operations', 'פעילות שוטפת')}
+            {t('Daily Sessions', 'פעילות שוטפת')}
           </button>
 
           <button 
@@ -92,7 +92,7 @@ const DashboardOverview = ({ navigate }) => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {t('Analytics Data', 'נתוני אנליטיקה')}
+            {t('Clinic Analytics', 'נתוני אנליטיקה')}
           </button>
         </div>
       </div>
@@ -108,28 +108,28 @@ const DashboardOverview = ({ navigate }) => {
             
             {/* Active Patients */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Active Patients', 'מטופלים פעילים')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Active Patients', 'מטופלים ונועצים פעילים')}</p>
               <h3 className="text-3xl font-extrabold text-slate-800">{activePatientsCount}</h3>
-              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Active in system', 'מטופלים פעילים במערכת')}</p>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Active in clinic', 'בתהליך טיפולי רציף')}</p>
             </div>
 
             {/* New Leads */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('New Leads', 'לידים חדשים בצנרת')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('New Inquiries', 'פניות חדשות לקליניקה')}</p>
               <h3 className="text-3xl font-extrabold text-slate-800">{newLeads.length}</h3>
-              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Awaiting contact', 'ממתינים ליצירת קשר')}</p>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Awaiting response', 'ממתינים לשיחת היכרות')}</p>
             </div>
 
             {/* Appointments Today */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Appointments Today', 'תורים להיום')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Sessions Today', 'מפגשים להיום')}</p>
               <h3 className="text-3xl font-extrabold text-slate-800">{todayAppointments.length}</h3>
               <p className="text-xs text-slate-500 mt-2 font-medium">{todayAppointments.filter(a => a.status === 'completed').length} {t('completed', 'הושלמו')}</p>
             </div>
 
             {/* Monthly Revenue */}
             <div className="bg-slate-900 p-5 rounded-2xl text-white shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Monthly Revenue', 'הכנסות החודש')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Monthly Income', 'הכנסות הקליניקה החודש')}</p>
               <h3 className="text-3xl font-extrabold text-white" dir="ltr">₪{revenueThisMonth.toFixed(2)}</h3>
               <p className="text-xs text-emerald-400 mt-2 font-semibold">+12.4% {t('vs last month', 'מהחודש שעבר')}</p>
             </div>
@@ -145,12 +145,12 @@ const DashboardOverview = ({ navigate }) => {
               {/* Today's Appointments */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800 text-sm">{t("Today's Appointments", "התורים של היום")}</h3>
+                  <h3 className="font-bold text-slate-800 text-sm">{t("Today's Sessions", "מפגשי הטיפול של היום")}</h3>
                   <button 
                     onClick={() => navigate('appointments')}
                     className="text-xs font-bold text-slate-600 hover:text-slate-900 hover:underline"
                   >
-                    {t('View All', 'הצג הכל ➔')}
+                    {t('View All', 'לכל המפגשים ➔')}
                   </button>
                 </div>
 
@@ -159,8 +159,8 @@ const DashboardOverview = ({ navigate }) => {
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/30 text-slate-500 text-xs uppercase tracking-wider">
                         <th className="py-3 px-6 text-start">{t('Time', 'שעה')}</th>
-                        <th className="py-3 px-6 text-start">{t('Patient', 'מטופל')}</th>
-                        <th className="py-3 px-6 text-start">{t('Service', 'שירות')}</th>
+                        <th className="py-3 px-6 text-start">{t('Patient', 'שם המטופל/ת')}</th>
+                        <th className="py-3 px-6 text-start">{t('Session Type', 'סוג המפגש')}</th>
                         <th className="py-3 px-6 text-end">{t('Status', 'סטטוס')}</th>
                       </tr>
                     </thead>
@@ -168,7 +168,7 @@ const DashboardOverview = ({ navigate }) => {
                       {todayAppointments.length === 0 ? (
                         <tr>
                           <td colSpan="4" className="py-10 text-center text-slate-400 text-xs font-medium">
-                            {t('No appointments scheduled for today.', 'אין תורים מתוכננים להיום.')}
+                            {t('No sessions scheduled for today.', 'אין מפגשי טיפול מתוכננים להיום.')}
                           </td>
                         </tr>
                       ) : (
@@ -204,13 +204,13 @@ const DashboardOverview = ({ navigate }) => {
               {/* Today's Tasks */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800 text-sm">{t("Today's Tasks", "משימות להיום")}</h3>
+                  <h3 className="font-bold text-slate-800 text-sm">{t("Today's Tasks", "משימות ומעקבי טיפול להיום")}</h3>
                   <span className="text-xs text-slate-500 font-bold">{tasksDueToday.length} {t('pending', 'ממתינות')}</span>
                 </div>
 
                 <div className="p-5 space-y-2.5">
                   {tasksDueToday.length === 0 ? (
-                    <p className="text-center py-6 text-slate-400 text-xs font-medium">{t('All caught up for today! 🎉', 'אין משימות ממתינות להיום.')}</p>
+                    <p className="text-center py-6 text-slate-400 text-xs font-medium">{t('All caught up for today! 🎉', 'אין משימות או מעקבים ממתינים להיום.')}</p>
                   ) : (
                     tasksDueToday.map(task => (
                       <div key={task.id} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
@@ -222,7 +222,7 @@ const DashboardOverview = ({ navigate }) => {
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-slate-800 truncate">{task.title}</p>
-                          {task.patient_id && <p className="text-[10px] text-slate-400">{t('Patient:', 'מטופל:')} {getPatientName(task.patient_id)}</p>}
+                          {task.patient_id && <p className="text-[10px] text-slate-400">{t('Patient:', 'מטופל/ת:')} {getPatientName(task.patient_id)}</p>}
                         </div>
                         <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded ${
                           task.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-600'
@@ -243,18 +243,18 @@ const DashboardOverview = ({ navigate }) => {
               {/* Recent Leads Widget */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800 text-sm">{t('Recent Leads', 'לידים אחרונים בצנרת')}</h3>
+                  <h3 className="font-bold text-slate-800 text-sm">{t('Recent Inquiries', 'פניות אחרונות לקליניקה')}</h3>
                   <button 
                     onClick={() => navigate('leads')} 
                     className="text-xs font-bold text-slate-600 hover:text-slate-900 hover:underline"
                   >
-                    {t('Pipeline', 'לצנרת ➔')}
+                    {t('Pipeline', 'לפניות ➔')}
                   </button>
                 </div>
 
                 <div className="p-4 space-y-3">
                   {newLeads.length === 0 ? (
-                    <p className="text-center text-xs font-medium text-slate-400 py-6">{t('No new leads awaiting follow-up.', 'אין לידים חדשים כרגע.')}</p>
+                    <p className="text-center text-xs font-medium text-slate-400 py-6">{t('No new inquiries awaiting response.', 'אין פניות חדשות כרגע.')}</p>
                   ) : (
                     newLeads.slice(0, 4).map(lead => (
                       <div key={lead.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -276,7 +276,7 @@ const DashboardOverview = ({ navigate }) => {
                             onClick={() => { updateLeadStatus(lead.id, 'contacted'); navigate('leads'); }} 
                             className="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-bold py-1.5 rounded-lg transition-colors"
                           >
-                            {t('Follow Up', 'פולואו-אפ')}
+                            {t('Follow Up', 'צור קשר')}
                           </button>
                         </div>
                       </div>
@@ -288,7 +288,7 @@ const DashboardOverview = ({ navigate }) => {
               {/* Pending Payments Widget */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800 text-xs">{t('Pending Payments', 'תשלומים ממתינים לגבייה')}</h3>
+                  <h3 className="font-bold text-slate-800 text-xs">{t('Pending Payments', 'תשלומים בהמתנה לגבייה')}</h3>
                   <span className="text-sm font-bold text-slate-800" dir="ltr">₪{pendingPaymentsTotal.toFixed(2)}</span>
                 </div>
                 <div className="p-4 space-y-2.5">

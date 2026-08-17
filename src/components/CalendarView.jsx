@@ -25,10 +25,10 @@ const CalendarView = ({ initialTab = 'grid' }) => {
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            {t('Calendar & Appointments', 'יומן תורים ויומן עבודה')}
+            {t('Sessions & Appointments', 'יומן מפגשים ותורים')}
           </h2>
           <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            {t('View schedule grid, manage appointments and client sessions.', 'צפה בלוח הזמנים השבועי, נהל תורים ופגישות טיפול.')}
+            {t('View schedule grid, manage therapy sessions and client appointments.', 'צפה בלוח הזמנים השבועי, נהל מפגשים וסדרות טיפול.')}
           </p>
         </div>
 
@@ -46,7 +46,7 @@ const CalendarView = ({ initialTab = 'grid' }) => {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span>{t('Calendar View', 'תצוגת יומן')}</span>
+              <span>{t('Calendar Grid', 'תצוגת יומן')}</span>
             </button>
 
             <button
@@ -60,7 +60,7 @@ const CalendarView = ({ initialTab = 'grid' }) => {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
-              <span>{t('Appointments List', 'ניהול רשימת תורים')}</span>
+              <span>{t('Sessions List', 'רשימת מפגשים')}</span>
             </button>
           </div>
 
@@ -123,7 +123,7 @@ const CalendarView = ({ initialTab = 'grid' }) => {
                                 <span className={`text-[9px] uppercase font-bold tracking-wider mt-1 text-start ${
                                   isCompleted ? 'text-emerald-700' : 'text-blue-700'
                                 }`}>
-                                  {isCompleted ? t('Done', 'הושלם') : t('Scheduled', 'נקבע')}
+                                  {isCompleted ? t('Done', 'בוצע') : t('Scheduled', 'מתוכנן')}
                                 </span>
                               </div>
                             )
