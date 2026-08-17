@@ -196,11 +196,86 @@ export const ClinicProvider = ({ children }) => {
       .reduce((sum, p) => sum + parseFloat(p.amount), 0);
   }, [payments]);
 
+  // Patient CRM functions
+  const updatePatient = async (patientId, updates) => {
+    const { data, error } = await supabase.from('patients').update(updates).eq('id', patientId).select();
+    if (!error && data) {
+      setPatients(prev => prev.map(p => p.id === patientId ? data[0] : p));
+      return data[0];
+    } else {
+      // Fallback for local update if Supabase table columns aren't created yet
+      setPatients(prev => prev.map(p => p.id === patientId ? { ...p, ...updates } : p));
+      const current = patients.find(p => p.id === patientId);
+      return { ...current, ...updates };
+    }
+  };
+
+  const addClinicalNote = async (patientId, noteText, author = 'ד"ר אוקונסקי') => {
+    const newNote = {
+      id: 'note_' + Date.now(),
+      patient_id: patientId,
+      created_at: new Date().toISOString(),
+      author,
+      content: noteText
+    };
+    setPatients(prev => prev.map(p => {
+      if (p.id === patientId) {
+        const notes = p.clinical_notes || [];
+        return { ...p, clinical_notes: [newNote, ...notes] };
+      }
+      return p;
+    }));
+    return newNote;
+  };
+
+  const addPatientDocument = async (patientId, docName, docUrl = '#') => {
+    const newDoc = {
+      id: 'doc_' + Date.now(),
+      name: docName,
+      uploaded_at: new Date().toISOString().split('T')[0],
+      url: docUrl,
+      size: '1.2 MB'
+    };
+    setPatients(prev => prev.map(p => {
+      if (p.id === patientId) {
+        const docs = p.documents || [];
+        return { ...p, documents: [newDoc, ...docs] };
+      }
+      return p;
+    }));
+    return newDoc;
+  };
+
+  const addLeadCommunication = async (leadId, type, note) => {
+    const newComm = {
+      id: 'comm_' + Date.now(),
+      type, // 'whatsapp', 'call', 'email'
+      created_at: new Date().toISOString(),
+      note
+    };
+    setLeads(prev => prev.map(l => {
+      if (l.id === leadId) {
+        const comms = l.communication_log || [];
+        return { ...l, communication_log: [newComm, ...comms] };
+      }
+      return l;
+    }));
+    return newComm;
+  };
+
+  const updateLeadFollowUp = async (leadId, followUpDate, lostReason = null) => {
+    const updates = { follow_up_date: followUpDate };
+    if (lostReason) updates.lost_reason = lostReason;
+    
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
+  };
+
   return (
     <ClinicContext.Provider value={{
       isLoading,
       patients, services, businessHours, appointments, leads, tasks, payments, forms, formSubmissions,
-      addPatient, addService, addAppointment, addLead, addTask, addPayment, addForm, updateForm, addFormSubmission,
+      addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
+      addService, addAppointment, addLead, addTask, addPayment, addForm, updateForm, addFormSubmission,
       updateLeadStatus, updateTaskStatus, updateBusinessHour,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,

@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
-const LeadsPipeline = ({ navigate }) => {
+const LeadsPipeline = ({ navigate, onSelectLead }) => {
   const { leads, addLead, addPatient, updateLeadStatus } = useContext(ClinicContext);
   const { t } = useContext(LanguageContext);
   const [leadForm, setLeadForm] = useState({ full_name: '', phone: '', email: '', source: 'Website', status: 'new' });
@@ -13,7 +13,8 @@ const LeadsPipeline = ({ navigate }) => {
     setLeadForm({ full_name: '', phone: '', email: '', source: 'Website', status: 'new' });
   };
 
-  const convertToPatient = (lead) => {
+  const convertToPatient = (lead, e) => {
+    if (e) e.stopPropagation();
     addPatient({ full_name: lead.full_name, email: lead.email, phone: lead.phone, status: 'active' });
     updateLeadStatus(lead.id, 'converted');
     if(window.confirm(t('Lead successfully converted to patient! Schedule an appointment now?', 'הליד הומר למטופל בהצלחה! האם תרצה לקבוע לו תור עכשיו?'))) {
@@ -37,7 +38,7 @@ const LeadsPipeline = ({ navigate }) => {
     <div className="animate-in fade-in duration-500 space-y-6 text-start">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-800">{t('Leads Pipeline', 'צנרת לידים (Pipeline)')}</h2>
-        <p className="text-slate-500 text-sm mt-1">{t('Track leads and manage the conversion process to patients.', 'עקוב אחר לידים ונהל את תהליך ההמרה למטופלים.')}</p>
+        <p className="text-slate-500 text-sm mt-1">{t('Track leads, set follow-ups, and manage conversions.', 'עקוב אחר לידים, נהל משימות מעקב (Follow-up) והמר אותם למטופלים.')}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -88,28 +89,45 @@ const LeadsPipeline = ({ navigate }) => {
                 </div>
                 <div className="space-y-3 flex-1 overflow-y-auto">
                   {leads.filter(l => l.status === column.id).map(lead => (
-                    <div key={lead.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group">
+                    <div 
+                      key={lead.id} 
+                      onClick={() => onSelectLead && onSelectLead(lead)}
+                      className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:border-violet-300"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <h5 className="font-bold text-sm text-slate-800 text-start">{lead.full_name}</h5>
+                        <h5 className="font-bold text-sm text-slate-800 text-start group-hover:text-violet-600 transition-colors">{lead.full_name}</h5>
                         <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">{translateSource(lead.source)}</span>
                       </div>
-                      <p className="text-xs text-slate-500 mb-3 text-start" dir="ltr">{lead.phone}</p>
+                      <p className="text-xs text-slate-500 mb-2 text-start" dir="ltr">{lead.phone}</p>
                       
-                      <div className="flex gap-2">
+                      {lead.lost_reason && column.id === 'lost' && (
+                        <p className="text-[10px] text-red-500 font-semibold mb-2 text-start bg-red-50 p-1.5 rounded border border-red-100">
+                          {t('Reason', 'סיבה')}: {lead.lost_reason}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-100">
                         {lead.status !== 'converted' && (
                           <select 
                             value={lead.status} 
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
-                            className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 text-slate-600 outline-none w-full cursor-pointer text-start"
+                            className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-600 outline-none cursor-pointer text-start"
                           >
                             <option value="new">{t('New', 'חדש')}</option>
                             <option value="contacted">{t('Contacted', 'נוצר קשר')}</option>
                             <option value="lost">{t('Lost', 'אבוד')}</option>
                           </select>
                         )}
+
                         {lead.status !== 'converted' && (
-                          <button onClick={() => convertToPatient(lead)} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors shrink-0 tooltip" title={t("Convert to Patient", "המר למטופל")}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                          <button 
+                            onClick={(e) => convertToPatient(lead, e)} 
+                            className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors shrink-0 flex items-center gap-1" 
+                            title={t("Convert to Patient", "המר למטופל")}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            <span>{t('Convert', 'המר')}</span>
                           </button>
                         )}
                       </div>

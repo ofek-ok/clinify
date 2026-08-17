@@ -1,11 +1,24 @@
 import React, { useState, useContext } from 'react';
 import PatientDirectory from './PatientDirectory';
 import LeadsPipeline from './LeadsPipeline';
+import ClientDetailDrawer from './ClientDetailDrawer';
 import { LanguageContext } from '../context/LanguageContext';
 
 const ClientCrmManager = ({ navigate, initialTab = 'patients' }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedType, setSelectedType] = useState('patient');
   const { t } = useContext(LanguageContext);
+
+  const handleSelectPatient = (patient) => {
+    setSelectedClient(patient);
+    setSelectedType('patient');
+  };
+
+  const handleSelectLead = (lead) => {
+    setSelectedClient(lead);
+    setSelectedType('lead');
+  };
 
   return (
     <div className="space-y-6 text-start">
@@ -54,9 +67,18 @@ const ClientCrmManager = ({ navigate, initialTab = 'patients' }) => {
 
       {/* Tab Content */}
       <div className="pt-2">
-        {activeTab === 'patients' && <PatientDirectory />}
-        {activeTab === 'leads' && <LeadsPipeline navigate={navigate} />}
+        {activeTab === 'patients' && <PatientDirectory onSelectPatient={handleSelectPatient} />}
+        {activeTab === 'leads' && <LeadsPipeline navigate={navigate} onSelectLead={handleSelectLead} />}
       </div>
+
+      {/* Slide-Over Detail Drawer */}
+      {selectedClient && (
+        <ClientDetailDrawer 
+          item={selectedClient} 
+          type={selectedType} 
+          onClose={() => setSelectedClient(null)} 
+        />
+      )}
     </div>
   );
 };
