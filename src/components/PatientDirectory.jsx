@@ -1,4 +1,5 @@
 import React, { useContext, useState, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import { 
   useReactTable, 
   getCoreRowModel, 
@@ -17,12 +18,25 @@ const PatientDirectory = ({ onSelectPatient }) => {
   const [sorting, setSorting] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [patientForm, setPatientForm] = useState({ full_name: '', email: '', phone: '', status: 'active' });
 
-  const handlePatientSubmit = (e) => {
-    e.preventDefault();
-    addPatient(patientForm);
-    setPatientForm({ full_name: '', email: '', phone: '', status: 'active' });
+  // React Hook Form Integration
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    defaultValues: {
+      full_name: '',
+      email: '',
+      phone: '',
+      status: 'active'
+    }
+  });
+
+  const handlePatientSubmit = (data) => {
+    addPatient(data);
+    reset();
     setIsAddModalOpen(false);
   };
 
@@ -140,7 +154,7 @@ const PatientDirectory = ({ onSelectPatient }) => {
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t('Patient Directory', 'ספר מטופלים')}</h2>
             <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              TanStack Table v8 Powered
+              TanStack Table + React Hook Form
             </span>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1 font-medium">{t('View, search, and manage patient records in the system.', 'צפה, חפש ונהל תיקי מטופלים במערכת בזמן אמת.')}</p>
@@ -277,7 +291,7 @@ const PatientDirectory = ({ onSelectPatient }) => {
         </div>
       </div>
 
-      {/* Modal for Adding New Patient */}
+      {/* Modal for Adding New Patient (React Hook Form Powered) */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden text-start">
           <div 
@@ -299,42 +313,42 @@ const PatientDirectory = ({ onSelectPatient }) => {
                 </button>
               </div>
 
-              <form onSubmit={handlePatientSubmit} className="space-y-4">
+              {/* Form with React Hook Form validation */}
+              <form onSubmit={handleSubmit(handlePatientSubmit)} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">{t('Full Name', 'שם מלא')}</label>
                   <input 
                     type="text" 
-                    value={patientForm.full_name} 
-                    onChange={e => setPatientForm({...patientForm, full_name: e.target.value})} 
-                    required 
+                    {...register('full_name', { required: t('Full Name is required', 'שם מלא הוא שדה חובה') })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-start text-sm font-medium" 
                   />
+                  {errors.full_name && <p className="text-[11px] text-red-500 font-bold mt-1">{errors.full_name.message}</p>}
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">{t('Email', 'אימייל')}</label>
                   <input 
                     type="email" 
-                    value={patientForm.email} 
-                    onChange={e => setPatientForm({...patientForm, email: e.target.value})} 
+                    {...register('email')}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-start text-sm font-medium" 
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">{t('Phone', 'טלפון')}</label>
                   <input 
                     type="tel" 
-                    value={patientForm.phone} 
-                    onChange={e => setPatientForm({...patientForm, phone: e.target.value})} 
-                    required 
+                    {...register('phone', { required: t('Phone number is required', 'מספר טלפון הוא שדה חובה') })}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-end text-sm font-medium" 
                     dir="ltr" 
                   />
+                  {errors.phone && <p className="text-[11px] text-red-500 font-bold mt-1">{errors.phone.message}</p>}
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">{t('Initial Status', 'סטטוס ראשוני')}</label>
                   <select 
-                    value={patientForm.status} 
-                    onChange={e => setPatientForm({...patientForm, status: e.target.value})} 
+                    {...register('status')}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-start text-sm font-medium"
                   >
                     <option value="active">{t('Active', 'פעיל')}</option>
@@ -352,7 +366,8 @@ const PatientDirectory = ({ onSelectPatient }) => {
                   </button>
                   <button 
                     type="submit" 
-                    className="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all"
+                    disabled={isSubmitting}
+                    className="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all disabled:opacity-50"
                   >
                     {t('Save Patient', 'שמור מטופל')}
                   </button>
