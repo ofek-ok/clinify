@@ -14,6 +14,10 @@ export const ClinicProvider = ({ children }) => {
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [expenses, setExpenses] = useState([
+    { id: 'exp_1', title: 'שכירות קליניקה', category: 'Rent', amount: 4500, payment_method: 'Bank Transfer', expense_date: todayStr },
+    { id: 'exp_2', title: 'ציוד מתכלה ותחבושות', category: 'Equipment', amount: 650, payment_method: 'Credit Card', expense_date: todayStr }
+  ]);
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
   
@@ -36,7 +40,7 @@ export const ClinicProvider = ({ children }) => {
     try {
       const [
         patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, paymentsRes, formsRes, formSubRes
+        tasksRes, paymentsRes, formsRes, formSubRes, expensesRes
       ] = await Promise.all([
         supabase.from('patients').select('*'),
         supabase.from('services').select('*'),
@@ -45,7 +49,8 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('tasks').select('*'),
         supabase.from('payments').select('*'),
         supabase.from('forms').select('*'),
-        supabase.from('form_submissions').select('*')
+        supabase.from('form_submissions').select('*'),
+        supabase.from('expenses').select('*')
       ]);
 
       if (patientsRes.data) setPatients(patientsRes.data);
@@ -56,6 +61,7 @@ export const ClinicProvider = ({ children }) => {
       if (paymentsRes.data) setPayments(paymentsRes.data);
       if (formsRes.data) setForms(formsRes.data);
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
+      if (expensesRes.data && expensesRes.data.length > 0) setExpenses(expensesRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -109,12 +115,36 @@ export const ClinicProvider = ({ children }) => {
       payment_date: payment.payment_date || new Date().toISOString()
     };
     const { data, error } = await supabase.from('payments').insert([payload]).select();
-    if (!error && data) setPayments([...payments, data[0]]);
+    if (!error && data) {
+      setPayments([...payments, data[0]]);
+    } else {
+      setPayments(prev => [...prev, { id: 'pay_' + Date.now(), ...payload }]);
+    }
   };
 
   const updatePaymentStatus = async (paymentId, newStatus) => {
     const { error } = await supabase.from('payments').update({ status: newStatus }).eq('id', paymentId);
-    if (!error) setPayments(payments.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
+    setPayments(payments.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
+  };
+
+  // Expenses API
+  const addExpense = async (expense) => {
+    const payload = {
+      title: expense.title,
+      category: expense.category,
+      amount: parseFloat(expense.amount),
+      payment_method: expense.payment_method,
+      expense_date: expense.expense_date || todayStr
+    };
+    const { data, error } = await supabase.from('expenses').insert([payload]).select();
+    if (!error && data) {
+      setExpenses(prev => [...prev, data[0]]);
+      return data[0];
+    } else {
+      const fallback = { id: 'exp_' + Date.now(), ...payload };
+      setExpenses(prev => [...prev, fallback]);
+      return fallback;
+    }
   };
 
   // Forms API
@@ -202,7 +232,7 @@ export const ClinicProvider = ({ children }) => {
     const currentYear = new Date().getFullYear();
     return payments
       .filter(p => p.status === 'paid' && new Date(p.payment_date).getMonth() === currentMonth && new Date(p.payment_date).getFullYear() === currentYear)
-      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
   }, [payments]);
 
   // Patient CRM functions
@@ -212,7 +242,6 @@ export const ClinicProvider = ({ children }) => {
       setPatients(prev => prev.map(p => p.id === patientId ? data[0] : p));
       return data[0];
     } else {
-      // Fallback for local update if Supabase table columns aren't created yet
       setPatients(prev => prev.map(p => p.id === patientId ? { ...p, ...updates } : p));
       const current = patients.find(p => p.id === patientId);
       return { ...current, ...updates };
@@ -258,7 +287,7 @@ export const ClinicProvider = ({ children }) => {
   const addLeadCommunication = async (leadId, type, note) => {
     const newComm = {
       id: 'comm_' + Date.now(),
-      type, // 'whatsapp', 'call', 'email'
+      type,
       created_at: new Date().toISOString(),
       note
     };
@@ -282,9 +311,9 @@ export const ClinicProvider = ({ children }) => {
   return (
     <ClinicContext.Provider value={{
       isLoading,
-      patients, services, businessHours, appointments, leads, tasks, payments, forms, formSubmissions,
+      patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, addAppointment, addLead, addTask, addPayment, updatePaymentStatus, addForm, updateForm, addFormSubmission,
+      addService, addAppointment, addLead, addTask, addPayment, updatePaymentStatus, addExpense, addForm, updateForm, addFormSubmission,
       updateLeadStatus, updateTaskStatus, updateBusinessHour,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,

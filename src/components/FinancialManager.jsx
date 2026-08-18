@@ -1,15 +1,17 @@
 import React, { useContext, useState, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 const FinancialManager = () => {
   const { 
     payments, 
+    expenses = [],
     appointments, 
     patients, 
     services, 
     addPayment, 
+    addExpense,
     updatePaymentStatus, 
     getPatientName, 
     getServiceName 
@@ -17,10 +19,15 @@ const FinancialManager = () => {
   
   const { t, language } = useContext(LanguageContext);
 
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'paid', 'pending', 'refunded'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'income', 'expenses'
+  const [statusFilter, setStatusFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Modals
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
   // New Payment Form State
   const [paymentForm, setPaymentForm] = useState({
@@ -32,12 +39,42 @@ const FinancialManager = () => {
     payment_date: new Date().toISOString().split('T')[0]
   });
 
-  // Calculate Metrics
+  // New Expense Form State
+  const [expenseForm, setExpenseForm] = useState({
+    title: '',
+    category: 'Equipment',
+    amount: '',
+    payment_method: 'Credit Card',
+    expense_date: new Date().toISOString().split('T')[0]
+  });
+
+  // Category translation map
+  const translateCategory = (cat) => {
+    const map = {
+      'Rent': t('Rent & Facilities', 'שכירות ומבנה'),
+      'Equipment': t('Equipment & Supplies', 'ציוד ומלאי'),
+      'Software': t('Software & Digital', 'תוכנה ודיגיטל'),
+      'Marketing': t('Marketing & Ads', 'שיווק ופרסום'),
+      'Salaries': t('Salaries & Services', 'שכר ושירותים'),
+      'Other': t('Utilities & Other', 'שונות וכללי')
+    };
+    return map[cat] || cat;
+  };
+
+  // Calculate Income & Expense Totals
   const totalRevenue = useMemo(() => {
     return payments
       .filter(p => p.status === 'paid')
       .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
   }, [payments]);
+
+  const totalExpensesSum = useMemo(() => {
+    return expenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+  }, [expenses]);
+
+  const netProfitTotal = useMemo(() => {
+    return totalRevenue - totalExpensesSum;
+  }, [totalRevenue, totalExpensesSum]);
 
   const pendingPaymentsTotal = useMemo(() => {
     return payments
@@ -54,41 +91,45 @@ const FinancialManager = () => {
       .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
   }, [payments]);
 
-  const avgTicketSize = useMemo(() => {
-    const paidPayments = payments.filter(p => p.status === 'paid');
-    if (paidPayments.length === 0) return 0;
-    return totalRevenue / paidPayments.length;
-  }, [payments, totalRevenue]);
+  const thisMonthExpenses = useMemo(() => {
+    const now = new Date();
+    const currMonth = now.getMonth();
+    const currYear = now.getFullYear();
+    return expenses
+      .filter(e => new Date(e.expense_date).getMonth() === currMonth && new Date(e.expense_date).getFullYear() === currYear)
+      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+  }, [expenses]);
 
-  // Chart Data: Payment Methods Distribution
-  const methodDistribution = useMemo(() => {
-    const counts = { 'Credit Card': 0, 'Cash': 0, 'Bit': 0, 'Bank Transfer': 0 };
-    payments.forEach(p => {
-      const m = p.payment_method || 'Credit Card';
-      if (counts[m] !== undefined) {
-        counts[m] += parseFloat(p.amount || 0);
-      } else {
-        counts['Credit Card'] += parseFloat(p.amount || 0);
-      }
+  const thisMonthNetProfit = useMemo(() => {
+    return thisMonthRevenue - thisMonthExpenses;
+  }, [thisMonthRevenue, thisMonthExpenses]);
+
+  // Chart Data: Expense Category Distribution
+  const expenseCategoryDistribution = useMemo(() => {
+    const catTotals = {};
+    expenses.forEach(e => {
+      const cat = e.category || 'Other';
+      catTotals[cat] = (catTotals[cat] || 0) + parseFloat(e.amount || 0);
     });
 
     const colors = {
-      'Credit Card': '#10b981',
-      'Cash': '#3b82f6',
-      'Bit': '#8b5cf6',
-      'Bank Transfer': '#f59e0b'
+      'Rent': '#ef4444',
+      'Equipment': '#f59e0b',
+      'Software': '#3b82f6',
+      'Marketing': '#8b5cf6',
+      'Salaries': '#10b981',
+      'Other': '#64748b'
     };
 
-    return [
-      { name: t('Credit Card', 'כרטיס אשראי'), value: counts['Credit Card'], color: colors['Credit Card'] },
-      { name: t('Cash', 'מזומן'), value: counts['Cash'], color: colors['Cash'] },
-      { name: t('Bit / Paybox', 'ביט / פייבוקס'), value: counts['Bit'], color: colors['Bit'] },
-      { name: t('Bank Transfer', 'העברה בנקאית'), value: counts['Bank Transfer'], color: colors['Bank Transfer'] },
-    ].filter(item => item.value > 0);
-  }, [payments, t]);
+    return Object.keys(catTotals).map(cat => ({
+      name: translateCategory(cat),
+      value: catTotals[cat],
+      color: colors[cat] || '#64748b'
+    })).filter(c => c.value > 0);
+  }, [expenses, t]);
 
-  // Monthly Revenue Chart Data
-  const monthlyRevenueChartData = useMemo(() => {
+  // Chart Data: 6-Month Income vs Expenses Comparison
+  const pnlComparisonChartData = useMemo(() => {
     const monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthNamesHe = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
@@ -103,22 +144,25 @@ const FinancialManager = () => {
         .filter(p => p.status === 'paid' && new Date(p.payment_date).getMonth() === mIdx && new Date(p.payment_date).getFullYear() === y)
         .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
+      const exp = expenses
+        .filter(e => new Date(e.expense_date).getMonth() === mIdx && new Date(e.expense_date).getFullYear() === y)
+        .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+
       last6Months.push({
         name: language === 'he' ? monthNamesHe[mIdx] : monthNamesEn[mIdx],
-        revenue: rev
+        revenue: rev,
+        expenses: exp,
+        profit: rev - exp
       });
     }
     return last6Months;
-  }, [payments, language]);
+  }, [payments, expenses, language]);
 
-  // Filtered Payments List
+  // Filtered Payments
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
-      // Status filter
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-      // Method filter
       if (methodFilter !== 'all' && p.payment_method !== methodFilter) return false;
-      // Search filter
       if (searchTerm.trim() !== '') {
         const term = searchTerm.toLowerCase();
         const appt = appointments.find(a => a.id === p.appointment_id);
@@ -131,7 +175,23 @@ const FinancialManager = () => {
     }).sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
   }, [payments, statusFilter, methodFilter, searchTerm, appointments, getPatientName]);
 
-  const handleFormSubmit = async (e) => {
+  // Filtered Expenses
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      if (categoryFilter !== 'all' && e.category !== categoryFilter) return false;
+      if (methodFilter !== 'all' && e.payment_method !== methodFilter) return false;
+      if (searchTerm.trim() !== '') {
+        const term = searchTerm.toLowerCase();
+        const title = (e.title || '').toLowerCase();
+        const category = (e.category || '').toLowerCase();
+        const amount = String(e.amount);
+        return title.includes(term) || category.includes(term) || amount.includes(term);
+      }
+      return true;
+    }).sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date));
+  }, [expenses, categoryFilter, methodFilter, searchTerm]);
+
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
       alert(t('Please enter a valid amount.', 'אנא הזן סכום תקין.'));
@@ -147,7 +207,7 @@ const FinancialManager = () => {
       payment_date: paymentForm.payment_date
     });
 
-    setIsModalOpen(false);
+    setIsPaymentModalOpen(false);
     setPaymentForm({
       patient_id: '',
       appointment_id: '',
@@ -155,6 +215,35 @@ const FinancialManager = () => {
       payment_method: 'Credit Card',
       status: 'paid',
       payment_date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    if (!expenseForm.title.trim()) {
+      alert(t('Please enter an expense title.', 'אנא הזן תיאור להוצאה.'));
+      return;
+    }
+    if (!expenseForm.amount || parseFloat(expenseForm.amount) <= 0) {
+      alert(t('Please enter a valid amount.', 'אנא הזן סכום תקין.'));
+      return;
+    }
+
+    await addExpense({
+      title: expenseForm.title,
+      category: expenseForm.category,
+      amount: parseFloat(expenseForm.amount),
+      payment_method: expenseForm.payment_method,
+      expense_date: expenseForm.expense_date
+    });
+
+    setIsExpenseModalOpen(false);
+    setExpenseForm({
+      title: '',
+      category: 'Equipment',
+      amount: '',
+      payment_method: 'Credit Card',
+      expense_date: new Date().toISOString().split('T')[0]
     });
   };
 
@@ -180,29 +269,61 @@ const FinancialManager = () => {
   return (
     <div className="animate-in fade-in duration-500 space-y-8 pb-12 text-start relative">
       
-      {/* 1. Header & Quick Action */}
+      {/* 1. Top Header & Action Buttons */}
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t('Financials & Payments', 'פיננסים ותשלומים')}</h2>
-          <p className="text-slate-500 text-sm mt-1 font-medium">{t('Track clinic revenue, invoices, and payment methods.', 'עקוב אחר הכנסות הקליניקה, תשלומים ודוחות כספיים.')}</p>
+          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t('Financials & Expense Management', 'פיננסים, תשלומים וניהול הוצאות')}</h2>
+          <p className="text-slate-500 text-sm mt-1 font-medium">{t('Full financial overview of clinic income, expenses, and net profit.', 'דוח כספי מלא: הכנסות, הוצאות הקליניקה וחישוב רווח נקי.')}</p>
         </div>
+        
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsExpenseModalOpen(true)}
+            className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2 text-xs"
+          >
+            <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"></path></svg>
+            {t('Log Expense', 'רשום הוצאה חדשה')}
+          </button>
+          <button 
+            onClick={() => setIsPaymentModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2 text-xs"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            {t('Log Payment', 'רשום תשלום חדש')}
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Primary Financial Navigation Tabs */}
+      <div className="bg-slate-200/60 p-1 rounded-2xl flex gap-1 border border-slate-200/60 w-fit">
         <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all flex items-center gap-2"
+          onClick={() => setActiveTab('overview')} 
+          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-          {t('Log New Payment', 'רשום תשלום חדש')}
+          {t('P&L Overview', 'דוח רווח והפסד')}
+        </button>
+        <button 
+          onClick={() => setActiveTab('income')} 
+          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'income' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+        >
+          {t('Income & Receipts', 'הכנסות ותשלומים')} ({payments.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('expenses')} 
+          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+        >
+          {t('Clinic Expenses', 'הוצאות הקליניקה')} ({expenses.length})
         </button>
       </div>
 
-      {/* 2. KPI Summary Bar (Bento Grid) */}
+      {/* 3. KPI Summary Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Total Revenue */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] hover:bg-white/90 shadow-sm">
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-sm">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Total Revenue', 'סך כל ההכנסות')}</p>
-            <p className="text-3xl font-black text-slate-800 tracking-tight" dir="ltr">
+            <p className="text-3xl font-black text-emerald-600 tracking-tight" dir="ltr">
               <span className="text-xl opacity-50 me-1">₪</span>{totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
           </div>
@@ -211,8 +332,34 @@ const FinancialManager = () => {
           </div>
         </div>
 
+        {/* Total Expenses */}
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-sm">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Total Expenses', 'סך כל ההוצאות')}</p>
+            <p className="text-3xl font-black text-rose-600 tracking-tight" dir="ltr">
+              <span className="text-xl opacity-50 me-1">₪</span>{totalExpensesSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center border border-rose-100/50">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+        </div>
+
+        {/* Net Profit */}
+        <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-md relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Net Profit', 'רווח נקי כולל')}</p>
+            <p className={`text-3xl font-black tracking-tight ${netProfitTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} dir="ltr">
+              <span className="text-xl opacity-50 me-1">₪</span>{netProfitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-slate-800 text-white rounded-xl flex items-center justify-center border border-slate-700">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          </div>
+        </div>
+
         {/* Pending Payments */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] hover:bg-white/90 shadow-sm">
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-sm">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Pending Payments', 'תשלומים ממתינים')}</p>
             <p className="text-3xl font-black text-amber-600 tracking-tight" dir="ltr">
@@ -224,255 +371,328 @@ const FinancialManager = () => {
           </div>
         </div>
 
-        {/* Monthly Revenue */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] hover:bg-white/90 shadow-sm">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('This Month', 'הכנסות החודש')}</p>
-            <p className="text-3xl font-black text-slate-800 tracking-tight" dir="ltr">
-              <span className="text-xl opacity-50 me-1">₪</span>{thisMonthRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center border border-blue-100/50">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-          </div>
-        </div>
-
-        {/* Avg Ticket Size */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] hover:bg-white/90 shadow-sm">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Avg. Transaction', 'עסקה ממוצעת')}</p>
-            <p className="text-3xl font-black text-slate-800 tracking-tight" dir="ltr">
-              <span className="text-xl opacity-50 me-1">₪</span>{avgTicketSize.toFixed(2)}
-            </p>
-          </div>
-          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center border border-violet-100/50">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-          </div>
-        </div>
-
       </div>
 
-      {/* 3. Analytics Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Revenue Trend Area Chart */}
-        <div className="lg:col-span-2 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm">
-          <div className="mb-4 flex justify-between items-center">
-            <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              {t('Revenue Trend (6 Months)', 'מגמת הכנסות (6 חודשים אחרונים)')}
-            </h3>
-          </div>
-          <div className="h-[260px] w-full" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyRevenueChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="finRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', textAlign: language === 'he' ? 'right' : 'left' }}
-                  formatter={(val) => [`₪${val.toLocaleString()}`, t('Revenue', 'הכנסות')]}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#finRevenue)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Payment Methods Distribution */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
-          <div className="mb-2">
-            <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              {t('Payment Methods', 'התפלגות אמצעי תשלום')}
-            </h3>
-          </div>
-          
-          {methodDistribution.length === 0 ? (
-            <div className="h-[200px] flex items-center justify-center text-slate-400 text-sm">
-              {t('No payment method data available', 'אין נתונים זמינים על אמצעי תשלום')}
-            </div>
-          ) : (
-            <>
-              <div className="h-[180px] w-full" dir="ltr">
+      {/* TAB 1: P&L Overview (דוח רווח והפסד) */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Income vs Expenses Bar Chart */}
+            <div className="lg:col-span-2 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm">
+              <div className="mb-4">
+                <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  {t('Income vs Expenses (6 Months)', 'השוואת הכנסות מול הוצאות (6 חודשים אחרונים)')}
+                </h3>
+              </div>
+              <div className="h-[280px] w-full" dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={methodDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={4}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {methodDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
+                  <BarChart data={pnlComparisonChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                      formatter={(val) => [`₪${val.toLocaleString()}`, 'סכום']}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', textAlign: language === 'he' ? 'right' : 'left' }}
+                      formatter={(val, name) => [`₪${val.toLocaleString()}`, name === 'revenue' ? t('Income', 'הכנסות') : t('Expenses', 'הוצאות')]}
                     />
-                  </PieChart>
+                    <Bar dataKey="revenue" fill="#10b981" radius={[6, 6, 0, 0]} name="revenue" barSize={20} />
+                    <Bar dataKey="expenses" fill="#ef4444" radius={[6, 6, 0, 0]} name="expenses" barSize={20} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
-                {methodDistribution.map(m => (
-                  <div key={m.name} className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }}></span>
-                    <span className="text-xs font-semibold text-slate-600 truncate">{m.name}</span>
-                  </div>
-                ))}
+            </div>
+
+            {/* Expense Breakdown by Category Pie Chart */}
+            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+              <div className="mb-2">
+                <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  {t('Expense Categories', 'פילוח הוצאות לפי קטגוריה')}
+                </h3>
               </div>
-            </>
-          )}
+              
+              {expenseCategoryDistribution.length === 0 ? (
+                <div className="h-[200px] flex items-center justify-center text-slate-400 text-sm">
+                  {t('No expenses logged yet.', 'לא נרשמו הוצאות עדיין.')}
+                </div>
+              ) : (
+                <>
+                  <div className="h-[180px] w-full" dir="ltr">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={expenseCategoryDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={80}
+                          paddingAngle={4}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {expenseCategoryDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                          formatter={(val) => [`₪${val.toLocaleString()}`, 'סכום']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
+                    {expenseCategoryDistribution.map(c => (
+                      <div key={c.name} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }}></span>
+                        <span className="text-xs font-semibold text-slate-600 truncate">{c.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+          </div>
         </div>
+      )}
 
-      </div>
+      {/* TAB 2: Income & Payments */}
+      {activeTab === 'income' && (
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            
+            {/* Status Tabs */}
+            <div className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 border border-slate-200/50">
+              <button 
+                onClick={() => setStatusFilter('all')} 
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('All Transactions', 'כל העסקאות')}
+              </button>
+              <button 
+                onClick={() => setStatusFilter('paid')} 
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'paid' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('Paid', 'שולם')}
+              </button>
+              <button 
+                onClick={() => setStatusFilter('pending')} 
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'pending' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('Pending', 'ממתין')}
+              </button>
+            </div>
 
-      {/* 4. Filter & Search Controls */}
-      <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          
-          {/* Status Tabs */}
-          <div className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 border border-slate-200/50">
-            <button 
-              onClick={() => setStatusFilter('all')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              {t('All Transactions', 'כל העסקאות')}
-            </button>
-            <button 
-              onClick={() => setStatusFilter('paid')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'paid' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              {t('Paid', 'שולם')}
-            </button>
-            <button 
-              onClick={() => setStatusFilter('pending')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'pending' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              {t('Pending', 'ממתין')}
-            </button>
+            {/* Search & Method Filter */}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <select 
+                value={methodFilter} 
+                onChange={e => setMethodFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
+              >
+                <option value="all">{t('All Methods', 'כל אמצעי התשלום')}</option>
+                <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
+                <option value="Cash">{t('Cash', 'מזומן')}</option>
+                <option value="Bit">{t('Bit / Paybox', 'ביט / פייבוקס')}</option>
+                <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
+              </select>
+
+              <div className="relative flex-1 sm:w-64">
+                <input 
+                  type="text" 
+                  placeholder={t('Search patient or amount...', 'חיפוש לפי מטופל או סכום...')} 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full ps-9 pe-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                />
+                <svg className="w-4 h-4 text-slate-400 absolute start-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </div>
+            </div>
+
           </div>
 
-          {/* Search & Method Filter */}
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <select 
-              value={methodFilter} 
-              onChange={e => setMethodFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
-            >
-              <option value="all">{t('All Methods', 'כל אמצעי התשלום')}</option>
-              <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
-              <option value="Cash">{t('Cash', 'מזומן')}</option>
-              <option value="Bit">{t('Bit / Paybox', 'ביט / פייבוקס')}</option>
-              <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
-            </select>
+          {/* Payments Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-start border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/60 bg-slate-50/50">
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Date', 'תאריך')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Patient', 'מטופל')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Service / Notes', 'שירות / הערה')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Method', 'אמצעי תשלום')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Amount', 'סכום')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Status', 'סטטוס')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-end">{t('Actions', 'פעולות')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="py-12 text-center text-sm font-medium text-slate-400">
+                      {t('No transactions found matching your criteria.', 'לא נמצאו עסקאות התואמות את החיפוש.')}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPayments.map(p => {
+                    const appt = appointments.find(a => a.id === p.appointment_id);
+                    const patientName = appt ? getPatientName(appt.patient_id) : (p.patient_id ? getPatientName(p.patient_id) : t('General Patient', 'מטופל כללי'));
+                    const serviceName = appt ? getServiceName(appt.service_id) : '-';
 
+                    let statusBadge = p.status === 'paid' 
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60'
+                      : p.status === 'pending'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200/60'
+                      : 'bg-rose-50 text-rose-700 border-rose-200/60';
+
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="py-4 px-4 text-xs font-semibold text-slate-500 text-start">
+                          {new Date(p.payment_date).toLocaleDateString()}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-slate-800 text-sm text-start">
+                          {patientName}
+                        </td>
+                        <td className="py-4 px-4 text-xs text-slate-500 font-medium text-start">
+                          {serviceName}
+                        </td>
+                        <td className="py-4 px-4 text-start">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
+                            {translateMethod(p.payment_method)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-black text-slate-800 text-sm text-start" dir="ltr">
+                          <span className="opacity-50 me-1">₪</span>{parseFloat(p.amount || 0).toFixed(2)}
+                        </td>
+                        <td className="py-4 px-4 text-start">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-widest border ${statusBadge}`}>
+                            {translateStatus(p.status)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-end">
+                          {p.status === 'pending' && (
+                            <button 
+                              onClick={() => updatePaymentStatus(p.id, 'paid')}
+                              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors"
+                            >
+                              {t('Mark Paid', 'סימון כסולק')}
+                            </button>
+                          )}
+                          {p.status === 'paid' && (
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t('Completed', 'הושלם')}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Clinic Expenses */}
+      {activeTab === 'expenses' && (
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            
+            {/* Category Filter */}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <select 
+                value={categoryFilter} 
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-rose-500/20"
+              >
+                <option value="all">{t('All Categories', 'כל קטגוריות ההוצאה')}</option>
+                <option value="Rent">{t('Rent & Facilities', 'שכירות ומבנה')}</option>
+                <option value="Equipment">{t('Equipment & Supplies', 'ציוד ומלאי')}</option>
+                <option value="Software">{t('Software & Digital', 'תוכנה ודיגיטל')}</option>
+                <option value="Marketing">{t('Marketing & Ads', 'שיווק ופרסום')}</option>
+                <option value="Salaries">{t('Salaries & Services', 'שכר ושירותים')}</option>
+                <option value="Other">{t('Utilities & Other', 'שונות וכללי')}</option>
+              </select>
+
+              <select 
+                value={methodFilter} 
+                onChange={e => setMethodFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-rose-500/20"
+              >
+                <option value="all">{t('All Payment Methods', 'כל אמצעי התשלום')}</option>
+                <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
+                <option value="Cash">{t('Cash', 'מזומן')}</option>
+                <option value="Bit">{t('Bit / Paybox', 'ביט / פייבוקס')}</option>
+                <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
+              </select>
+            </div>
+
+            {/* Search */}
             <div className="relative flex-1 sm:w-64">
               <input 
                 type="text" 
-                placeholder={t('Search patient or amount...', 'חיפוש לפי מטופל או סכום...')} 
+                placeholder={t('Search expense title...', 'חיפוש הוצאה...')} 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full ps-9 pe-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                className="w-full ps-9 pe-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-rose-500/20 outline-none"
               />
               <svg className="w-4 h-4 text-slate-400 absolute start-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
+
           </div>
 
-        </div>
-
-        {/* Payments Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-start border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200/60 bg-slate-50/50">
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Date', 'תאריך')}</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Patient', 'מטופל')}</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Service / Notes', 'שירות / הערה')}</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Method', 'אמצעי תשלום')}</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Amount', 'סכום')}</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Status', 'סטטוס')}</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-end">{t('Actions', 'פעולות')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredPayments.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="py-12 text-center text-sm font-medium text-slate-400">
-                    {t('No transactions found matching your criteria.', 'לא נמצאו עסקאות התואמות את החיפוש.')}
-                  </td>
+          {/* Expenses Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-start border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/60 bg-slate-50/50">
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Date', 'תאריך')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Title / Description', 'תיאור ההוצאה')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Category', 'קטגוריה')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Method', 'אמצעי תשלום')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-end">{t('Amount', 'סכום')}</th>
                 </tr>
-              ) : (
-                filteredPayments.map(p => {
-                  const appt = appointments.find(a => a.id === p.appointment_id);
-                  const patientName = appt ? getPatientName(appt.patient_id) : (p.patient_id ? getPatientName(p.patient_id) : t('General Patient', 'מטופל כללי'));
-                  const serviceName = appt ? getServiceName(appt.service_id) : '-';
-
-                  let statusBadge = p.status === 'paid' 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60'
-                    : p.status === 'pending'
-                    ? 'bg-amber-50 text-amber-700 border-amber-200/60'
-                    : 'bg-rose-50 text-rose-700 border-rose-200/60';
-
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredExpenses.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="py-12 text-center text-sm font-medium text-slate-400">
+                      {t('No expenses logged yet.', 'לא נרשמו הוצאות התואמות את התנאים.')}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredExpenses.map(exp => (
+                    <tr key={exp.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="py-4 px-4 text-xs font-semibold text-slate-500 text-start">
-                        {new Date(p.payment_date).toLocaleDateString()}
+                        {new Date(exp.expense_date).toLocaleDateString()}
                       </td>
                       <td className="py-4 px-4 font-bold text-slate-800 text-sm text-start">
-                        {patientName}
+                        {exp.title}
                       </td>
-                      <td className="py-4 px-4 text-xs text-slate-500 font-medium text-start">
-                        {serviceName}
+                      <td className="py-4 px-4 text-start">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-100">
+                          {translateCategory(exp.category)}
+                        </span>
                       </td>
                       <td className="py-4 px-4 text-start">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
-                          {translateMethod(p.payment_method)}
+                          {translateMethod(exp.payment_method)}
                         </span>
                       </td>
-                      <td className="py-4 px-4 font-black text-slate-800 text-sm text-start" dir="ltr">
-                        <span className="opacity-50 me-1">₪</span>{parseFloat(p.amount || 0).toFixed(2)}
-                      </td>
-                      <td className="py-4 px-4 text-start">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-widest border ${statusBadge}`}>
-                          {translateStatus(p.status)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-end">
-                        {p.status === 'pending' && (
-                          <button 
-                            onClick={() => updatePaymentStatus(p.id, 'paid')}
-                            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors"
-                          >
-                            {t('Mark Paid', 'סימון כסולק')}
-                          </button>
-                        )}
-                        {p.status === 'paid' && (
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t('Completed', 'הושלם')}</span>
-                        )}
+                      <td className="py-4 px-4 font-black text-rose-600 text-sm text-end" dir="ltr">
+                        -<span className="opacity-50 me-1">₪</span>{parseFloat(exp.amount || 0).toFixed(2)}
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 5. Log New Payment Modal */}
-      {isModalOpen && (
+      {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="bg-[#0f172a] p-6 text-white flex justify-between items-center">
@@ -480,12 +700,12 @@ const FinancialManager = () => {
                 <h3 className="font-extrabold text-xl tracking-tight">{t('Log New Payment', 'רישום תשלום חדש')}</h3>
                 <p className="text-slate-400 text-xs mt-1">{t('Record a transaction directly into the ledger.', 'הזן עסקה כספית ישירות לספרי הקליניקה.')}</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-4 text-start">
+            <form onSubmit={handlePaymentSubmit} className="p-6 space-y-4 text-start">
               
               {/* Select Patient */}
               <div>
@@ -596,7 +816,7 @@ const FinancialManager = () => {
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button" 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsPaymentModalOpen(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors text-sm"
                 >
                   {t('Cancel', 'ביטול')}
@@ -606,6 +826,117 @@ const FinancialManager = () => {
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors text-sm"
                 >
                   {t('Save Payment', 'שמור תשלום')}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Log New Expense Modal */}
+      {isExpenseModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+            <div className="bg-rose-950 p-6 text-white flex justify-between items-center border-b border-rose-900">
+              <div>
+                <h3 className="font-extrabold text-xl tracking-tight text-white">{t('Log New Expense', 'רישום הוצאה חדשה')}</h3>
+                <p className="text-rose-300 text-xs mt-1">{t('Record clinic expenses and operational costs.', 'הזן הוצאת תפעול, שכירות או ציוד לקליניקה.')}</p>
+              </div>
+              <button onClick={() => setIsExpenseModalOpen(false)} className="text-rose-300 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleExpenseSubmit} className="p-6 space-y-4 text-start">
+              
+              {/* Title / Description */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Title / Description', 'תיאור ההוצאה')}</label>
+                <input 
+                  type="text" 
+                  placeholder={t('e.g., Clinic Rent, Medical Supplies', 'למשל: שכירות, ציוד מתכלה, חשבון חשמל')}
+                  value={expenseForm.title} 
+                  onChange={e => setExpenseForm({...expenseForm, title: e.target.value})} 
+                  required 
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none" 
+                />
+              </div>
+
+              {/* Category & Amount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Category', 'קטגוריה')}</label>
+                  <select 
+                    value={expenseForm.category} 
+                    onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none"
+                  >
+                    <option value="Rent">{t('Rent & Facilities', 'שכירות ומבנה')}</option>
+                    <option value="Equipment">{t('Equipment & Supplies', 'ציוד ומלאי')}</option>
+                    <option value="Software">{t('Software & Digital', 'תוכנה ודיגיטל')}</option>
+                    <option value="Marketing">{t('Marketing & Ads', 'שיווק ופרסום')}</option>
+                    <option value="Salaries">{t('Salaries & Services', 'שכר ושירותים')}</option>
+                    <option value="Other">{t('Utilities & Other', 'שונות וכללי')}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Amount (₪)', 'סכום (₪)')}</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="0.00"
+                    value={expenseForm.amount} 
+                    onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} 
+                    required 
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-rose-600 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none" 
+                  />
+                </div>
+              </div>
+
+              {/* Method & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Payment Method', 'אמצעי תשלום')}</label>
+                  <select 
+                    value={expenseForm.payment_method} 
+                    onChange={e => setExpenseForm({...expenseForm, payment_method: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none"
+                  >
+                    <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
+                    <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
+                    <option value="Cash">{t('Cash', 'מזומן')}</option>
+                    <option value="Bit">{t('Bit / Paybox', 'ביט / Paybox')}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Expense Date', 'תאריך הוצאה')}</label>
+                  <input 
+                    type="date" 
+                    value={expenseForm.expense_date} 
+                    onChange={e => setExpenseForm({...expenseForm, expense_date: e.target.value})} 
+                    required 
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none" 
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsExpenseModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors text-sm"
+                >
+                  {t('Cancel', 'ביטול')}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors text-sm"
+                >
+                  {t('Save Expense', 'שמור הוצאה')}
                 </button>
               </div>
 
