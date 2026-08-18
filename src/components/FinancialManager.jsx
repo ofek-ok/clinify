@@ -40,6 +40,8 @@ const FinancialManager = () => {
   const [paymentForm, setPaymentForm] = useState({
     patient_id: '',
     appointment_id: '',
+    catalog_item_id: '',
+    item_type: 'service',
     amount: '',
     payment_method: 'Credit Card',
     status: 'paid',
@@ -88,24 +90,6 @@ const FinancialManager = () => {
       .filter(p => p.status === 'pending')
       .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
   }, [payments]);
-
-  const thisMonthRevenue = useMemo(() => {
-    const now = new Date();
-    const currMonth = now.getMonth();
-    const currYear = now.getFullYear();
-    return payments
-      .filter(p => p.status === 'paid' && new Date(p.payment_date).getMonth() === currMonth && new Date(p.payment_date).getFullYear() === currYear)
-      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-  }, [payments]);
-
-  const thisMonthExpenses = useMemo(() => {
-    const now = new Date();
-    const currMonth = now.getMonth();
-    const currYear = now.getFullYear();
-    return expenses
-      .filter(e => new Date(e.expense_date).getMonth() === currMonth && new Date(e.expense_date).getFullYear() === currYear)
-      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
-  }, [expenses]);
 
   // Chart Data: Expense Category Distribution
   const expenseCategoryDistribution = useMemo(() => {
@@ -201,6 +185,8 @@ const FinancialManager = () => {
       setPaymentForm({
         patient_id: paymentToEdit.patient_id || '',
         appointment_id: paymentToEdit.appointment_id || '',
+        catalog_item_id: paymentToEdit.catalog_item_id || '',
+        item_type: paymentToEdit.item_type || 'service',
         amount: paymentToEdit.amount || '',
         payment_method: paymentToEdit.payment_method || 'Credit Card',
         status: paymentToEdit.status || 'paid',
@@ -211,6 +197,8 @@ const FinancialManager = () => {
       setPaymentForm({
         patient_id: '',
         appointment_id: '',
+        catalog_item_id: '',
+        item_type: 'service',
         amount: '',
         payment_method: 'Credit Card',
         status: 'paid',
@@ -230,6 +218,8 @@ const FinancialManager = () => {
     const payload = {
       patient_id: paymentForm.patient_id || null,
       appointment_id: paymentForm.appointment_id || null,
+      catalog_item_id: paymentForm.catalog_item_id || null,
+      item_type: paymentForm.item_type,
       amount: parseFloat(paymentForm.amount),
       payment_method: paymentForm.payment_method,
       status: paymentForm.status,
@@ -336,24 +326,24 @@ const FinancialManager = () => {
       {/* 1. Top Header & Action Buttons */}
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t('Financials & Expense Management', 'פיננסים, תשלומים וניהול הוצאות')}</h2>
-          <p className="text-slate-500 text-sm mt-1 font-medium">{t('Full financial overview of clinic income, expenses, and net profit.', 'דוח כספי מלא: הכנסות, הוצאות הקליניקה, עריכה ידנית וסליקה.')}</p>
+          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t('Financials & Universal Payments', 'פיננסים, תשלומים וניהול הוצאות')}</h2>
+          <p className="text-slate-500 text-sm mt-1 font-medium">{t('Full financial overview of clinic income, expenses, and net profit.', 'דוח כספי מלא: הכנסות, מכירת חבילות/מוצרים, הוצאות ועריכה ידנית.')}</p>
         </div>
         
         <div className="flex items-center gap-3">
           <button 
             onClick={() => openExpenseModal(null)}
-            className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2 text-xs"
+            className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all flex items-center gap-2 text-xs"
           >
             <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"></path></svg>
             {t('Log Expense', 'רשום הוצאה חדשה')}
           </button>
           <button 
             onClick={() => openPaymentModal(null)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2 text-xs"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all flex items-center gap-2 text-xs"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            {t('Log Payment', 'רשום תשלום חדש')}
+            {t('Log Payment / Sale', 'רשום תשלום / מכירת חבילה')}
           </button>
         </div>
       </div>
@@ -362,19 +352,19 @@ const FinancialManager = () => {
       <div className="bg-slate-200/60 p-1 rounded-2xl flex gap-1 border border-slate-200/60 w-fit">
         <button 
           onClick={() => setActiveTab('overview')} 
-          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
           {t('P&L Overview', 'דוח רווח והפסד')}
         </button>
         <button 
           onClick={() => setActiveTab('income')} 
-          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'income' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'income' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
           {t('Income & Receipts', 'הכנסות ותשלומים')} ({payments.length})
         </button>
         <button 
           onClick={() => setActiveTab('expenses')} 
-          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          className={`px-5 py-2 text-xs font-extrabold rounded-xl transition-all ${activeTab === 'expenses' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
           {t('Clinic Expenses', 'הוצאות הקליניקה')} ({expenses.length})
         </button>
@@ -384,7 +374,7 @@ const FinancialManager = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Total Revenue */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-sm">
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between shadow-xs">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Total Revenue', 'סך כל ההכנסות')}</p>
             <p className="text-3xl font-black text-emerald-600 tracking-tight" dir="ltr">
@@ -397,7 +387,7 @@ const FinancialManager = () => {
         </div>
 
         {/* Total Expenses */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-sm">
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between shadow-xs">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Total Expenses', 'סך כל ההוצאות')}</p>
             <p className="text-3xl font-black text-rose-600 tracking-tight" dir="ltr">
@@ -410,7 +400,7 @@ const FinancialManager = () => {
         </div>
 
         {/* Net Profit */}
-        <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-md relative overflow-hidden">
+        <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 flex items-center justify-between shadow-md relative overflow-hidden">
           <div className="relative z-10">
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Net Profit', 'רווח נקי כולל')}</p>
             <p className={`text-3xl font-black tracking-tight ${netProfitTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} dir="ltr">
@@ -423,7 +413,7 @@ const FinancialManager = () => {
         </div>
 
         {/* Pending Payments */}
-        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between transition-all duration-300 hover:scale-[1.02] shadow-sm">
+        <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between shadow-xs">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Pending Payments', 'תשלומים ממתינים')}</p>
             <p className="text-3xl font-black text-amber-600 tracking-tight" dir="ltr">
@@ -443,7 +433,7 @@ const FinancialManager = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Income vs Expenses Bar Chart */}
-            <div className="lg:col-span-2 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm">
+            <div className="lg:col-span-2 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-xs">
               <div className="mb-4">
                 <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -468,7 +458,7 @@ const FinancialManager = () => {
             </div>
 
             {/* Expense Breakdown by Category Pie Chart */}
-            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-xs flex flex-col justify-between">
               <div className="mb-2">
                 <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-rose-500"></span>
@@ -524,32 +514,32 @@ const FinancialManager = () => {
 
       {/* TAB 2: Income & Payments */}
       {activeTab === 'income' && (
-        <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-sm space-y-4">
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             
             {/* Status Tabs */}
             <div className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 border border-slate-200/50">
               <button 
                 onClick={() => setStatusFilter('all')} 
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'all' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {t('All Transactions', 'כל העסקאות')}
               </button>
               <button 
                 onClick={() => setStatusFilter('paid')} 
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'paid' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'paid' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {t('Paid', 'שולם')}
               </button>
               <button 
                 onClick={() => setStatusFilter('pending')} 
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'pending' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'pending' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {t('Pending', 'ממתין')}
               </button>
               <button 
                 onClick={() => setStatusFilter('refunded')} 
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'refunded' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'refunded' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {t('Refunded', 'זיכוי')}
               </button>
@@ -590,7 +580,7 @@ const FinancialManager = () => {
                 <tr className="border-b border-slate-200/60 bg-slate-50/50">
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Date', 'תאריך')}</th>
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Patient', 'מטופל')}</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Service / Notes', 'שירות / הערה')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Item / Service', 'פריט / חבילה שנמכרה')}</th>
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Method', 'אמצעי תשלום')}</th>
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Amount', 'סכום')}</th>
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Status', 'סטטוס')}</th>
@@ -607,8 +597,9 @@ const FinancialManager = () => {
                 ) : (
                   filteredPayments.map(p => {
                     const appt = appointments.find(a => a.id === p.appointment_id);
+                    const catalogItem = services.find(s => s.id === p.catalog_item_id);
                     const patientName = appt ? getPatientName(appt.patient_id) : (p.patient_id ? getPatientName(p.patient_id) : t('General Patient', 'מטופל כללי'));
-                    const serviceName = appt ? getServiceName(appt.service_id) : '-';
+                    const itemLabel = catalogItem ? catalogItem.name : (appt ? getServiceName(appt.service_id) : t('General Payment', 'תשלום כללי'));
 
                     let statusBadge = p.status === 'paid' 
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60'
@@ -624,8 +615,8 @@ const FinancialManager = () => {
                         <td className="py-4 px-4 font-bold text-slate-800 text-sm text-start">
                           {patientName}
                         </td>
-                        <td className="py-4 px-4 text-xs text-slate-500 font-medium text-start">
-                          {serviceName}
+                        <td className="py-4 px-4 text-xs text-slate-700 font-bold text-start">
+                          {itemLabel}
                         </td>
                         <td className="py-4 px-4 text-start">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
@@ -650,7 +641,6 @@ const FinancialManager = () => {
                             </button>
                           )}
                           
-                          {/* Manual Edit Button */}
                           <button 
                             onClick={() => openPaymentModal(p)}
                             className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors"
@@ -658,7 +648,6 @@ const FinancialManager = () => {
                             {t('Edit', 'ערוך')}
                           </button>
 
-                          {/* Delete Button */}
                           <button 
                             onClick={() => handleDeletePayment(p.id)}
                             className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors"
@@ -679,7 +668,7 @@ const FinancialManager = () => {
 
       {/* TAB 3: Clinic Expenses */}
       {activeTab === 'expenses' && (
-        <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-sm space-y-4">
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/60 p-5 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             
             {/* Category Filter */}
@@ -791,14 +780,14 @@ const FinancialManager = () => {
         </div>
       )}
 
-      {/* 5. Log / Edit Payment Modal */}
+      {/* 5. Universal Log / Edit Payment Modal */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="bg-[#0f172a] p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="font-extrabold text-xl tracking-tight">{editingPaymentId ? t('Edit Payment Record', 'עריכת תשלום קיים') : t('Log New Payment', 'רישום תשלום חדש')}</h3>
-                <p className="text-slate-400 text-xs mt-1">{t('Record or update a transaction directly in the ledger.', 'הזן או עדכן עסקה כספית בספרי הקליניקה.')}</p>
+                <h3 className="font-extrabold text-xl tracking-tight">{editingPaymentId ? t('Edit Payment Record', 'עריכת תשלום קיים') : t('Log Universal Payment / Sale', 'רישום תשלום / מכירת חבילה/מוצר')}</h3>
+                <p className="text-slate-400 text-xs mt-1">{t('Record sale of treatment, package, physical product or subscription.', 'בחר טיפול, כרטיסייה, מוצר פיזי או תוכנית ליווי ומכור למטופל.')}</p>
               </div>
               <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -822,37 +811,29 @@ const FinancialManager = () => {
                 </select>
               </div>
 
-              {/* Select Appointment (Optional) */}
+              {/* Select Item from Catalog */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Link to Appointment (Optional)', 'שיוך לתור (אופציונלי)')}</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Select Offering from Catalog', 'בחר פריט/שירות מהקטלוג')}</label>
                 <select 
-                  value={paymentForm.appointment_id} 
+                  value={paymentForm.catalog_item_id} 
                   onChange={e => {
-                    const apptId = e.target.value;
-                    const appt = appointments.find(a => a.id === apptId);
-                    let suggestedAmount = paymentForm.amount;
-                    if (appt) {
-                      const svc = services.find(s => s.id === appt.service_id);
-                      if (svc) suggestedAmount = svc.default_price;
-                    }
+                    const catId = e.target.value;
+                    const item = services.find(s => s.id === catId);
                     setPaymentForm({
                       ...paymentForm, 
-                      appointment_id: apptId,
-                      patient_id: appt ? appt.patient_id : paymentForm.patient_id,
-                      amount: suggestedAmount
+                      catalog_item_id: catId,
+                      item_type: item ? (item.type || 'service') : 'service',
+                      amount: item ? item.default_price : paymentForm.amount
                     });
                   }}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
                 >
-                  <option value="">{t('No specific appointment', 'ללא תור ספציפי')}</option>
-                  {appointments.map(a => {
-                    const dateStr = new Date(a.appointment_date).toLocaleDateString();
-                    return (
-                      <option key={a.id} value={a.id}>
-                        {getPatientName(a.patient_id)} - {getServiceName(a.service_id)} ({dateStr})
-                      </option>
-                    );
-                  })}
+                  <option value="">{t('General Payment / Custom', 'תשלום כללי / לפי סכום חופשי')}</option>
+                  {services.map(s => (
+                    <option key={s.id} value={s.id}>
+                      [{s.type === 'package' ? '🎟️ כרטיסייה' : s.type === 'product' ? '📦 מוצר' : s.type === 'subscription' ? '⭐ מנוי' : '🩺 טיפול'}] {s.name} - ₪{s.default_price}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -926,7 +907,7 @@ const FinancialManager = () => {
                   type="submit" 
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors text-sm"
                 >
-                  {editingPaymentId ? t('Update Payment', 'עדכן תשלום') : t('Save Payment', 'שמור תשלום')}
+                  {editingPaymentId ? t('Update Payment', 'עדכן תשלום') : t('Save Payment / Issue Package', 'שמור תשלום / הנספק כרטיסייה')}
                 </button>
               </div>
 
@@ -937,7 +918,7 @@ const FinancialManager = () => {
 
       {/* 6. Log / Edit Expense Modal */}
       {isExpenseModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="bg-rose-950 p-6 text-white flex justify-between items-center border-b border-rose-900">
               <div>

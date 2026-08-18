@@ -9,7 +9,17 @@ export const ClinicProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   
   const [patients, setPatients] = useState([]);
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState([
+    { id: 'svc_1', name: 'טיפול פיזיותרפיה מקיף', description: 'אבחון וטיפול 45 דק', duration_minutes: 45, default_price: 250, type: 'service' },
+    { id: 'pkg_1', name: 'כרטיסיית 10 טיפולים', description: 'חבילה מוזלת של 10 מפגשים', duration_minutes: 45, default_price: 2100, type: 'package', session_count: 10 },
+    { id: 'prd_1', name: 'משחת תנועה ושיקום 100 מ"ל', description: 'ציוד נלווה לטיפול בבית', duration_minutes: 0, default_price: 85, type: 'product' },
+    { id: 'sub_1', name: 'תוכנית ליווי חודשית VIP', description: 'סדרת טיפולים ומעקב זמין ב-WhatsApp', duration_minutes: 60, default_price: 1500, type: 'subscription' }
+  ]);
+
+  const [patientPackages, setPatientPackages] = useState([
+    { id: 'ppkg_1', patient_id: '1', name: 'כרטיסיית 10 טיפולים', total_sessions: 10, remaining_sessions: 7, purchased_date: todayStr }
+  ]);
+
   const [appointments, setAppointments] = useState([]);
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -66,7 +76,7 @@ export const ClinicProvider = ({ children }) => {
       ]);
 
       if (patientsRes.data) setPatients(patientsRes.data);
-      if (servicesRes.data) setServices(servicesRes.data);
+      if (servicesRes.data && servicesRes.data.length > 0) setServices(servicesRes.data);
       if (appointmentsRes.data) setAppointments(appointmentsRes.data);
       if (leadsRes.data) setLeads(leadsRes.data);
       if (tasksRes.data) setTasks(tasksRes.data);
@@ -100,13 +110,44 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addService = async (service) => {
-    const { data, error } = await supabase.from('services').insert([{
+    const payload = {
       name: service.name,
       description: service.description,
-      duration_minutes: parseInt(service.duration_minutes),
-      default_price: parseFloat(service.default_price)
-    }]).select();
-    if (!error && data) setServices([...services, data[0]]);
+      duration_minutes: parseInt(service.duration_minutes || 0),
+      default_price: parseFloat(service.default_price || 0),
+      type: service.type || 'service',
+      session_count: service.session_count ? parseInt(service.session_count) : null
+    };
+    const { data, error } = await supabase.from('services').insert([payload]).select();
+    if (!error && data) {
+      setServices(prev => [...prev, data[0]]);
+    } else {
+      setServices(prev => [...prev, { id: 'item_' + Date.now(), ...payload }]);
+    }
+  };
+
+  // Issue Package to Patient
+  const issuePackageToPatient = (patientId, catalogItem) => {
+    const newPkg = {
+      id: 'ppkg_' + Date.now(),
+      patient_id: patientId,
+      name: catalogItem.name,
+      total_sessions: catalogItem.session_count || 10,
+      remaining_sessions: catalogItem.session_count || 10,
+      purchased_date: todayStr
+    };
+    setPatientPackages(prev => [...prev, newPkg]);
+    return newPkg;
+  };
+
+  // Redeem / Deduct Session from Patient Package
+  const redeemPackageSession = (packageId) => {
+    setPatientPackages(prev => prev.map(pkg => {
+      if (pkg.id === packageId && pkg.remaining_sessions > 0) {
+        return { ...pkg, remaining_sessions: pkg.remaining_sessions - 1 };
+      }
+      return pkg;
+    }));
   };
 
   const addAppointment = async (appt) => {
@@ -150,6 +191,12 @@ export const ClinicProvider = ({ children }) => {
       setPayments([...payments, data[0]]);
     } else {
       setPayments(prev => [...prev, { id: 'pay_' + Date.now(), ...payload }]);
+    }
+    
+    // If a package item was bought for a patient, auto-issue it!
+    if (payment.item_type === 'package' && payment.patient_id) {
+      const catalogItem = services.find(s => s.id === payment.catalog_item_id) || { name: 'כרטיסיית טיפולים', session_count: 10 };
+      issuePackageToPatient(payment.patient_id, catalogItem);
     }
   };
 
@@ -385,12 +432,13 @@ export const ClinicProvider = ({ children }) => {
   return (
     <ClinicContext.Provider value={{
       isLoading,
-      patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions, bookingSettings,
+      patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, addAppointment, addLead, addTask, 
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
       addExpense, updateExpense, deleteExpense, 
       addForm, updateForm, addFormSubmission, updateBookingSettings,
+      issuePackageToPatient, redeemPackageSession,
       updateLeadStatus, updateTaskStatus, updateBusinessHour, getAvailableSlotsForDate,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,

@@ -1,95 +1,267 @@
-import React, { useContext, useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
 const ServicesCatalog = () => {
-  const { services, addService } = useContext(ClinicContext);
-  const { t } = useContext(LanguageContext);
-  const [serviceForm, setServiceForm] = useState({
+  const { services, addService, t } = useContext(ClinicContext);
+  const [activeTypeFilter, setActiveTypeFilter] = useState('all');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
-    duration_minutes: 30,
-    default_price: ''
+    duration_minutes: '45',
+    default_price: '',
+    type: 'service', // 'service', 'package', 'product', 'subscription'
+    session_count: '10'
   });
 
-  const handleServiceSubmit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.name || !formData.default_price) {
+      alert(t('Please enter item name and price.', 'אנא מלא שם פריט ומחיר.'));
+      return;
+    }
     addService({
-      ...serviceForm,
-      duration_minutes: parseInt(serviceForm.duration_minutes),
-      default_price: parseFloat(serviceForm.default_price)
+      name: formData.name,
+      description: formData.description,
+      duration_minutes: formData.type === 'product' ? 0 : parseInt(formData.duration_minutes || 0),
+      default_price: parseFloat(formData.default_price),
+      type: formData.type,
+      session_count: formData.type === 'package' ? parseInt(formData.session_count || 10) : null
     });
-    setServiceForm({ name: '', description: '', duration_minutes: 30, default_price: '' });
+    setIsModalOpen(false);
+    setFormData({ name: '', description: '', duration_minutes: '45', default_price: '', type: 'service', session_count: '10' });
+  };
+
+  const filteredItems = services.filter(item => {
+    if (activeTypeFilter === 'all') return true;
+    const itemType = item.type || 'service';
+    return itemType === activeTypeFilter;
+  });
+
+  const translateType = (type) => {
+    const map = {
+      'service': t('Single Treatment', 'טיפול בודד'),
+      'package': t('Punch Card / Package', 'כרטיסייה / חבילה'),
+      'product': t('Physical Product', 'מוצר פיזי'),
+      'subscription': t('Mentorship / Subscription', 'תוכנית ליווי / מנוי')
+    };
+    return map[type] || t('Treatment', 'טיפול');
+  };
+
+  const getTypeBadge = (type) => {
+    switch (type) {
+      case 'package':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'product':
+        return 'bg-sky-50 text-sky-700 border-sky-200';
+      case 'subscription':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    }
   };
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6 text-start">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-800">{t('Services Catalog', 'קטלוג שירותים')}</h2>
-        <p className="text-slate-500 text-sm mt-1">{t('Manage treatments, durations, and pricing.', 'נהל את סוגי הטיפולים, משך הזמן והתמחור שלהם.')}</p>
+    <div className="space-y-6 text-start">
+      
+      {/* Top Controls Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+        
+        {/* Type Filter Buttons */}
+        <div className="flex flex-wrap bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 shrink-0 gap-1">
+          <button 
+            onClick={() => setActiveTypeFilter('all')} 
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'all' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            {t('All Items', 'הכל')} ({services.length})
+          </button>
+          <button 
+            onClick={() => setActiveTypeFilter('service')} 
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'service' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            {t('Treatments', 'טיפולים בודדים')}
+          </button>
+          <button 
+            onClick={() => setActiveTypeFilter('package')} 
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'package' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            {t('Packages & Punch Cards', 'כרטיסיות וחבילות')}
+          </button>
+          <button 
+            onClick={() => setActiveTypeFilter('product')} 
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'product' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            {t('Products', 'מוצרים פיזיים')}
+          </button>
+          <button 
+            onClick={() => setActiveTypeFilter('subscription')} 
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'subscription' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            {t('Subscriptions', 'תוכניות ליווי ומנויים')}
+          </button>
+        </div>
+
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors flex items-center gap-2 text-xs self-start sm:self-auto"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+          {t('Add New Item / Service', 'הוסף מוצר / שירות / חבילה')}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100/50 relative overflow-hidden h-max">
-            <div className="absolute top-0 end-0 w-full h-1 bg-gradient-to-s from-indigo-400 to-purple-500"></div>
-            <h3 className="text-lg font-semibold mb-5 text-slate-700 flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              {t('Add New Service', 'הוספת שירות חדש')}
-            </h3>
-            <form onSubmit={handleServiceSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 text-start">{t('Service Name', 'שם השירות')}</label>
-                <input type="text" value={serviceForm.name} onChange={e => setServiceForm({...serviceForm, name: e.target.value})} required 
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-start" />
+      {/* Offerings Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filteredItems.map(item => {
+          const itemType = item.type || 'service';
+          return (
+            <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${getTypeBadge(itemType)}`}>
+                    {translateType(itemType)}
+                  </span>
+                  <span className="text-xl font-black text-slate-800" dir="ltr">₪{item.default_price}</span>
+                </div>
+
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-base group-hover:text-emerald-600 transition-colors">{item.name}</h3>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description || '-'}</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 text-start">{t('Description (Optional)', 'תיאור (אופציונלי)')}</label>
-                <textarea value={serviceForm.description} onChange={e => setServiceForm({...serviceForm, description: e.target.value})} rows="2"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none text-start"></textarea>
+
+              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-semibold">
+                {itemType === 'package' ? (
+                  <span className="text-amber-600 font-bold flex items-center gap-1">
+                    🎟️ {item.session_count || 10} {t('sessions included', 'טיפולים כלולים בחבילה')}
+                  </span>
+                ) : itemType === 'product' ? (
+                  <span>📦 {t('Physical product for sale', 'מוצר למכירהבקליניקה')}</span>
+                ) : itemType === 'subscription' ? (
+                  <span className="text-purple-600 font-bold">♾️ {t('Monthly retainer / mentorship', 'תוכנית ליווי מתמשכת')}</span>
+                ) : (
+                  <span>⏱️ {item.duration_minutes} {t('minutes', 'דקות')}</span>
+                )}
               </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Create Item Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="font-extrabold text-lg tracking-tight">{t('Add Offering to Catalog', 'הוספת פריט/שירות לקטלוג')}</h3>
+                <p className="text-slate-400 text-xs mt-0.5">{t('Define a service, package, product or subscription.', 'צור טיפול בודד, כרטיסייה, מוצר פיזי או תוכנית ליווי.')}</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 text-start">
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('Item Type', 'סוג הפריט')}</label>
+                <select 
+                  value={formData.type} 
+                  onChange={e => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                >
+                  <option value="service">🩺 {t('Single Treatment', 'טיפול / שירות בודד')}</option>
+                  <option value="package">🎟️ {t('Punch Card / Package', 'כרטיסייה / חבילת טיפולים')}</option>
+                  <option value="product">📦 {t('Physical Product', 'מוצר פיזי (משחות/ציוד)')}</option>
+                  <option value="subscription">⭐ {t('Mentorship / Subscription', 'תוכנית ליווי / מנוי חודשי')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('Item Name', 'שם הפריט / השירות')} *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder={t('e.g. 10-Session Therapy Package', 'למשל: כרטיסיית 10 טיפולים, משחת שיקום')}
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 text-start">{t('Duration (Mins)', 'משך זמן (דקות)')}</label>
-                  <input type="number" min="5" step="5" value={serviceForm.duration_minutes} onChange={e => setServiceForm({...serviceForm, duration_minutes: e.target.value})} required 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-start" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('Price (₪)', 'מחיר (₪)')} *</label>
+                  <input 
+                    type="number" 
+                    required
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={formData.default_price}
+                    onChange={e => setFormData({ ...formData, default_price: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 text-start">{t('Price (₪)', 'מחיר (₪)')}</label>
-                  <input type="number" min="0" step="0.01" value={serviceForm.default_price} onChange={e => setServiceForm({...serviceForm, default_price: e.target.value})} required 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-start" />
-                </div>
+
+                {formData.type === 'package' ? (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('Number of Sessions', 'מספר טיפולים בחבילה')}</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={formData.session_count}
+                      onChange={e => setFormData({ ...formData, session_count: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('Duration (Mins)', 'משך בדקות')}</label>
+                    <input 
+                      type="number" 
+                      disabled={formData.type === 'product'}
+                      value={formData.duration_minutes}
+                      onChange={e => setFormData({ ...formData, duration_minutes: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold disabled:bg-slate-100 outline-none"
+                    />
+                  </div>
+                )}
               </div>
-              <button type="submit" className="w-full mt-2 bg-gradient-to-e from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all shadow-md active:scale-[0.98]">
-                {t('Save Service', 'שמור שירות')}
-              </button>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{t('Description', 'תיאור קצר')}</label>
+                <textarea 
+                  rows="2"
+                  value={formData.description}
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
+                />
+              </div>
+
+              <div className="pt-3 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl transition-colors text-xs"
+                >
+                  {t('Cancel', 'ביטול')}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition-colors text-xs"
+                >
+                  {t('Save Item', 'שמור פריט לקטלוג')}
+                </button>
+              </div>
+
             </form>
           </div>
         </div>
-        
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {services.map(service => (
-              <div key={service.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-slate-800 text-lg text-start">{service.name}</h4>
-                  <span className="font-extrabold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg" dir="ltr"><span className="opacity-50 me-1">₪</span>{service.default_price.toFixed(2)}</span>
-                </div>
-                <p className="text-sm text-slate-500 mb-4 h-10 overflow-hidden line-clamp-2 text-start">{service.description || t('No description', 'ללא תיאור')}</p>
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50 w-fit px-2 py-1 rounded-md">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                  {service.duration_minutes} {t('mins', 'דקות')}
-                </div>
-              </div>
-            ))}
-            {services.length === 0 && (
-              <div className="col-span-2 py-12 text-center text-slate-400">
-                {t('No services defined yet.', 'לא הוגדרו שירותים עדיין.')}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
+
     </div>
   );
 };

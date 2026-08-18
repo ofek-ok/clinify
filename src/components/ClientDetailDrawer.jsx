@@ -6,13 +6,13 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const { 
     updatePatient, addClinicalNote, addPatientDocument, 
     addLeadCommunication, updateLeadFollowUp, appointments, 
-    services, getServiceName, t 
+    services, getServiceName, t, patientPackages, redeemPackageSession, issuePackageToPatient
   } = useContext(ClinicContext);
 
   const [activeTab, setActiveTab] = useState('general');
   
   // Note Form State (Simple or SOAP mode)
-  const [noteMode, setNoteMode] = useState('soap'); // 'soap' or 'simple'
+  const [noteMode, setNoteMode] = useState('soap');
   const [simpleNoteText, setSimpleNoteText] = useState('');
   const [soapForm, setSoapForm] = useState({
     subjective: '',
@@ -35,6 +35,9 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const phone = item.phone || '-';
   const email = item.email || '-';
   const tags = item.tags || (isPatient ? ['VIP', 'טיפול משמר'] : ['מתעניין', 'פייסבוק']);
+
+  // Patient active packages
+  const activePkgs = patientPackages.filter(p => p.patient_id === item.id);
 
   // Format phone for WhatsApp link
   const cleanPhone = phone.replace(/\D/g, '');
@@ -102,7 +105,18 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     alert(t('Saved successfully!', 'הפרטים נשמרו בהצלחה!'));
   };
 
-  // Render clinical note card (handles raw text or JSON SOAP)
+  // Handle issuing package directly from CRM
+  const handleQuickIssuePackage = () => {
+    const packageItems = services.filter(s => s.type === 'package');
+    if (packageItems.length === 0) {
+      alert(t('No package items in catalog. Add one in Settings first.', 'אין כרטיסיות מוגדרות בקטלוג. הוסף כרטיסייה בהגדרות קודם.'));
+      return;
+    }
+    issuePackageToPatient(item.id, packageItems[0]);
+    alert(t('Package issued successfully!', 'הכרטיסייה הונפקה בהצלחה למטופל!'));
+  };
+
+  // Render clinical note card
   const renderNoteContent = (noteContent) => {
     try {
       const parsed = JSON.parse(noteContent);
@@ -146,7 +160,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     <div className="fixed inset-0 z-50 overflow-hidden text-start">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-300"
         onClick={onClose}
       />
 
@@ -196,6 +210,17 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
             >
               📋 {t('General Details', 'מידע כללי ורפואי')}
             </button>
+
+            {isPatient && (
+              <button
+                onClick={() => setActiveTab('packages')}
+                className={`pb-3 px-3 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === 'packages' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                🎟️ {t('Punch Cards & Packages', 'כרטיסיות וחבילות')}
+              </button>
+            )}
 
             {isPatient && (
               <button
@@ -346,6 +371,69 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               </div>
             )}
 
+            {/* TAB: PACKAGES & PUNCH CARDS */}
+            {activeTab === 'packages' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex justify-between items-center bg-amber-50/60 p-4 rounded-2xl border border-amber-200/60">
+                  <div>
+                    <h4 className="font-extrabold text-amber-900 text-sm">{t('Patient Punch Cards & Package Balances', 'כרטיסיות וחבילות טיפול פעילות')}</h4>
+                    <p className="text-xs text-amber-700 mt-0.5">{t('Track remaining session credits and redeem treatments.', 'עקוב אחר יתרת הטיפולים בכרטיסייה ונכה טיפולים בזמן הגעה.')}</p>
+                  </div>
+                  <button 
+                    onClick={handleQuickIssuePackage}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-xl text-xs shadow-xs transition-colors shrink-0"
+                  >
+                    + {t('Issue New Package', 'הנפק כרטיסייה')}
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {activePkgs.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs">
+                      {t('No active packages found for this patient.', 'אין כרטיסיות פעילות למטופל זה. לחץ על "הנפק כרטיסייה" להנפקה מהירה.')}
+                    </div>
+                  ) : (
+                    activePkgs.map(pkg => (
+                      <div key={pkg.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="bg-amber-100 text-amber-800 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">
+                              🎟️ {t('Package Active', 'כרטיסייה בתוקף')}
+                            </span>
+                            <h4 className="font-extrabold text-slate-800 text-base mt-1">{pkg.name}</h4>
+                            <p className="text-xs text-slate-400 mt-0.5">{t('Purchased on', 'נרכשה בתאריך')}: {pkg.purchased_date}</p>
+                          </div>
+                          
+                          <div className="text-end">
+                            <span className="text-2xl font-black text-amber-600">{pkg.remaining_sessions} / {pkg.total_sessions}</span>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('Sessions Left', 'טיפולים נותרים')}</p>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-amber-500 h-full transition-all duration-500" 
+                            style={{ width: `${(pkg.remaining_sessions / pkg.total_sessions) * 100}%` }}
+                          />
+                        </div>
+
+                        <div className="pt-2 flex justify-end">
+                          <button 
+                            disabled={pkg.remaining_sessions <= 0}
+                            onClick={() => redeemPackageSession(pkg.id)}
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors disabled:opacity-50"
+                          >
+                            - {t('Redeem 1 Session', 'נכה טיפול 1 מהכרטיסייה')}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* TAB 2: CLINICAL NOTES (SOAP) */}
             {activeTab === 'notes' && (
               <div className="space-y-6 animate-in fade-in duration-300">
@@ -425,7 +513,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         rows="4"
                         placeholder={t('Write clinical observations, treatment provided, or next steps...', 'רשום הערות טיפוליות, סיכום יעוץ או הנחיות להמשך...')}
                         value={simpleNoteText}
-                        onChange={(e) => setNewNoteText(e.target.value)}
+                        onChange={(e) => setSimpleNoteText(e.target.value)}
                         className="w-full p-3 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
                       />
                     </div>
