@@ -10,7 +10,17 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   } = useContext(ClinicContext);
 
   const [activeTab, setActiveTab] = useState('general');
-  const [newNoteText, setNewNoteText] = useState('');
+  
+  // Note Form State (Simple or SOAP mode)
+  const [noteMode, setNoteMode] = useState('soap'); // 'soap' or 'simple'
+  const [simpleNoteText, setSimpleNoteText] = useState('');
+  const [soapForm, setSoapForm] = useState({
+    subjective: '',
+    objective: '',
+    assessment: '',
+    plan: ''
+  });
+
   const [newDocName, setNewDocName] = useState('');
   const [newCommNote, setNewCommNote] = useState('');
   const [commType, setCommType] = useState('call');
@@ -26,7 +36,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const email = item.email || '-';
   const tags = item.tags || (isPatient ? ['VIP', 'טיפול משמר'] : ['מתעניין', 'פייסבוק']);
 
-  // Format phone for WhatsApp link (remove non-digits, replace leading 0 with 972)
+  // Format phone for WhatsApp link
   const cleanPhone = phone.replace(/\D/g, '');
   const formattedWaPhone = cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1) : cleanPhone;
   const whatsappUrl = `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, פניתי אלייך ממרפאת Clinify`)}`;
@@ -43,12 +53,31 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     setTagInput('');
   };
 
-  // Add clinical note handler
+  // Add clinical note handler (SOAP or Simple)
   const handleAddNote = (e) => {
     e.preventDefault();
-    if (!newNoteText.trim()) return;
-    addClinicalNote(item.id, newNoteText);
-    setNewNoteText('');
+    let noteContent = '';
+
+    if (noteMode === 'soap') {
+      if (!soapForm.subjective && !soapForm.objective && !soapForm.assessment && !soapForm.plan) {
+        alert(t('Please fill in at least one SOAP section.', 'אנא מלא לפחות סעיף אחד בטופס ה-SOAP.'));
+        return;
+      }
+      noteContent = JSON.stringify({
+        isSoap: true,
+        subjective: soapForm.subjective,
+        objective: soapForm.objective,
+        assessment: soapForm.assessment,
+        plan: soapForm.plan
+      });
+    } else {
+      if (!simpleNoteText.trim()) return;
+      noteContent = simpleNoteText;
+    }
+
+    addClinicalNote(item.id, noteContent);
+    setSimpleNoteText('');
+    setSoapForm({ subjective: '', objective: '', assessment: '', plan: '' });
   };
 
   // Add document handler
@@ -71,6 +100,46 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const handleSaveFollowUp = () => {
     updateLeadFollowUp(item.id, followUpDateInput, lostReasonInput);
     alert(t('Saved successfully!', 'הפרטים נשמרו בהצלחה!'));
+  };
+
+  // Render clinical note card (handles raw text or JSON SOAP)
+  const renderNoteContent = (noteContent) => {
+    try {
+      const parsed = JSON.parse(noteContent);
+      if (parsed && parsed.isSoap) {
+        return (
+          <div className="space-y-3 pt-1">
+            {parsed.subjective && (
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+                <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 me-2">S - Subjective (תלונה/תיאור)</span>
+                <p className="text-xs text-slate-700 font-medium mt-1">{parsed.subjective}</p>
+              </div>
+            )}
+            {parsed.objective && (
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+                <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 me-2">O - Objective (ממצאים/בדיקה)</span>
+                <p className="text-xs text-slate-700 font-medium mt-1">{parsed.objective}</p>
+              </div>
+            )}
+            {parsed.assessment && (
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+                <span className="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 me-2">A - Assessment (אבחון/הערכה)</span>
+                <p className="text-xs text-slate-700 font-medium mt-1">{parsed.assessment}</p>
+              </div>
+            )}
+            {parsed.plan && (
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+                <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 me-2">P - Plan (תוכנית המשך)</span>
+                <p className="text-xs text-slate-700 font-medium mt-1">{parsed.plan}</p>
+              </div>
+            )}
+          </div>
+        );
+      }
+    } catch (e) {
+      // Raw string
+    }
+    return <p className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-line">{noteContent}</p>;
   };
 
   return (
@@ -99,53 +168,26 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                       {isPatient ? t('Patient', 'מטופל במערכת') : t('Lead', 'ליד בצנרת')}
                     </span>
-                    <span className="text-xs text-slate-400" dir="ltr">{phone}</span>
+                    <a 
+                      href={whatsappUrl} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 transition-colors"
+                    >
+                      🟢 WhatsApp
+                    </a>
                   </div>
                 </div>
               </div>
 
-              <button 
-                onClick={onClose} 
-                className="text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
-            </div>
-
-            {/* Quick Actions Bar */}
-            <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center gap-3">
-              <a 
-                href={whatsappUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.14 4.162 4.183-1.101z"/></svg>
-                <span>WhatsApp</span>
-              </a>
-
-              <a 
-                href={`tel:${phone}`}
-                className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all border border-slate-700"
-              >
-                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                <span>{t('Call', 'חייג')}: {phone}</span>
-              </a>
-
-              {email !== '-' && (
-                <a 
-                  href={`mailto:${email}`}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all border border-slate-700"
-                >
-                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                  <span>Email</span>
-                </a>
-              )}
             </div>
           </div>
 
-          {/* Sub-Tabs Bar */}
-          <div className="flex border-b border-slate-100 bg-slate-50 px-6 pt-3 gap-2 overflow-x-auto shrink-0">
+          {/* Drawer Sub-Nav Tabs */}
+          <div className="flex border-b border-slate-100 px-6 pt-3 bg-slate-50/50 shrink-0 overflow-x-auto gap-2">
             <button
               onClick={() => setActiveTab('general')}
               className={`pb-3 px-3 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
@@ -162,7 +204,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   activeTab === 'notes' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
-                📝 {t('Clinical Notes', 'סיכומי טיפול (SOAP)')}
+                📝 {t('Clinical Notes (SOAP)', 'תיק רפואי וסיכומי טיפול')}
               </button>
             )}
 
@@ -204,7 +246,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
             {/* TAB 1: GENERAL */}
             {activeTab === 'general' && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Contact Information */}
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Contact & Personal Details', 'פרטי התקשרות ואישיים')}</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -229,7 +270,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   </div>
                 </div>
 
-                {/* Medical & Allergies */}
                 {isPatient && (
                   <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200/60 space-y-3">
                     <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -242,7 +282,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   </div>
                 )}
 
-                {/* Lead Lost Reason / Follow up */}
                 {!isPatient && (
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('Lead Management Details', 'ניהול ומעקב ליד')}</h4>
@@ -281,7 +320,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   </div>
                 )}
 
-                {/* Tags Management */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Tags & Labels', 'תגיות וסיווג')}</h4>
                   <div className="flex flex-wrap gap-2">
@@ -308,46 +346,132 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               </div>
             )}
 
-            {/* TAB 2: CLINICAL NOTES */}
+            {/* TAB 2: CLINICAL NOTES (SOAP) */}
             {activeTab === 'notes' && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Add Note Form */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <h4 className="text-xs font-bold text-slate-700 mb-2">{t('Add Clinical / Treatment Note (SOAP)', 'הוספת סיכום טיפול / הערה קלינית')}</h4>
-                  <textarea 
-                    rows="3"
-                    placeholder={t('Write clinical observations, treatment provided, or next steps...', 'רשום הערות טיפוליות, סיכום יעוץ או הנחיות להמשך...')}
-                    value={newNoteText}
-                    onChange={(e) => setNewNoteText(e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
-                  />
-                  <div className="flex justify-end mt-2">
+                
+                {/* Note Form Header Switch */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4 shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      {t('New Clinical Session Note (SOAP)', 'הזנת סיכום טיפול קליני (SOAP)')}
+                    </h4>
+                    <div className="bg-slate-200 p-0.5 rounded-lg flex text-[11px] font-bold">
+                      <button 
+                        type="button"
+                        onClick={() => setNoteMode('soap')}
+                        className={`px-3 py-1 rounded-md transition-all ${noteMode === 'soap' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'}`}
+                      >
+                        {t('Structured SOAP', 'תבנית מובנית SOAP')}
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setNoteMode('simple')}
+                        className={`px-3 py-1 rounded-md transition-all ${noteMode === 'simple' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'}`}
+                      >
+                        {t('Free Text', 'טקסט חופשי')}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Structured SOAP Form */}
+                  {noteMode === 'soap' ? (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-blue-700 mb-1">S - Subjective (תלונת המטופל ותיאור חופשי)</label>
+                        <textarea 
+                          rows="2"
+                          placeholder={t('Patient reported symptoms, pain level, history...', 'תלונות המטופל, דרגת כאב, תיאור פגישה...')}
+                          value={soapForm.subjective}
+                          onChange={e => setSoapForm({...soapForm, subjective: e.target.value})}
+                          className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-emerald-700 mb-1">O - Objective (ממצאים קליניים ובדיקה פיזית)</label>
+                        <textarea 
+                          rows="2"
+                          placeholder={t('Clinical observations, range of motion, test results...', 'ממצאים בבדיקה, טווח תנועה, תגובות, בדיקות רפואיות...')}
+                          value={soapForm.objective}
+                          onChange={e => setSoapForm({...soapForm, objective: e.target.value})}
+                          className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-purple-700 mb-1">A - Assessment (אבחון והערכת התקדמות)</label>
+                        <textarea 
+                          rows="2"
+                          placeholder={t('Practitioner diagnosis, progress assessment...', 'אבחנת המטפל, הערכת התקדמות הטיפול...')}
+                          value={soapForm.assessment}
+                          onChange={e => setSoapForm({...soapForm, assessment: e.target.value})}
+                          className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-amber-700 mb-1">P - Plan (תוכנית המשך, תרגילים והנחיות)</label>
+                        <textarea 
+                          rows="2"
+                          placeholder={t('Treatment plan, homework exercises, next appointment date...', 'תוכנית המשך, תרגילים לבית, הנחיות לפגישה הבאה...')}
+                          value={soapForm.plan}
+                          onChange={e => setSoapForm({...soapForm, plan: e.target.value})}
+                          className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <textarea 
+                        rows="4"
+                        placeholder={t('Write clinical observations, treatment provided, or next steps...', 'רשום הערות טיפוליות, סיכום יעוץ או הנחיות להמשך...')}
+                        value={simpleNoteText}
+                        onChange={(e) => setNewNoteText(e.target.value)}
+                        className="w-full p-3 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-1">
                     <button 
                       onClick={handleAddNote}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-xs transition-colors"
                     >
-                      {t('Save Note', 'שמור סיכום טיפול')}
+                      {t('Save SOAP Note', 'שמור סיכום טיפול')}
                     </button>
                   </div>
                 </div>
 
                 {/* Notes History List */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Notes History', 'היסטוריית סיכומי טיפול')}</h4>
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Medical Timeline & Notes History', 'ציר זמן - היסטוריית סיכומי טיפול')}</h4>
                   {(item.clinical_notes || [
-                    { id: '1', created_at: new Date().toISOString(), author: 'ד"ר אוקונסקי', content: 'בוצעה בדיקה ראשונית וצילום פנורמי. הומלץ על תוכנית טיפול לשיקום.' }
+                    { 
+                      id: 'demo_soap_1', 
+                      created_at: new Date().toISOString(), 
+                      author: 'ד"ר אוקונסקי', 
+                      content: JSON.stringify({
+                        isSoap: true,
+                        subjective: 'המטופל מדווח על כאב גב תחתון דרגה 6/10 לאחר פעילות ספורטיבית.',
+                        objective: 'הגבלה בכיפוף לפנים, רגישות למגע בחוליות L4-L5.',
+                        assessment: 'עומס שרירי מוגבר. שיפור מתוני לעומת טיפול קודם.',
+                        plan: 'טיפול מנואלי, מתיחות להמסטרינגס, פגישת מעקב בעוד שבוע.'
+                      })
+                    }
                   ]).map((note) => (
-                    <div key={note.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                      <div className="flex justify-between items-center text-xs text-slate-400 border-b border-slate-100 pb-2">
-                        <span className="font-bold text-slate-700">{note.author}</span>
-                        <span>{new Date(note.created_at).toLocaleDateString('he-IL')}</span>
+                    <div key={note.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 hover:border-slate-300 transition-colors">
+                      <div className="flex justify-between items-center text-xs text-slate-400 border-b border-slate-100 pb-2.5">
+                        <span className="font-bold text-slate-800 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          {note.author}
+                        </span>
+                        <span className="font-medium bg-slate-100 px-2.5 py-0.5 rounded-md text-slate-600 text-[11px]">{new Date(note.created_at).toLocaleDateString('he-IL')}</span>
                       </div>
-                      <p className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-line">
-                        {note.content}
-                      </p>
+                      
+                      {renderNoteContent(note.content)}
                     </div>
                   ))}
                 </div>
+
               </div>
             )}
 
