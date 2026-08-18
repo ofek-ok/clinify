@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 import ServicesCatalog from './ServicesCatalog';
@@ -9,6 +9,12 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
   const [activeTab, setActiveTab] = useState(activeFormSubTab || 'hours');
   const { businessHours, updateBusinessHour, bookingSettings, updateBookingSettings } = useContext(ClinicContext);
   const { t } = useContext(LanguageContext);
+
+  useEffect(() => {
+    if (activeFormSubTab) {
+      setActiveTab(activeFormSubTab);
+    }
+  }, [activeFormSubTab]);
 
   const copyBookingLink = () => {
     const link = `${window.location.origin}/book`;
@@ -190,7 +196,7 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
                   onClick={copyBookingLink}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 00-2 2h10a2 2 0 00-2v-1M8 5a2 2 0 00-2 2h2a2 2 0 00-2-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                   {t('Copy Link', 'העתק קישור ללוח')}
                 </button>
                 <a 
@@ -199,7 +205,7 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
                   rel="noreferrer"
                   className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center gap-2 border border-slate-700"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 00-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                   {t('Preview Portal', 'תצוגה מקדימה')}
                 </a>
               </div>
