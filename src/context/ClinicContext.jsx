@@ -104,8 +104,17 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addPayment = async (payment) => {
-    const { data, error } = await supabase.from('payments').insert([{...payment, payment_date: new Date().toISOString()}]).select();
+    const payload = {
+      ...payment,
+      payment_date: payment.payment_date || new Date().toISOString()
+    };
+    const { data, error } = await supabase.from('payments').insert([payload]).select();
     if (!error && data) setPayments([...payments, data[0]]);
+  };
+
+  const updatePaymentStatus = async (paymentId, newStatus) => {
+    const { error } = await supabase.from('payments').update({ status: newStatus }).eq('id', paymentId);
+    if (!error) setPayments(payments.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
   };
 
   // Forms API
@@ -200,7 +209,7 @@ export const ClinicProvider = ({ children }) => {
     <ClinicContext.Provider value={{
       isLoading,
       patients, services, businessHours, appointments, leads, tasks, payments, forms, formSubmissions,
-      addPatient, addService, addAppointment, addLead, addTask, addPayment, addForm, updateForm, addFormSubmission,
+      addPatient, addService, addAppointment, addLead, addTask, addPayment, updatePaymentStatus, addForm, updateForm, addFormSubmission,
       updateLeadStatus, updateTaskStatus, updateBusinessHour,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,
