@@ -3,7 +3,9 @@ import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
 const ServicesCatalog = () => {
-  const { services = [], addService, updateService, deleteService, t } = useContext(ClinicContext);
+  const { services = [], addService, updateService, deleteService } = useContext(ClinicContext);
+  const { t } = useContext(LanguageContext);
+
   const [activeTypeFilter, setActiveTypeFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
