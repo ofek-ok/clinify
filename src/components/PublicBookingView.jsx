@@ -26,7 +26,7 @@ const PublicBookingView = () => {
     phone: '',
     email: '',
     notes: '',
-    paymentMethod: 'clinic', // 'clinic' or 'package'
+    paymentMethod: 'clinic',
     acceptedTerms: false
   });
 
@@ -121,10 +121,12 @@ const PublicBookingView = () => {
 
         {/* Brand & Clinic Header */}
         <div className="text-center bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-4 text-sky-400 font-extrabold shadow-md">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-md shrink-0">
+            {bookingSettings.logoUrl ? (
+              <img src={bookingSettings.logoUrl} alt="Clinic Logo" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-slate-900 flex items-center justify-center text-sky-400 font-extrabold text-xl">C</div>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Clinify</h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1.5 font-medium max-w-md mx-auto">
@@ -390,7 +392,7 @@ const PublicBookingView = () => {
                 rel="noreferrer"
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-sm"
               >
-                <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 {t('Add to Google Calendar', 'הוסף ל-Google Calendar שלי')}
               </a>
             </div>

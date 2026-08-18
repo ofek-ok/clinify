@@ -16,6 +16,17 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
     alert(t('Public Booking link copied to clipboard!', 'הקישור הציבורי לזימון תורים הועתק ללוח!'));
   };
 
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateBookingSettings({ logoUrl: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const getDayName = (dayOfWeek) => {
     const dayMap = {
       'Sunday': t('Sunday', 'ראשון'),
@@ -179,7 +190,7 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
                   onClick={copyBookingLink}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 00-2 2h10a2 2 0 00-2v-1M8 5a2 2 0 00-2 2h2a2 2 0 00-2-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                   {t('Copy Link', 'העתק קישור ללוח')}
                 </button>
                 <a 
@@ -188,15 +199,56 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
                   rel="noreferrer"
                   className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center gap-2 border border-slate-700"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 00-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                   {t('Preview Portal', 'תצוגה מקדימה')}
                 </a>
               </div>
             </div>
 
+            {/* Logo Upload Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                {t('Clinic Logo Customization', 'לוגו הקליניקה (מוצג בדף קביעת התור)')}
+              </h3>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative group">
+                  {bookingSettings.logoUrl ? (
+                    <img src={bookingSettings.logoUrl} alt="Clinic Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                  )}
+                </div>
+
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Upload Logo File', 'העלה קובץ לוגו חדש')}</label>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('Or Image URL', 'או הדבק קישור לתמונה (URL)')}</label>
+                    <input 
+                      type="text" 
+                      placeholder="https://example.com/logo.png"
+                      value={bookingSettings.logoUrl || ''}
+                      onChange={e => updateBookingSettings({ logoUrl: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Configurable Features Controls */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-6">
-              <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3">
                 {t('Configure Booking Link Capabilities', 'ניהול פיצ׳רים בעמוד הזימון הציבורי')}
               </h3>
 

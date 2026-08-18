@@ -28,7 +28,8 @@ export const ClinicProvider = ({ children }) => {
     requirePolicy: true,
     cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש. ביטול במעמד קצר יותר יחויב במחצית משווי הטיפול.',
     welcomeMessage: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
-    clinicAddress: 'הרצל 15, תל אביב (בניין B, קומה 3)'
+    clinicAddress: 'הרצל 15, תל אביב (בניין B, קומה 3)',
+    logoUrl: '/clinify-logo.png'
   });
   
   const [businessHours, setBusinessHours] = useState([
@@ -276,7 +277,6 @@ export const ClinicProvider = ({ children }) => {
     });
   };
 
-  // Helper to generate open time slots for a given date and service duration
   const getAvailableSlotsForDate = (dateStr, durationMinutes = 30) => {
     if (!dateStr) return [];
     const dt = new Date(dateStr);
@@ -290,15 +290,11 @@ export const ClinicProvider = ({ children }) => {
     const end = new Date(`${dateStr}T${hours.endTime}:00`);
 
     while (current.getTime() + durationMinutes * 60000 <= end.getTime()) {
-      const timeIso = current.toISOString();
       const timeDisplay = current.toTimeString().substring(0, 5);
-      
-      // Check collision
       const available = isTimeSlotAvailable(current.toISOString().split('T')[0] + 'T' + timeDisplay, durationMinutes);
       if (available) {
         slots.push(timeDisplay);
       }
-      // Step by 30 mins
       current = new Date(current.getTime() + 30 * 60000);
     }
     return slots;
