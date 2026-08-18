@@ -126,6 +126,16 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
+  const updateService = async (serviceId, updates) => {
+    const { data, error } = await supabase.from('services').update(updates).eq('id', serviceId).select();
+    setServices(prev => prev.map(s => s.id === serviceId ? (data && data[0] ? data[0] : { ...s, ...updates }) : s));
+  };
+
+  const deleteService = async (serviceId) => {
+    await supabase.from('services').delete().eq('id', serviceId);
+    setServices(prev => prev.filter(s => s.id !== serviceId));
+  };
+
   // Issue Package to Patient
   const issuePackageToPatient = (patientId, catalogItem) => {
     const newPkg = {
@@ -434,7 +444,7 @@ export const ClinicProvider = ({ children }) => {
       isLoading,
       patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, addAppointment, addLead, addTask, 
+      addService, updateService, deleteService, addAppointment, addLead, addTask, 
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
       addExpense, updateExpense, deleteExpense, 
       addForm, updateForm, addFormSubmission, updateBookingSettings,

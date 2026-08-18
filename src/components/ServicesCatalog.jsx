@@ -3,9 +3,11 @@ import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
 const ServicesCatalog = () => {
-  const { services, addService, t } = useContext(ClinicContext);
+  const { services, addService, updateService, deleteService, t } = useContext(ClinicContext);
   const [activeTypeFilter, setActiveTypeFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItemId, setEditingItemId] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -15,22 +17,62 @@ const ServicesCatalog = () => {
     session_count: '10'
   });
 
+  const openCreateModal = () => {
+    setEditingItemId(null);
+    setFormData({
+      name: '',
+      description: '',
+      duration_minutes: '45',
+      default_price: '',
+      type: 'service',
+      session_count: '10'
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (item) => {
+    setEditingItemId(item.id);
+    setFormData({
+      name: item.name || '',
+      description: item.description || '',
+      duration_minutes: item.duration_minutes !== undefined ? String(item.duration_minutes) : '45',
+      default_price: item.default_price !== undefined ? String(item.default_price) : '',
+      type: item.type || 'service',
+      session_count: item.session_count !== undefined ? String(item.session_count) : '10'
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteItem = async (id) => {
+    if (window.confirm(t('Are you sure you want to delete this catalog item?', 'האם אתה בטוח שברצונך למחוק פריט זה מהקטלוג?'))) {
+      await deleteService(id);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.default_price) {
       alert(t('Please enter item name and price.', 'אנא מלא שם פריט ומחיר.'));
       return;
     }
-    addService({
+
+    const payload = {
       name: formData.name,
       description: formData.description,
       duration_minutes: formData.type === 'product' ? 0 : parseInt(formData.duration_minutes || 0),
       default_price: parseFloat(formData.default_price),
       type: formData.type,
       session_count: formData.type === 'package' ? parseInt(formData.session_count || 10) : null
-    });
+    };
+
+    if (editingItemId) {
+      updateService(editingItemId, payload);
+    } else {
+      addService(payload);
+    }
+
     setIsModalOpen(false);
-    setFormData({ name: '', description: '', duration_minutes: '45', default_price: '', type: 'service', session_count: '10' });
+    setEditingItemId(null);
   };
 
   const filteredItems = services.filter(item => {
@@ -103,7 +145,7 @@ const ServicesCatalog = () => {
         </div>
 
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors flex items-center gap-2 text-xs self-start sm:self-auto"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
@@ -116,13 +158,15 @@ const ServicesCatalog = () => {
         {filteredItems.map(item => {
           const itemType = item.type || 'service';
           return (
-            <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group">
+            <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group relative">
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${getTypeBadge(itemType)}`}>
                     {translateType(itemType)}
                   </span>
-                  <span className="text-xl font-black text-slate-800" dir="ltr">₪{item.default_price}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-black text-slate-800" dir="ltr">₪{item.default_price}</span>
+                  </div>
                 </div>
 
                 <div>
@@ -134,28 +178,46 @@ const ServicesCatalog = () => {
               <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-semibold">
                 {itemType === 'package' ? (
                   <span className="text-amber-600 font-bold flex items-center gap-1">
-                    🎟️ {item.session_count || 10} {t('sessions included', 'טיפולים כלולים בחבילה')}
+                    🎟️ {item.session_count || 10} {t('sessions included', 'טיפולים כלולים')}
                   </span>
                 ) : itemType === 'product' ? (
-                  <span>📦 {t('Physical product for sale', 'מוצר למכירהבקליניקה')}</span>
+                  <span>📦 {t('Physical product', 'מוצר למכירה')}</span>
                 ) : itemType === 'subscription' ? (
-                  <span className="text-purple-600 font-bold">♾️ {t('Monthly retainer / mentorship', 'תוכנית ליווי מתמשכת')}</span>
+                  <span className="text-purple-600 font-bold">♾️ {t('Monthly retainer', 'מנוי מתמשך')}</span>
                 ) : (
                   <span>⏱️ {item.duration_minutes} {t('minutes', 'דקות')}</span>
                 )}
+
+                {/* Edit & Delete Action Buttons */}
+                <div className="flex items-center gap-1.5">
+                  <button 
+                    onClick={() => openEditModal(item)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                    title={t('Edit Item', 'ערוך פריט')}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                    title={t('Delete Item', 'מחק פריט')}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Create Item Modal */}
+      {/* Create / Edit Item Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="font-extrabold text-lg tracking-tight">{t('Add Offering to Catalog', 'הוספת פריט/שירות לקטלוג')}</h3>
+                <h3 className="font-extrabold text-lg tracking-tight">{editingItemId ? t('Edit Offering', 'עריכת פריט בקטלוג') : t('Add Offering to Catalog', 'הוספת פריט/שירות לקטלוג')}</h3>
                 <p className="text-slate-400 text-xs mt-0.5">{t('Define a service, package, product or subscription.', 'צור טיפול בודד, כרטיסייה, מוצר פיזי או תוכנית ליווי.')}</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
@@ -253,7 +315,7 @@ const ServicesCatalog = () => {
                   type="submit" 
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition-colors text-xs"
                 >
-                  {t('Save Item', 'שמור פריט לקטלוג')}
+                  {editingItemId ? t('Update Item', 'עדכן פריט') : t('Save Item', 'שמור פריט לקטלוג')}
                 </button>
               </div>
 
