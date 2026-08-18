@@ -4,6 +4,7 @@ import { ClinicProvider } from './context/ClinicContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
 import PublicFormView from './components/PublicFormView';
+import PublicBookingView from './components/PublicBookingView';
 import './index.css';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
       <LanguageProvider>
         <ClinicProvider>
           <Routes>
+            <Route path="/book" element={<PublicBookingView />} />
             <Route path="/form/:id" element={<PublicFormView />} />
             <Route path="/*" element={<Layout />} />
           </Routes>
