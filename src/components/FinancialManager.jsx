@@ -11,7 +11,11 @@ const FinancialManager = () => {
     patients, 
     services, 
     addPayment, 
+    updatePayment,
+    deletePayment,
     addExpense,
+    updateExpense,
+    deleteExpense,
     updatePaymentStatus, 
     getPatientName, 
     getServiceName 
@@ -25,11 +29,14 @@ const FinancialManager = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Modals
+  // Modals & Editing Item State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
 
-  // New Payment Form State
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+
+  // New/Edit Payment Form State
   const [paymentForm, setPaymentForm] = useState({
     patient_id: '',
     appointment_id: '',
@@ -39,7 +46,7 @@ const FinancialManager = () => {
     payment_date: new Date().toISOString().split('T')[0]
   });
 
-  // New Expense Form State
+  // New/Edit Expense Form State
   const [expenseForm, setExpenseForm] = useState({
     title: '',
     category: 'Equipment',
@@ -99,10 +106,6 @@ const FinancialManager = () => {
       .filter(e => new Date(e.expense_date).getMonth() === currMonth && new Date(e.expense_date).getFullYear() === currYear)
       .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
   }, [expenses]);
-
-  const thisMonthNetProfit = useMemo(() => {
-    return thisMonthRevenue - thisMonthExpenses;
-  }, [thisMonthRevenue, thisMonthExpenses]);
 
   // Chart Data: Expense Category Distribution
   const expenseCategoryDistribution = useMemo(() => {
@@ -191,6 +194,32 @@ const FinancialManager = () => {
     }).sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date));
   }, [expenses, categoryFilter, methodFilter, searchTerm]);
 
+  // Open Payment Modal for Create or Edit
+  const openPaymentModal = (paymentToEdit = null) => {
+    if (paymentToEdit) {
+      setEditingPaymentId(paymentToEdit.id);
+      setPaymentForm({
+        patient_id: paymentToEdit.patient_id || '',
+        appointment_id: paymentToEdit.appointment_id || '',
+        amount: paymentToEdit.amount || '',
+        payment_method: paymentToEdit.payment_method || 'Credit Card',
+        status: paymentToEdit.status || 'paid',
+        payment_date: paymentToEdit.payment_date ? paymentToEdit.payment_date.split('T')[0] : new Date().toISOString().split('T')[0]
+      });
+    } else {
+      setEditingPaymentId(null);
+      setPaymentForm({
+        patient_id: '',
+        appointment_id: '',
+        amount: '',
+        payment_method: 'Credit Card',
+        status: 'paid',
+        payment_date: new Date().toISOString().split('T')[0]
+      });
+    }
+    setIsPaymentModalOpen(true);
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
@@ -198,24 +227,53 @@ const FinancialManager = () => {
       return;
     }
 
-    await addPayment({
+    const payload = {
       patient_id: paymentForm.patient_id || null,
       appointment_id: paymentForm.appointment_id || null,
       amount: parseFloat(paymentForm.amount),
       payment_method: paymentForm.payment_method,
       status: paymentForm.status,
       payment_date: paymentForm.payment_date
-    });
+    };
+
+    if (editingPaymentId) {
+      await updatePayment(editingPaymentId, payload);
+    } else {
+      await addPayment(payload);
+    }
 
     setIsPaymentModalOpen(false);
-    setPaymentForm({
-      patient_id: '',
-      appointment_id: '',
-      amount: '',
-      payment_method: 'Credit Card',
-      status: 'paid',
-      payment_date: new Date().toISOString().split('T')[0]
-    });
+    setEditingPaymentId(null);
+  };
+
+  const handleDeletePayment = async (id) => {
+    if (window.confirm(t('Are you sure you want to delete this payment record?', 'האם אתה בטוח שברצונך למחוק תשלום זה?'))) {
+      await deletePayment(id);
+    }
+  };
+
+  // Open Expense Modal for Create or Edit
+  const openExpenseModal = (expenseToEdit = null) => {
+    if (expenseToEdit) {
+      setEditingExpenseId(expenseToEdit.id);
+      setExpenseForm({
+        title: expenseToEdit.title || '',
+        category: expenseToEdit.category || 'Equipment',
+        amount: expenseToEdit.amount || '',
+        payment_method: expenseToEdit.payment_method || 'Credit Card',
+        expense_date: expenseToEdit.expense_date ? expenseToEdit.expense_date.split('T')[0] : new Date().toISOString().split('T')[0]
+      });
+    } else {
+      setEditingExpenseId(null);
+      setExpenseForm({
+        title: '',
+        category: 'Equipment',
+        amount: '',
+        payment_method: 'Credit Card',
+        expense_date: new Date().toISOString().split('T')[0]
+      });
+    }
+    setIsExpenseModalOpen(true);
   };
 
   const handleExpenseSubmit = async (e) => {
@@ -229,22 +287,28 @@ const FinancialManager = () => {
       return;
     }
 
-    await addExpense({
+    const payload = {
       title: expenseForm.title,
       category: expenseForm.category,
       amount: parseFloat(expenseForm.amount),
       payment_method: expenseForm.payment_method,
       expense_date: expenseForm.expense_date
-    });
+    };
+
+    if (editingExpenseId) {
+      await updateExpense(editingExpenseId, payload);
+    } else {
+      await addExpense(payload);
+    }
 
     setIsExpenseModalOpen(false);
-    setExpenseForm({
-      title: '',
-      category: 'Equipment',
-      amount: '',
-      payment_method: 'Credit Card',
-      expense_date: new Date().toISOString().split('T')[0]
-    });
+    setEditingExpenseId(null);
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (window.confirm(t('Are you sure you want to delete this expense record?', 'האם אתה בטוח שברצונך למחוק הוצאה זו?'))) {
+      await deleteExpense(id);
+    }
   };
 
   const translateMethod = (method) => {
@@ -273,19 +337,19 @@ const FinancialManager = () => {
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t('Financials & Expense Management', 'פיננסים, תשלומים וניהול הוצאות')}</h2>
-          <p className="text-slate-500 text-sm mt-1 font-medium">{t('Full financial overview of clinic income, expenses, and net profit.', 'דוח כספי מלא: הכנסות, הוצאות הקליניקה וחישוב רווח נקי.')}</p>
+          <p className="text-slate-500 text-sm mt-1 font-medium">{t('Full financial overview of clinic income, expenses, and net profit.', 'דוח כספי מלא: הכנסות, הוצאות הקליניקה, עריכה ידנית וסליקה.')}</p>
         </div>
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsExpenseModalOpen(true)}
+            onClick={() => openExpenseModal(null)}
             className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2 text-xs"
           >
             <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"></path></svg>
             {t('Log Expense', 'רשום הוצאה חדשה')}
           </button>
           <button 
-            onClick={() => setIsPaymentModalOpen(true)}
+            onClick={() => openPaymentModal(null)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2 text-xs"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
@@ -483,6 +547,12 @@ const FinancialManager = () => {
               >
                 {t('Pending', 'ממתין')}
               </button>
+              <button 
+                onClick={() => setStatusFilter('refunded')} 
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === 'refunded' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('Refunded', 'זיכוי')}
+              </button>
             </div>
 
             {/* Search & Method Filter */}
@@ -570,18 +640,32 @@ const FinancialManager = () => {
                             {translateStatus(p.status)}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-end">
+                        <td className="py-4 px-4 text-end space-x-2 space-x-reverse">
                           {p.status === 'pending' && (
                             <button 
                               onClick={() => updatePaymentStatus(p.id, 'paid')}
-                              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors"
+                              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors"
                             >
                               {t('Mark Paid', 'סימון כסולק')}
                             </button>
                           )}
-                          {p.status === 'paid' && (
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t('Completed', 'הושלם')}</span>
-                          )}
+                          
+                          {/* Manual Edit Button */}
+                          <button 
+                            onClick={() => openPaymentModal(p)}
+                            className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors"
+                          >
+                            {t('Edit', 'ערוך')}
+                          </button>
+
+                          {/* Delete Button */}
+                          <button 
+                            onClick={() => handleDeletePayment(p.id)}
+                            className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors"
+                            title={t('Delete Record', 'מחק עסקה')}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -650,13 +734,14 @@ const FinancialManager = () => {
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Title / Description', 'תיאור ההוצאה')}</th>
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Category', 'קטגוריה')}</th>
                   <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Method', 'אמצעי תשלום')}</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-end">{t('Amount', 'סכום')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-start">{t('Amount', 'סכום')}</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-end">{t('Actions', 'פעולות')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredExpenses.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="py-12 text-center text-sm font-medium text-slate-400">
+                    <td colSpan="6" className="py-12 text-center text-sm font-medium text-slate-400">
                       {t('No expenses logged yet.', 'לא נרשמו הוצאות התואמות את התנאים.')}
                     </td>
                   </tr>
@@ -679,8 +764,23 @@ const FinancialManager = () => {
                           {translateMethod(exp.payment_method)}
                         </span>
                       </td>
-                      <td className="py-4 px-4 font-black text-rose-600 text-sm text-end" dir="ltr">
+                      <td className="py-4 px-4 font-black text-rose-600 text-sm text-start" dir="ltr">
                         -<span className="opacity-50 me-1">₪</span>{parseFloat(exp.amount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 text-end space-x-2 space-x-reverse">
+                        <button 
+                          onClick={() => openExpenseModal(exp)}
+                          className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors"
+                        >
+                          {t('Edit', 'ערוך')}
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteExpense(exp.id)}
+                          className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors"
+                          title={t('Delete Record', 'מחק הוצאה')}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -691,14 +791,14 @@ const FinancialManager = () => {
         </div>
       )}
 
-      {/* 5. Log New Payment Modal */}
+      {/* 5. Log / Edit Payment Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="bg-[#0f172a] p-6 text-white flex justify-between items-center">
               <div>
-                <h3 className="font-extrabold text-xl tracking-tight">{t('Log New Payment', 'רישום תשלום חדש')}</h3>
-                <p className="text-slate-400 text-xs mt-1">{t('Record a transaction directly into the ledger.', 'הזן עסקה כספית ישירות לספרי הקליניקה.')}</p>
+                <h3 className="font-extrabold text-xl tracking-tight">{editingPaymentId ? t('Edit Payment Record', 'עריכת תשלום קיים') : t('Log New Payment', 'רישום תשלום חדש')}</h3>
+                <p className="text-slate-400 text-xs mt-1">{t('Record or update a transaction directly in the ledger.', 'הזן או עדכן עסקה כספית בספרי הקליניקה.')}</p>
               </div>
               <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -798,6 +898,7 @@ const FinancialManager = () => {
                   >
                     <option value="paid">{t('Paid', 'שולם')}</option>
                     <option value="pending">{t('Pending', 'ממתין')}</option>
+                    <option value="refunded">{t('Refunded', 'זיכוי')}</option>
                   </select>
                 </div>
 
@@ -825,7 +926,7 @@ const FinancialManager = () => {
                   type="submit" 
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors text-sm"
                 >
-                  {t('Save Payment', 'שמור תשלום')}
+                  {editingPaymentId ? t('Update Payment', 'עדכן תשלום') : t('Save Payment', 'שמור תשלום')}
                 </button>
               </div>
 
@@ -834,14 +935,14 @@ const FinancialManager = () => {
         </div>
       )}
 
-      {/* 6. Log New Expense Modal */}
+      {/* 6. Log / Edit Expense Modal */}
       {isExpenseModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="bg-rose-950 p-6 text-white flex justify-between items-center border-b border-rose-900">
               <div>
-                <h3 className="font-extrabold text-xl tracking-tight text-white">{t('Log New Expense', 'רישום הוצאה חדשה')}</h3>
-                <p className="text-rose-300 text-xs mt-1">{t('Record clinic expenses and operational costs.', 'הזן הוצאת תפעול, שכירות או ציוד לקליניקה.')}</p>
+                <h3 className="font-extrabold text-xl tracking-tight text-white">{editingExpenseId ? t('Edit Expense Record', 'עריכת הוצאה קיימת') : t('Log New Expense', 'רישום הוצאה חדשה')}</h3>
+                <p className="text-rose-300 text-xs mt-1">{t('Record or update clinic expenses and operational costs.', 'הזן או עדכן הוצאת תפעול, שכירות או ציוד לקליניקה.')}</p>
               </div>
               <button onClick={() => setIsExpenseModalOpen(false)} className="text-rose-300 hover:text-white transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -936,7 +1037,7 @@ const FinancialManager = () => {
                   type="submit" 
                   className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors text-sm"
                 >
-                  {t('Save Expense', 'שמור הוצאה')}
+                  {editingExpenseId ? t('Update Expense', 'עדכן הוצאה') : t('Save Expense', 'שמור הוצאה')}
                 </button>
               </div>
 

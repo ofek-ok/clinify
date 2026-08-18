@@ -122,6 +122,16 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
+  const updatePayment = async (paymentId, updates) => {
+    const { data, error } = await supabase.from('payments').update(updates).eq('id', paymentId).select();
+    setPayments(prev => prev.map(p => p.id === paymentId ? (data && data[0] ? data[0] : { ...p, ...updates }) : p));
+  };
+
+  const deletePayment = async (paymentId) => {
+    await supabase.from('payments').delete().eq('id', paymentId);
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
+  };
+
   const updatePaymentStatus = async (paymentId, newStatus) => {
     const { error } = await supabase.from('payments').update({ status: newStatus }).eq('id', paymentId);
     setPayments(payments.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
@@ -145,6 +155,16 @@ export const ClinicProvider = ({ children }) => {
       setExpenses(prev => [...prev, fallback]);
       return fallback;
     }
+  };
+
+  const updateExpense = async (expenseId, updates) => {
+    const { data, error } = await supabase.from('expenses').update(updates).eq('id', expenseId).select();
+    setExpenses(prev => prev.map(e => e.id === expenseId ? (data && data[0] ? data[0] : { ...e, ...updates }) : e));
+  };
+
+  const deleteExpense = async (expenseId) => {
+    await supabase.from('expenses').delete().eq('id', expenseId);
+    setExpenses(prev => prev.filter(e => e.id !== expenseId));
   };
 
   // Forms API
@@ -313,7 +333,10 @@ export const ClinicProvider = ({ children }) => {
       isLoading,
       patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, addAppointment, addLead, addTask, addPayment, updatePaymentStatus, addExpense, addForm, updateForm, addFormSubmission,
+      addService, addAppointment, addLead, addTask, 
+      addPayment, updatePayment, deletePayment, updatePaymentStatus, 
+      addExpense, updateExpense, deleteExpense, 
+      addForm, updateForm, addFormSubmission,
       updateLeadStatus, updateTaskStatus, updateBusinessHour,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,
