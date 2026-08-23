@@ -1,8 +1,9 @@
-import React, { Component } from 'react';
+import React, { Component, useContext } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ClinicProvider } from './context/ClinicContext';
+import { ClinicProvider, ClinicContext } from './context/ClinicContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
+import AuthView from './components/AuthView';
 import PublicFormView from './components/PublicFormView';
 import PublicBookingView from './components/PublicBookingView';
 import './index.css';
@@ -47,6 +48,16 @@ class ErrorBoundary extends Component {
   }
 }
 
+const ProtectedDashboardRoute = () => {
+  const { session } = useContext(ClinicContext);
+
+  if (!session) {
+    return <AuthView />;
+  }
+
+  return <Layout />;
+};
+
 function App() {
   return (
     <ErrorBoundary>
@@ -56,7 +67,7 @@ function App() {
             <Routes>
               <Route path="/book" element={<PublicBookingView />} />
               <Route path="/form/:id" element={<PublicFormView />} />
-              <Route path="/*" element={<Layout />} />
+              <Route path="/*" element={<ProtectedDashboardRoute />} />
             </Routes>
           </ClinicProvider>
         </LanguageProvider>

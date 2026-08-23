@@ -14,7 +14,10 @@ const Layout = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { language, toggleLanguage, t } = useContext(LanguageContext);
-  const { isLoading } = useContext(ClinicContext);
+  const { isLoading, user, signOut } = useContext(ClinicContext);
+
+  const userDisplayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || t('Therapist Profile', 'מטפל/ת קליניקה');
+  const userInitial = userDisplayName.charAt(0).toUpperCase();
 
   const modules = [
     { 
@@ -67,7 +70,7 @@ const Layout = () => {
       name: t('Follow-ups & Tasks', 'משימות ומעקבים'), 
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 01-2-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
         </svg>
       )
     },
@@ -169,24 +172,34 @@ const Layout = () => {
           })}
         </nav>
         
-        {/* User Profile & Language Switcher */}
-        <div className="p-4 border-t border-slate-800 shrink-0">
+        {/* User Profile, Language Switcher & Sign Out */}
+        <div className="p-4 border-t border-slate-800 shrink-0 space-y-3">
           <button 
             onClick={toggleLanguage}
-            className="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 hover:bg-slate-800 rounded-xl transition-colors mb-3 border border-slate-700/50"
+            className="w-full flex items-center justify-between px-3 py-2 bg-slate-800/60 hover:bg-slate-800 rounded-xl transition-colors border border-slate-700/50"
           >
             <span className="text-xs font-semibold text-slate-300">{t('Language', 'שפה')}</span>
             <span className="text-xs font-bold text-sky-400 bg-sky-950 px-2 py-0.5 rounded border border-sky-800">{language === 'en' ? 'EN' : 'HE'}</span>
           </button>
 
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-white">
-              מ
+          <div className="flex items-center justify-between px-2 py-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-emerald-600 border border-emerald-500 flex items-center justify-center text-xs font-black text-white shrink-0 shadow-sm">
+                {userInitial}
+              </div>
+              <div className="flex-1 min-w-0 text-start">
+                <p className="text-xs font-bold text-white truncate">{userDisplayName}</p>
+                <p className="text-[10px] text-slate-400 font-medium truncate" dir="ltr">{user?.email || 'authenticated'}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white truncate">{t('Therapist Profile', 'קליניקה / מטפל/ת')}</p>
-              <p className="text-[10px] text-slate-400 font-medium truncate">{t('Private Practitioner', 'מטפל/ת פרטי/ת')}</p>
-            </div>
+
+            <button 
+              onClick={signOut}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+              title={t('Sign Out', 'התנתק מהמערכת')}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
           </div>
         </div>
       </aside>

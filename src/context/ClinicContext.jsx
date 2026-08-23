@@ -6,6 +6,8 @@ export const ClinicContext = createContext();
 export const ClinicProvider = ({ children }) => {
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const [patients, setPatients] = useState([]);
@@ -52,6 +54,21 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
+  // Supabase Auth State Listener
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -92,6 +109,12 @@ export const ClinicProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
   };
 
   const updateBookingSettings = async (updates) => {
@@ -468,7 +491,7 @@ export const ClinicProvider = ({ children }) => {
 
   return (
     <ClinicContext.Provider value={{
-      isLoading,
+      session, user, signOut, isLoading,
       patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, updateService, deleteService, addAppointment, addLead, addTask, 
