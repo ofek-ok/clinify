@@ -4,55 +4,66 @@ import { LanguageContext } from '../context/LanguageContext';
 
 const PublicBookingView = () => {
   const { 
-    services, 
-    patients, 
-    bookingSettings, 
-    getAvailableSlotsForDate,
-    addAppointment,
-    addLead
+    services = [], 
+    bookingSettings = {}, 
+    getAvailableSlotsForDate, 
+    addAppointment, 
+    addLead, 
+    patients = [],
+    patientPackages = [],
+    redeemPackageSession
   } = useContext(ClinicContext);
+  
+  const { t } = useContext(LanguageContext);
 
-  const { t, language } = useContext(LanguageContext);
-
-  // Booking Flow Steps: 1 = Service, 2 = Date & Slot, 3 = Patient Details & Payment, 4 = Confirmation
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // 1: Service, 2: Date/Slot, 3: Patient Info, 4: Confirmation
   const [selectedService, setSelectedService] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   
-  // Patient details
   const [patientInfo, setPatientInfo] = useState({
-    fullName: '',
     phone: '',
+    fullName: '',
     email: '',
     notes: '',
-    paymentMethod: 'clinic',
-    acceptedTerms: false
+    acceptedTerms: false,
+    usePackage: false,
+    selectedPackageId: ''
   });
 
   const [existingPatient, setExistingPatient] = useState(null);
+  const [activePackage, setActivePackage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedAppointment, setCompletedAppointment] = useState(null);
 
-  // Compute available slots for selected date
+  // Available slots calculation
   const availableSlots = useMemo(() => {
-    if (!selectedService || !selectedDate) return [];
+    if (!selectedDate || !selectedService) return [];
     return getAvailableSlotsForDate(selectedDate, selectedService.duration_minutes || 30);
   }, [selectedDate, selectedService, getAvailableSlotsForDate]);
 
-  // Check existing patient & packages on phone number change
+  // Handle phone blur to check for existing patient and active package
   const handlePhoneBlur = () => {
     if (!patientInfo.phone) return;
-    const cleanPhone = patientInfo.phone.replace(/\D/g, '');
-    const found = patients.find(p => p.phone && p.phone.replace(/\D/g, '') === cleanPhone);
+    const cleanPhone = patientInfo.phone.trim();
+    const found = patients.find(p => p.phone && p.phone.trim() === cleanPhone);
     
     if (found) {
       setExistingPatient(found);
       if (found.full_name && !patientInfo.fullName) {
         setPatientInfo(prev => ({ ...prev, fullName: found.full_name, email: found.email || prev.email }));
       }
+      // Check active package
+      const pkg = patientPackages.find(p => p.patient_id === found.id && p.remaining_sessions > 0);
+      if (pkg) {
+        setActivePackage(pkg);
+        setPatientInfo(prev => ({ ...prev, usePackage: true, selectedPackageId: pkg.id }));
+      } else {
+        setActivePackage(null);
+      }
     } else {
       setExistingPatient(null);
+      setActivePackage(null);
     }
   };
 
@@ -83,14 +94,20 @@ const PublicBookingView = () => {
         if (newLead) patientId = newLead.id;
       }
 
+      // If patient selected to redeem session credit
+      if (patientInfo.usePackage && activePackage) {
+        await redeemPackageSession(activePackage.id);
+      }
+
       // Create Appointment
       const apptDateIso = `${selectedDate}T${selectedSlot}:00`;
       const newAppt = await addAppointment({
         patient_id: patientId,
         service_id: selectedService.id,
         appointment_date: apptDateIso,
-        notes: patientInfo.notes || 'Self-booked via online portal',
-        status: 'scheduled'
+        notes: patientInfo.notes || (patientInfo.usePackage ? 'Self-booked via package credit' : 'Self-booked via online portal'),
+        status: 'scheduled',
+        source: patientInfo.usePackage ? 'package_redemption' : 'public_booking'
       });
 
       setCompletedAppointment(newAppt || { appointment_date: apptDateIso });
@@ -267,7 +284,9 @@ const PublicBookingView = () => {
                 <p className="text-xs text-emerald-400 font-bold">{selectedService?.name}</p>
                 <p className="text-sm font-black text-white mt-0.5">{selectedDate} ({selectedSlot})</p>
               </div>
-              <span className="text-lg font-black text-white" dir="ltr">₪{selectedService?.default_price}</span>
+              <span className="text-lg font-black text-white" dir="ltr">
+                {patientInfo.usePackage ? '₪0 (מכרטיסייה)' : `₪${selectedService?.default_price}`}
+              </span>
             </div>
 
             {/* Patient Inputs */}
@@ -285,11 +304,30 @@ const PublicBookingView = () => {
                 />
               </div>
 
-              {/* Package Banner if existing patient */}
-              {existingPatient && bookingSettings.allowPackages && (
-                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
-                  <span>{t('Welcome back, ', 'שלום ')}{existingPatient.full_name}! {t('You have an active package.', 'נמצאה כרטיסייה פעילה בחשבונך.')}</span>
-                  <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-md text-[10px]">{t('Package Active', 'כרטיסייה בתוקף')}</span>
+              {/* Package Banner & Checkbox if active package found */}
+              {existingPatient && activePackage && bookingSettings.allowPackages && (
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-extrabold text-sm text-amber-900">🎟️ {t('Active Package Found!', 'שלום ' + existingPatient.full_name + ', נמצאה כרטיסייה פעילה!')}</p>
+                      <p className="text-xs text-amber-700 mt-0.5">{activePackage.name} — נותרו {activePackage.remaining_sessions} מתוך {activePackage.total_sessions} טיפולים</p>
+                    </div>
+                    <span className="bg-amber-600 text-white font-black px-2.5 py-1 rounded-md text-[10px] uppercase">
+                      {activePackage.remaining_sessions} {t('Left', 'נותרו')}
+                    </span>
+                  </div>
+
+                  <label className="flex items-center gap-2.5 pt-2 border-t border-amber-200/80 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={patientInfo.usePackage}
+                      onChange={e => setPatientInfo({ ...patientInfo, usePackage: e.target.checked })}
+                      className="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500"
+                    />
+                    <span className="text-xs font-bold text-amber-900">
+                      {t('Deduct 1 session credit from active package (Pay ₪0 now)', 'נכה 1 טיפול מהכרטיסייה (תשלום: ₪0 במעמד הזימון)')}
+                    </span>
+                  </label>
                 </div>
               )}
 
@@ -314,87 +352,99 @@ const PublicBookingView = () => {
                 />
               </div>
 
-              {/* Payment Method Selector */}
-              {bookingSettings.allowPayAtClinic && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Payment Option', 'אפשרות תשלום')}</label>
-                  <select 
-                    value={patientInfo.paymentMethod}
-                    onChange={e => setPatientInfo({ ...patientInfo, paymentMethod: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
-                  >
-                    <option value="clinic">{t('Pay at Clinic (Cash / Bit / Credit)', 'תשלום בקליניקה במעמד הטיפול')}</option>
-                    {existingPatient && <option value="package">{t('Redeem Session from Package', 'ניצול טיפול מתוך כרטיסייה קיבלת')}</option>}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Notes for Therapist (Optional)', 'הערות למטפל/ת (אופציונלי)')}</label>
+                <textarea 
+                  rows="2"
+                  value={patientInfo.notes}
+                  onChange={e => setPatientInfo({ ...patientInfo, notes: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
+                />
+              </div>
 
-              {/* Policy Checkbox */}
+              {/* Cancellation Policy Acceptance Checkbox */}
               {bookingSettings.requirePolicy && (
-                <div className="pt-2">
-                  <label className="flex items-start gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <input 
-                      type="checkbox"
-                      required
-                      checked={patientInfo.acceptedTerms}
-                      onChange={e => setPatientInfo({ ...patientInfo, acceptedTerms: e.target.checked })}
-                      className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
-                    />
-                    <span className="text-xs text-slate-600 font-medium">
-                      {bookingSettings.cancellationPolicyText || t('I agree to the clinic cancellation policy.', 'אני מאשר את מדיניות ביטול התורים בקליניקה.')}
-                    </span>
-                  </label>
-                </div>
+                <label className="flex items-start gap-2.5 p-3.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    required
+                    checked={patientInfo.acceptedTerms}
+                    onChange={e => setPatientInfo({ ...patientInfo, acceptedTerms: e.target.checked })}
+                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 mt-0.5"
+                  />
+                  <span className="text-xs text-slate-600 leading-relaxed font-medium">
+                    {t('I agree to the cancellation policy: ', 'אני מאשר/ת את מדיניות הביטולים: ')} 
+                    <strong className="text-slate-800">{bookingSettings.cancellationPolicyText}</strong>
+                  </span>
+                </label>
               )}
             </div>
 
             <button 
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all text-sm disabled:opacity-50"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2"
             >
-              {isSubmitting ? t('Confirming Booking...', 'מאשר תור...') : t('Confirm Appointment Now', 'אשר וקבע תור עכשיו')}
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <span>{patientInfo.usePackage ? t('Confirm Package Redemption & Booking', 'אישור זימון ומימוש טיפול מהכרטיסייה (₪0)') : t('Confirm & Complete Booking', 'אישור וקביעת תור')}</span>
+              )}
             </button>
           </form>
         )}
 
-        {/* STEP 4: Success & Add to Calendar */}
+        {/* STEP 4: Success & Export to Calendar */}
         {step === 4 && (
-          <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-md text-center space-y-6 animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+          <div className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-md text-center space-y-6 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
             </div>
-            
+
             <div>
-              <h2 className="text-2xl font-black text-slate-800">{t('Appointment Confirmed!', 'התור נקבע בהצלחה!')}</h2>
-              <p className="text-slate-500 text-sm mt-1">{t('We look forward to seeing you at the clinic.', 'מחכים לראותך בקליניקה.')}</p>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">{t('Appointment Confirmed!', 'התור נקבע בהצלחה!')}</h2>
+              <p className="text-slate-500 text-xs sm:text-sm mt-1 font-medium">{t('We look forward to seeing you at the clinic.', 'התור נרשם ביומן הקליניקה. נשמח לראותך!')}</p>
             </div>
 
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-start space-y-2 text-xs">
               <div className="flex justify-between border-b border-slate-200/60 pb-2">
-                <span className="font-bold text-slate-500">{t('Treatment', 'טיפול')}:</span>
+                <span className="text-slate-400 font-bold">{t('Service', 'שירות/טיפול')}:</span>
                 <span className="font-extrabold text-slate-800">{selectedService?.name}</span>
               </div>
               <div className="flex justify-between border-b border-slate-200/60 pb-2">
-                <span className="font-bold text-slate-500">{t('Date & Time', 'תאריך ושעה')}:</span>
-                <span className="font-extrabold text-slate-800">{selectedDate} ({selectedSlot})</span>
+                <span className="text-slate-400 font-bold">{t('Date & Time', 'תאריך ושעה')}:</span>
+                <span className="font-black text-emerald-700">{selectedDate} ({selectedSlot})</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-bold text-slate-500">{t('Location', 'מיקום')}:</span>
-                <span className="font-extrabold text-slate-800">{bookingSettings.clinicAddress}</span>
+                <span className="text-slate-400 font-bold">{t('Patient', 'מטופל/ת')}:</span>
+                <span className="font-bold text-slate-800">{patientInfo.fullName} ({patientInfo.phone})</span>
               </div>
             </div>
 
-            <div className="pt-2">
+            {/* Export Buttons */}
+            <div className="space-y-3 pt-2">
               <a 
                 href={googleCalendarUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-sm"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-2"
               >
-                <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                {t('Add to Google Calendar', 'הוסף ל-Google Calendar שלי')}
+                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                {t('Add to Google Calendar', 'הוסף ליומן Google Calendar')}
               </a>
+
+              <button 
+                onClick={() => {
+                  setStep(1);
+                  setSelectedService(null);
+                  setSelectedDate('');
+                  setSelectedSlot('');
+                  setPatientInfo({ phone: '', fullName: '', email: '', notes: '', acceptedTerms: false, usePackage: false, selectedPackageId: '' });
+                }}
+                className="text-xs text-slate-400 hover:text-slate-600 font-bold underline"
+              >
+                {t('Book Another Appointment', 'קבע תור נוסף')}
+              </button>
             </div>
           </div>
         )}

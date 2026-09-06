@@ -212,6 +212,21 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
+  // Update Appointment Status with Automatic Package Deduction on Completion
+  const updateAppointmentStatus = async (apptId, newStatus) => {
+    const appt = appointments.find(a => a.id === apptId);
+    await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
+    setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status: newStatus } : a));
+
+    // Auto-deduct 1 session if marked completed and patient has an active package!
+    if (newStatus === 'completed' && appt?.patient_id) {
+      const activePkg = patientPackages.find(p => p.patient_id === appt.patient_id && p.remaining_sessions > 0);
+      if (activePkg) {
+        redeemPackageSession(activePkg.id);
+      }
+    }
+  };
+
   const addLead = async (lead) => {
     const { data, error } = await supabase.from('leads').insert([lead]).select();
     if (!error && data) {
@@ -494,7 +509,7 @@ export const ClinicProvider = ({ children }) => {
       session, user, signOut, isLoading,
       patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, updateService, deleteService, addAppointment, addLead, addTask, 
+      addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead, addTask, 
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
       addExpense, updateExpense, deleteExpense, 
       addForm, updateForm, addFormSubmission, updateBookingSettings,
