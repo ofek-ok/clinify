@@ -1,209 +1,19 @@
 -- ========================================================
--- Clinify Master Supabase PostgreSQL Database Schema
--- Branch: op-os-core-v1
--- Production-Ready, RLS Secured, Multi-Tenant Data Model
+-- Clinify OP OS Core v1 Safe Migration Script
+-- Run this script in your Supabase SQL Editor on existing databases.
+-- Contains idempotent ALTER TABLE ... ADD COLUMN IF NOT EXISTS and RLS policies.
 -- ========================================================
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Clinics (Multi-tenant Organization Profiles)
-CREATE TABLE IF NOT EXISTS clinics (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name text NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- 1. Ensure new columns exist safely
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS converted_patient_id uuid REFERENCES patients(id) ON DELETE SET NULL;
+ALTER TABLE forms ADD COLUMN IF NOT EXISTS is_public boolean DEFAULT false;
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS end_date timestamp with time zone;
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS source text DEFAULT 'internal';
 
--- 2. Booking Settings (Public Portal Config)
-CREATE TABLE IF NOT EXISTS booking_settings (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  allow_packages boolean DEFAULT true,
-  allow_pay_at_clinic boolean DEFAULT true,
-  require_policy boolean DEFAULT true,
-  cancellation_policy_text text DEFAULT 'ביטול תור יתאפשר עד 24 שעות מראש.',
-  welcome_message text DEFAULT 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
-  clinic_address text DEFAULT '',
-  logo_url text DEFAULT '',
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 3. Business Hours (Clinic Operating Schedule)
-CREATE TABLE IF NOT EXISTS business_hours (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  day_index integer NOT NULL, -- 0=Sunday, 6=Saturday
-  day_of_week text NOT NULL,
-  is_open boolean DEFAULT true,
-  start_time time NOT NULL DEFAULT '09:00',
-  end_time time NOT NULL DEFAULT '17:00'
-);
-
--- 4. Unified Offerings Catalog (Services, Packages, Products, Subscriptions)
-CREATE TABLE IF NOT EXISTS services (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  name text NOT NULL,
-  description text,
-  duration_minutes integer NOT NULL DEFAULT 45,
-  default_price numeric(10,2) NOT NULL DEFAULT 0.00,
-  type text NOT NULL DEFAULT 'service', -- 'service' | 'package' | 'product' | 'subscription'
-  session_count integer,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 5. Patients Table
-CREATE TABLE IF NOT EXISTS patients (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  full_name text NOT NULL,
-  email text,
-  phone text NOT NULL,
-  status text DEFAULT 'active',
-  medical_history text,
-  allergies text,
-  emergency_contact text,
-  tags text[],
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 6. Patient Packages (Active Punch Cards & Session Balances)
-CREATE TABLE IF NOT EXISTS patient_packages (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  name text NOT NULL,
-  total_sessions integer NOT NULL DEFAULT 10,
-  remaining_sessions integer NOT NULL DEFAULT 10,
-  purchased_date date DEFAULT CURRENT_DATE,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 7. Appointments Table
-CREATE TABLE IF NOT EXISTS appointments (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  service_id uuid REFERENCES services(id) ON DELETE SET NULL,
-  appointment_date timestamp with time zone NOT NULL,
-  end_date timestamp with time zone,
-  notes text,
-  status text DEFAULT 'scheduled', -- 'scheduled' | 'completed' | 'cancelled' | 'no_show'
-  source text DEFAULT 'internal', -- 'internal' | 'public_booking' | 'package_redemption'
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 8. Patient SOAP Clinical Notes
-CREATE TABLE IF NOT EXISTS patient_clinical_notes (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  author text DEFAULT 'מטפל/ת',
-  subjective text,
-  objective text,
-  assessment text,
-  plan text,
-  content text,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 9. Patient Documents (Medical Files & Attachments)
-CREATE TABLE IF NOT EXISTS patient_documents (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  name text NOT NULL,
-  file_url text NOT NULL,
-  file_size text,
-  mime_type text,
-  uploaded_at date DEFAULT CURRENT_DATE
-);
-
--- 10. Leads Table
-CREATE TABLE IF NOT EXISTS leads (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  full_name text NOT NULL,
-  email text,
-  phone text NOT NULL,
-  source text DEFAULT 'Website',
-  status text DEFAULT 'new', -- 'new' | 'contacted' | 'scheduled' | 'won' | 'lost'
-  follow_up_date date,
-  lost_reason text,
-  converted_patient_id uuid REFERENCES patients(id) ON DELETE SET NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 11. Lead Communications Log
-CREATE TABLE IF NOT EXISTS lead_communications (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  lead_id uuid REFERENCES leads(id) ON DELETE CASCADE,
-  type text NOT NULL, -- 'call' | 'whatsapp' | 'email'
-  note text NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 12. Payments Ledger (Universal Checkout Income)
-CREATE TABLE IF NOT EXISTS payments (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  appointment_id uuid REFERENCES appointments(id) ON DELETE SET NULL,
-  catalog_item_id uuid REFERENCES services(id) ON DELETE SET NULL,
-  item_type text DEFAULT 'service',
-  amount numeric(10,2) NOT NULL,
-  payment_method text NOT NULL,
-  status text DEFAULT 'paid', -- 'paid' | 'pending' | 'refunded'
-  payment_date timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  invoice_number text
-);
-
--- 13. Expenses Ledger (Outgoing Costs)
-CREATE TABLE IF NOT EXISTS expenses (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  category text NOT NULL,
-  amount numeric(10,2) NOT NULL,
-  payment_method text NOT NULL,
-  expense_date date DEFAULT CURRENT_DATE
-);
-
--- 14. Tasks Table
-CREATE TABLE IF NOT EXISTS tasks (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  due_date date NOT NULL,
-  status text DEFAULT 'todo', -- 'todo' | 'done'
-  priority text DEFAULT 'medium', -- 'low' | 'medium' | 'high'
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 15. Forms Table (Dynamic Intake Questionnaires)
-CREATE TABLE IF NOT EXISTS forms (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  description text,
-  fields jsonb NOT NULL DEFAULT '[]'::jsonb,
-  is_public boolean DEFAULT false,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 16. Form Submissions Table
-CREATE TABLE IF NOT EXISTS form_submissions (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  form_id uuid REFERENCES forms(id) ON DELETE CASCADE,
-  patient_id uuid REFERENCES patients(id) ON DELETE SET NULL,
-  lead_id uuid REFERENCES leads(id) ON DELETE SET NULL,
-  responses jsonb NOT NULL DEFAULT '{}'::jsonb,
-  submitted_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- ========================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- ========================================================
-
--- Enable RLS on all tables containing private or business data
+-- 2. Enable Row Level Security (RLS) on all tables
 ALTER TABLE clinics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE booking_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_hours ENABLE ROW LEVEL SECURITY;
@@ -221,9 +31,7 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE form_submissions ENABLE ROW LEVEL SECURITY;
 
--- --------------------------------------------------------
--- Authenticated Internal Users Policies (Full Access)
--- --------------------------------------------------------
+-- 3. Internal Authenticated Users Full Access Policies
 DROP POLICY IF EXISTS "Authenticated users full access on clinics" ON clinics;
 CREATE POLICY "Authenticated users full access on clinics" ON clinics FOR ALL TO authenticated USING (true);
 
@@ -272,52 +80,27 @@ CREATE POLICY "Authenticated users full access on forms" ON forms FOR ALL TO aut
 DROP POLICY IF EXISTS "Authenticated users full access on form_submissions" ON form_submissions;
 CREATE POLICY "Authenticated users full access on form_submissions" ON form_submissions FOR ALL TO authenticated USING (true);
 
--- --------------------------------------------------------
--- Anonymous Public Policies (Minimum Exposure for Booking / Forms)
--- --------------------------------------------------------
-
--- Public can read offerings catalog for booking
+-- 4. Anonymous Public Access Policies (Strictly Limited Minimum Exposure)
 DROP POLICY IF EXISTS "Public read offerings catalog" ON services;
 CREATE POLICY "Public read offerings catalog" ON services FOR SELECT TO anon USING (true);
 
--- Public can read business operating hours for slot calculation
 DROP POLICY IF EXISTS "Public read business hours" ON business_hours;
 CREATE POLICY "Public read business hours" ON business_hours FOR SELECT TO anon USING (true);
 
--- Public can read public booking page settings
 DROP POLICY IF EXISTS "Public read booking settings" ON booking_settings;
 CREATE POLICY "Public read booking settings" ON booking_settings FOR SELECT TO anon USING (true);
 
--- ONLY EXPLICITLY PUBLIC FORMS (is_public = true) MAY BE READABLE ANONYMOUSLY!
 DROP POLICY IF EXISTS "Public read forms" ON forms;
 CREATE POLICY "Public read forms" ON forms FOR SELECT TO anon USING (is_public = true);
 
--- Public can submit intake form responses
 DROP POLICY IF EXISTS "Public insert form submissions" ON form_submissions;
 CREATE POLICY "Public insert form submissions" ON form_submissions FOR INSERT TO anon WITH CHECK (true);
 
--- NOTE: Patients, patient_packages, appointments, patient_clinical_notes, patient_documents,
--- leads, lead_communications, payments, expenses, tasks have NO SELECT POLICIES for anon!
-
--- ========================================================
--- SECURITY DEFINER PUBLIC PROCEDURES & AUDITED PERMISSIONS
--- ========================================================
-
--- Redeem 1 session from active package (Internal / Authenticated Execution Only!)
-CREATE OR REPLACE FUNCTION redeem_package_session(p_package_id uuid)
-RETURNS void AS $$
-BEGIN
-  UPDATE patient_packages
-  SET remaining_sessions = remaining_sessions - 1
-  WHERE id = p_package_id AND remaining_sessions > 0;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Strictly REVOKE execute on internal functions from anon/public role!
+-- 5. Revoke Internal Functions from Anon & Public
 REVOKE EXECUTE ON FUNCTION redeem_package_session(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION redeem_package_session(uuid) TO authenticated;
 
--- Public Package Credit Lookup Function (Audited: Zero Exposure of Patient IDs, Package IDs, or Names!)
+-- 6. Audited Public Check Package Status RPC (No Private Data Exposure)
 CREATE OR REPLACE FUNCTION public_check_package_status(p_phone text)
 RETURNS jsonb AS $$
 DECLARE
@@ -346,7 +129,6 @@ BEGIN
     RETURN jsonb_build_object('has_active_package', false);
   END IF;
 
-  -- Returns ONLY boolean flag & session count. ZERO private patient data, ZERO IDs exposed!
   RETURN jsonb_build_object(
     'has_active_package', true,
     'remaining_sessions', v_package.remaining_sessions
@@ -356,7 +138,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public_check_package_status(text) TO anon, authenticated;
 
--- Public Booking Transaction Function (Valid Lifecycle, Israel Timezone Safe, Audited Anon Output)
+-- 7. Audited Public Create Booking RPC (Israel Timezone Safe, Valid Lifecycle, Double Booking Protection)
 CREATE OR REPLACE FUNCTION public_create_booking(
   p_service_id uuid,
   p_appointment_date timestamp with time zone,
@@ -468,7 +250,6 @@ BEGIN
   )
   RETURNING id INTO v_appointment_id;
 
-  -- Returns ONLY success status and appointment date. ZERO internal patient/lead/appointment IDs exposed to anon response!
   RETURN jsonb_build_object(
     'success', true,
     'appointment_date', p_appointment_date

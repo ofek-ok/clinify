@@ -8,13 +8,13 @@ const PublicBookingView = () => {
   const [services, setServices] = useState([]);
   const [businessHours, setBusinessHours] = useState([]);
   const [bookingSettings, setBookingSettings] = useState({
-    allowPackages: true,
-    allowPayAtClinic: true,
-    requirePolicy: true,
-    cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש.',
-    welcomeMessage: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
-    clinicAddress: '',
-    logoUrl: ''
+    allow_packages: true,
+    allow_pay_at_clinic: true,
+    require_policy: true,
+    cancellation_policy_text: 'ביטול תור יתאפשר עד 24 שעות מראש.',
+    welcome_message: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
+    clinic_address: '',
+    logo_url: ''
   });
 
   const [step, setStep] = useState(1); // 1: Service, 2: Date/Slot, 3: Patient Info, 4: Confirmation
@@ -84,7 +84,7 @@ const PublicBookingView = () => {
     return slots;
   }, [selectedDate, selectedService, businessHours]);
 
-  // Handle phone blur: check active package using public RPC (Zero raw table exposure!)
+  // Handle phone blur: check active package via audited RPC (Zero private patient info or IDs returned!)
   const handlePhoneBlur = async () => {
     if (!patientInfo.phone || patientInfo.phone.trim().length < 7) return;
     
@@ -93,22 +93,28 @@ const PublicBookingView = () => {
         p_phone: patientInfo.phone.trim()
       });
 
-      if (!error && data && data.found) {
-        if (data.patient_name && !patientInfo.fullName) {
-          setPatientInfo(prev => ({ ...prev, fullName: data.patient_name }));
-        }
-        if (data.has_package) {
-          setActivePackageInfo(data);
-          setPatientInfo(prev => ({ ...prev, usePackage: true }));
-        } else {
-          setActivePackageInfo(null);
-        }
+      if (!error && data && data.has_active_package) {
+        setActivePackageInfo(data);
+        setPatientInfo(prev => ({ ...prev, usePackage: true }));
       } else {
         setActivePackageInfo(null);
       }
     } catch (err) {
       console.error("Error checking package status:", err);
     }
+  };
+
+  // Helper for Israel Timezone ISO String construction (Asia/Jerusalem)
+  const getIsraelIsoTimestamp = (dateStr, slotStr) => {
+    const dt = new Date(`${dateStr}T${slotStr}:00`);
+    const ilDateStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jerusalem',
+      timeZoneName: 'short'
+    }).format(dt);
+    
+    const isSummer = ilDateStr.includes('GMT+3') || ilDateStr.includes('IDT');
+    const offset = isSummer ? '+03:00' : '+02:00';
+    return `${dateStr}T${slotStr}:00${offset}`;
   };
 
   const handleBookingSubmit = async (e) => {
@@ -126,7 +132,7 @@ const PublicBookingView = () => {
 
     setIsSubmitting(true);
     try {
-      const apptDateIso = `${selectedDate}T${selectedSlot}:00Z`;
+      const apptDateIso = getIsraelIsoTimestamp(selectedDate, selectedSlot);
       
       // Execute Public Booking RPC (Enforces Identity Lifecycle, Double Booking Check & Transactional Package Deduction)
       const { data, error } = await supabase.rpc('public_create_booking', {
@@ -145,7 +151,6 @@ const PublicBookingView = () => {
 
       if (data && data.success) {
         setCompletedBooking({
-          appointment_id: data.appointment_id,
           date: selectedDate,
           slot: selectedSlot
         });
@@ -374,13 +379,13 @@ const PublicBookingView = () => {
                 />
               </div>
 
-              {/* Package Banner & Checkbox if active package found via public RPC */}
+              {/* Package Banner & Checkbox if active package found via audited public RPC */}
               {activePackageInfo && bookingSettings.allow_packages && (
                 <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-extrabold text-sm text-amber-900">🎟️ {t('Active Package Found!', 'נמצאה כרטיסייה פעילה בחשבונך!')}</p>
-                      <p className="text-xs text-amber-700 mt-0.5">{activePackageInfo.package_name} — נותרו {activePackageInfo.remaining_sessions} מתוך {activePackageInfo.total_sessions} טיפולים</p>
+                      <p className="text-xs text-amber-700 mt-0.5">נותרו {activePackageInfo.remaining_sessions} טיפולים למימוש</p>
                     </div>
                     <span className="bg-amber-600 text-white font-black px-2.5 py-1 rounded-md text-[10px] uppercase">
                       {activePackageInfo.remaining_sessions} {t('Left', 'נותרו')}
@@ -453,7 +458,7 @@ const PublicBookingView = () => {
             <button 
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -512,7 +517,7 @@ const PublicBookingView = () => {
                   setPatientInfo({ phone: '', fullName: '', email: '', notes: '', acceptedTerms: false, usePackage: false });
                   setActivePackageInfo(null);
                 }}
-                className="text-xs text-slate-400 hover:text-slate-600 font-bold underline"
+                className="text-xs text-slate-400 hover:text-slate-600 font-bold underline cursor-pointer"
               >
                 {t('Book Another Appointment', 'קבע תור נוסף')}
               </button>

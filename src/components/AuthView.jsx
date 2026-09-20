@@ -4,52 +4,28 @@ import { LanguageContext } from '../context/LanguageContext';
 
 const AuthView = () => {
   const { t } = useContext(LanguageContext);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage('');
-    setSuccessMessage('');
 
     try {
-      if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName }
-          }
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-        if (error) throw error;
-
-        if (data.session) {
-          setSuccessMessage(t('Registration successful! Redirecting...', 'הרשמה בוצעה בהצלחה! מעביר למערכת...'));
-        } else {
-          setSuccessMessage(t('Registration successful! Please check your email to confirm.', 'הרשמה בוצעה! אנא בדוק את תיבת הדוא"ל שלך לאישור החשבון.'));
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
     } catch (err) {
       console.error("Auth error:", err);
       let translatedErr = err.message;
       if (err.message.includes('Invalid login credentials')) {
         translatedErr = t('Invalid email or password.', 'אימייל או סיסמה שגויים. אנא נסה שוב.');
-      } else if (err.message.includes('User already registered')) {
-        translatedErr = t('User already registered. Please sign in.', 'משתמש זה כבר רשום במערכת. אנא התחבר.');
       }
       setErrorMessage(translatedErr);
     } finally {
@@ -73,26 +49,10 @@ const AuthView = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">Clinify</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">Clinify OP OS</h1>
           <p className="text-xs text-slate-400 font-medium">
-            {t('Private Therapy & Clinic Practice CRM', 'מערכת ניהול קליניקה ומטפלים פרטיים')}
+            {t('Internal Authorized Clinic Access', 'כניסה מורשית למנהל הקליניקה')}
           </p>
-        </div>
-
-        {/* Tab Switcher: Sign In vs Sign Up */}
-        <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-700/60">
-          <button 
-            onClick={() => { setIsSignUp(false); setErrorMessage(''); setSuccessMessage(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${!isSignUp ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            {t('Sign In', 'התחברות למערכת')}
-          </button>
-          <button 
-            onClick={() => { setIsSignUp(true); setErrorMessage(''); setSuccessMessage(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${isSignUp ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            {t('Register Clinic', 'הרשמת קליניקה חדשה')}
-          </button>
         </div>
 
         {/* Notifications */}
@@ -103,32 +63,8 @@ const AuthView = () => {
           </div>
         )}
 
-        {successMessage && (
-          <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-xl flex items-center gap-2">
-            <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
-            <span>{successMessage}</span>
-          </div>
-        )}
-
-        {/* Auth Form */}
+        {/* Auth Form (Single Internal Owner Sign-In) */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {isSignUp && (
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                {t('Full Name / Clinic Name', 'שם מלא / שם הקליניקה')} *
-              </label>
-              <input 
-                type="text"
-                required
-                placeholder={t('e.g. Clinic Name', 'למשל: קליניקת פיזיו-שיקום')}
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-medium text-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none"
-              />
-            </div>
-          )}
-
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
               {t('Email Address', 'כתובת אימייל')} *
@@ -136,7 +72,7 @@ const AuthView = () => {
             <input 
               type="email"
               required
-              placeholder="therapist@clinic.com"
+              placeholder="owner@clinic.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-medium text-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none"
@@ -163,19 +99,19 @@ const AuthView = () => {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg transition-all text-xs flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg transition-all text-xs flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <span>{isSignUp ? t('Create Clinic Account', 'צור חשבון קליניקה חדש') : t('Sign In to Dashboard', 'התחבר לדאשבורד')}</span>
+              <span>{t('Sign In to Dashboard', 'התחבר לדאשבורד')}</span>
             )}
           </button>
         </form>
 
         {/* Footer Note */}
         <div className="pt-2 text-center text-[11px] text-slate-500 border-t border-slate-800">
-          🔒 {t('Secured Auth & Database Encryption', 'חיבור מאובטח ומוצפן ב-Supabase Auth')}
+          🔒 {t('Authorized Internal Access Only', 'כניסה מורשית לצוות פנימי בלבד')}
         </div>
 
       </div>

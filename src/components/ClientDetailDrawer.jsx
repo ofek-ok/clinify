@@ -532,32 +532,25 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 {/* Notes History List */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Medical Timeline & Notes History', 'ציר זמן - היסטוריית סיכומי טיפול')}</h4>
-                  {(item.clinical_notes || [
-                    { 
-                      id: 'demo_soap_1', 
-                      created_at: new Date().toISOString(), 
-                      author: 'מטפל/ת', 
-                      content: JSON.stringify({
-                        isSoap: true,
-                        subjective: 'המטופל מדווח על כאב גב תחתון דרגה 6/10 לאחר פעילות ספורטיבית.',
-                        objective: 'הגבלה בכיפוף לפנים, רגישות למגע בחוליות L4-L5.',
-                        assessment: 'עומס שרירי מוגבר. שיפור מתוני לעומת טיפול קודם.',
-                        plan: 'טיפול מנואלי, מתיחות להמסטרינגס, פגישת מעקב בעוד שבוע.'
-                      })
-                    }
-                  ]).map((note) => (
-                    <div key={note.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 hover:border-slate-300 transition-colors">
-                      <div className="flex justify-between items-center text-xs text-slate-400 border-b border-slate-100 pb-2.5">
-                        <span className="font-bold text-slate-800 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                          {note.author}
-                        </span>
-                        <span className="font-medium bg-slate-100 px-2.5 py-0.5 rounded-md text-slate-600 text-[11px]">{new Date(note.created_at).toLocaleDateString('he-IL')}</span>
-                      </div>
-                      
-                      {renderNoteContent(note.content)}
+                  {(!item.clinical_notes || item.clinical_notes.length === 0) ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-medium">
+                      {t('No clinical notes recorded yet.', 'טרם נרשמו סיכומי טיפול עבור מטופל זה.')}
                     </div>
-                  ))}
+                  ) : (
+                    item.clinical_notes.map((note) => (
+                      <div key={note.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 hover:border-slate-300 transition-colors">
+                        <div className="flex justify-between items-center text-xs text-slate-400 border-b border-slate-100 pb-2.5">
+                          <span className="font-bold text-slate-800 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            {note.author}
+                          </span>
+                          <span className="font-medium bg-slate-100 px-2.5 py-0.5 rounded-md text-slate-600 text-[11px]">{new Date(note.created_at).toLocaleDateString('he-IL')}</span>
+                        </div>
+                        
+                        {renderNoteContent(note.content)}
+                      </div>
+                    ))
+                  )}
                 </div>
 
               </div>
@@ -613,24 +606,28 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 {/* Documents List */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Attached Documents', 'מסמכים שצורפו')}</h4>
-                  {(item.documents || [
-                    { id: '1', name: 'טופס הצהרת בריאות חתום.pdf', uploaded_at: '2026-08-10', size: '420 KB' }
-                  ]).map((doc) => (
-                    <div key={doc.id} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-red-50 border border-red-200 text-red-600 flex items-center justify-center font-bold text-xs">
-                          PDF
-                        </div>
-                        <div>
-                          <p className="font-bold text-xs text-slate-800">{doc.name}</p>
-                          <p className="text-[10px] text-slate-400">{doc.uploaded_at} • {doc.size}</p>
-                        </div>
-                      </div>
-                      <button onClick={() => alert('מוריד קובץ...')} className="text-xs font-bold text-emerald-600 hover:underline">
-                        {t('Download', 'הורד')}
-                      </button>
+                  {(!item.documents || item.documents.length === 0) ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-medium">
+                      {t('No documents attached yet.', 'טרם צורפו מסמכים עבור מטופל זה.')}
                     </div>
-                  ))}
+                  ) : (
+                    item.documents.map((doc) => (
+                      <div key={doc.id} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-red-50 border border-red-200 text-red-600 flex items-center justify-center font-bold text-xs">
+                            PDF
+                          </div>
+                          <div>
+                            <p className="font-bold text-xs text-slate-800">{doc.name}</p>
+                            <p className="text-[10px] text-slate-400">{doc.uploaded_at} • {doc.file_size || doc.size || ''}</p>
+                          </div>
+                        </div>
+                        <a href={doc.file_url || '#'} target="_blank" rel="noreferrer" className="text-xs font-bold text-emerald-600 hover:underline">
+                          {t('Download', 'הורד')}
+                        </a>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -667,19 +664,23 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 {/* Communication Log List */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Interaction History', 'היסטוריית פניות ושיחות')}</h4>
-                  {(item.communication_log || [
-                    { id: '1', type: 'call', created_at: new Date().toISOString(), note: 'שיחה קצרה – המטופל ביקש לקבל הצעת מחיר במייל.' }
-                  ]).map((comm) => (
-                    <div key={comm.id} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                          {comm.type === 'call' ? '📞 שיחת טלפון' : comm.type === 'whatsapp' ? '🟢 WhatsApp' : '✉️ אימייל'}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{new Date(comm.created_at).toLocaleDateString('he-IL')}</span>
-                      </div>
-                      <p className="text-xs text-slate-600">{comm.note}</p>
+                  {(!item.communication_log || item.communication_log.length === 0) ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-medium">
+                      {t('No communication history logged yet.', 'טרם תועדו פניות עבור מטופל זה.')}
                     </div>
-                  ))}
+                  ) : (
+                    item.communication_log.map((comm) => (
+                      <div key={comm.id} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                            {comm.type === 'call' ? '📞 שיחת טלפון' : comm.type === 'whatsapp' ? '🟢 WhatsApp' : '✉️ אימייל'}
+                          </span>
+                          <span className="text-[10px] text-slate-400">{new Date(comm.created_at).toLocaleDateString('he-IL')}</span>
+                        </div>
+                        <p className="text-xs text-slate-600">{comm.note}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
