@@ -1,21 +1,33 @@
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
+
+let runtimeConfig = { url: 'https://stwgtsmdtjfwfkibzdlh.supabase.co', anonKey: '' };
+try {
+  const configPath = path.resolve(process.cwd(), 'api/runtime-config.json');
+  if (fs.existsSync(configPath)) {
+    runtimeConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  }
+} catch (e) {
+  console.warn("Could not read runtime-config.json:", e);
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || runtimeConfig.url || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || runtimeConfig.anonKey;
   const ownerEmail = process.env.OWNER_EMAIL || 'owner@op-os.com';
   const ownerPassword = process.env.OWNER_PASSWORD || 'OwnerPassword2026!';
 
   if (!supabaseAnonKey) {
-    return res.status(500).json({
-      error: 'supabaseAnonKey missing in server environment',
-      anonKeyLength: String(supabaseAnonKey ? supabaseAnonKey.length : 0),
-      envValue: String(process.env.VITE_SUPABASE_ANON_KEY)
-    });
+    return res.status(500).json({ error: 'Server owner session configuration incomplete (supabaseAnonKey missing)' });
+  }
+
+  if (!ownerEmail || !ownerPassword) {
+    return res.status(500).json({ error: 'Server owner credentials not configured in environment' });
   }
 
   try {
