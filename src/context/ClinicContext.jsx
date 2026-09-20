@@ -11,25 +11,13 @@ export const ClinicProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   
   const [patients, setPatients] = useState([]);
-  const [services, setServices] = useState([
-    { id: 'svc_1', name: 'טיפול פיזיותרפיה מקיף', description: 'אבחון וטיפול 45 דק', duration_minutes: 45, default_price: 250, type: 'service' },
-    { id: 'pkg_1', name: 'כרטיסיית 10 טיפולים', description: 'חבילה מוזלת של 10 מפגשים', duration_minutes: 45, default_price: 2100, type: 'package', session_count: 10 },
-    { id: 'prd_1', name: 'משחת תנועה ושיקום 100 מ"ל', description: 'ציוד נלווה לטיפול בבית', duration_minutes: 0, default_price: 85, type: 'product' },
-    { id: 'sub_1', name: 'תוכנית ליווי חודשית VIP', description: 'סדרת טיפולים ומעקב זמין ב-WhatsApp', duration_minutes: 60, default_price: 1500, type: 'subscription' }
-  ]);
-
-  const [patientPackages, setPatientPackages] = useState([
-    { id: 'ppkg_1', patient_id: '1', name: 'כרטיסיית 10 טיפולים', total_sessions: 10, remaining_sessions: 7, purchased_date: todayStr }
-  ]);
-
+  const [services, setServices] = useState([]);
+  const [patientPackages, setPatientPackages] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [payments, setPayments] = useState([]);
-  const [expenses, setExpenses] = useState([
-    { id: 'exp_1', title: 'שכירות קליניקה', category: 'Rent', amount: 4500, payment_method: 'Bank Transfer', expense_date: todayStr },
-    { id: 'exp_2', title: 'ציוד מתכלה ותחבושות', category: 'Equipment', amount: 650, payment_method: 'Credit Card', expense_date: todayStr }
-  ]);
+  const [expenses, setExpenses] = useState([]);
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
 
@@ -38,10 +26,10 @@ export const ClinicProvider = ({ children }) => {
     allowPackages: true,
     allowPayAtClinic: true,
     requirePolicy: true,
-    cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש. ביטול במעמד קצר יותר יחויב במחצית משווי הטיפול.',
+    cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש.',
     welcomeMessage: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
-    clinicAddress: 'הרצל 15, תל אביב (בניין B, קומה 3)',
-    logoUrl: '/clinify-logo.png'
+    clinicAddress: '',
+    logoUrl: ''
   });
   
   const [businessHours, setBusinessHours] = useState([
@@ -59,26 +47,33 @@ export const ClinicProvider = ({ children }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (!session) setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (!session) setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // ONLY fetch complete internal CRM dataset when an authenticated user session exists!
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    if (session) {
+      fetchInitialData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [session]);
 
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
       const [
         patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes
+        tasksRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes
       ] = await Promise.all([
         supabase.from('patients').select('*'),
         supabase.from('services').select('*'),
@@ -90,22 +85,32 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('form_submissions').select('*'),
         supabase.from('expenses').select('*'),
         supabase.from('booking_settings').select('*').maybeSingle(),
-        supabase.from('patient_packages').select('*')
+        supabase.from('patient_packages').select('*'),
+        supabase.from('business_hours').select('*')
       ]);
 
       if (patientsRes.data) setPatients(patientsRes.data);
-      if (servicesRes.data && servicesRes.data.length > 0) setServices(servicesRes.data);
+      if (servicesRes.data) setServices(servicesRes.data);
       if (appointmentsRes.data) setAppointments(appointmentsRes.data);
       if (leadsRes.data) setLeads(leadsRes.data);
       if (tasksRes.data) setTasks(tasksRes.data);
       if (paymentsRes.data) setPayments(paymentsRes.data);
       if (formsRes.data) setForms(formsRes.data);
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
-      if (expensesRes.data && expensesRes.data.length > 0) setExpenses(expensesRes.data);
-      if (packagesRes.data && packagesRes.data.length > 0) setPatientPackages(packagesRes.data);
+      if (expensesRes.data) setExpenses(expensesRes.data);
+      if (packagesRes.data) setPatientPackages(packagesRes.data);
       if (bookingSetRes.data) setBookingSettings(prev => ({ ...prev, ...bookingSetRes.data }));
+      if (hoursRes.data && hoursRes.data.length > 0) {
+        setBusinessHours(hoursRes.data.map(h => ({
+          dayIndex: h.day_index,
+          dayOfWeek: h.day_of_week,
+          isOpen: h.is_open,
+          startTime: h.start_time,
+          endTime: h.end_time
+        })));
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching internal CRM data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -115,26 +120,35 @@ export const ClinicProvider = ({ children }) => {
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
+    setPatients([]);
+    setAppointments([]);
+    setLeads([]);
+    setTasks([]);
+    setPayments([]);
+    setExpenses([]);
   };
 
   const updateBookingSettings = async (updates) => {
-    setBookingSettings(prev => {
-      const next = { ...prev, ...updates };
-      supabase.from('booking_settings').upsert({ id: 'default', ...next }).then();
-      return next;
-    });
+    const next = { ...bookingSettings, ...updates };
+    const { error } = await supabase.from('booking_settings').upsert({ id: 'default', ...next });
+    if (error) {
+      console.error("Error updating booking settings:", error);
+      throw error;
+    }
+    setBookingSettings(next);
   };
 
   const addPatient = async (patient) => {
     const { data, error } = await supabase.from('patients').insert([patient]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error adding patient to database:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setPatients(prev => [...prev, data[0]]);
       return data[0];
-    } else {
-      const fallback = { id: 'pat_' + Date.now(), ...patient };
-      setPatients(prev => [...prev, fallback]);
-      return fallback;
     }
+    return null;
   };
 
   const addService = async (service) => {
@@ -147,20 +161,34 @@ export const ClinicProvider = ({ children }) => {
       session_count: service.session_count ? parseInt(service.session_count) : null
     };
     const { data, error } = await supabase.from('services').insert([payload]).select();
-    if (!error && data) {
-      setServices(prev => [...prev, data[0]]);
-    } else {
-      setServices(prev => [...prev, { id: 'item_' + Date.now(), ...payload }]);
+    if (error) {
+      console.error("Error adding service:", error);
+      throw error;
     }
+    if (data && data[0]) {
+      setServices(prev => [...prev, data[0]]);
+      return data[0];
+    }
+    return null;
   };
 
   const updateService = async (serviceId, updates) => {
     const { data, error } = await supabase.from('services').update(updates).eq('id', serviceId).select();
-    setServices(prev => prev.map(s => s.id === serviceId ? (data && data[0] ? data[0] : { ...s, ...updates }) : s));
+    if (error) {
+      console.error("Error updating service:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setServices(prev => prev.map(s => s.id === serviceId ? data[0] : s));
+    }
   };
 
   const deleteService = async (serviceId) => {
-    await supabase.from('services').delete().eq('id', serviceId);
+    const { error } = await supabase.from('services').delete().eq('id', serviceId);
+    if (error) {
+      console.error("Error deleting service:", error);
+      throw error;
+    }
     setServices(prev => prev.filter(s => s.id !== serviceId));
   };
 
@@ -174,14 +202,15 @@ export const ClinicProvider = ({ children }) => {
       purchased_date: todayStr
     };
     const { data, error } = await supabase.from('patient_packages').insert([newPkg]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error issuing package:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setPatientPackages(prev => [...prev, data[0]]);
       return data[0];
-    } else {
-      const fallback = { id: 'ppkg_' + Date.now(), ...newPkg };
-      setPatientPackages(prev => [...prev, fallback]);
-      return fallback;
     }
+    return null;
   };
 
   // Redeem / Deduct Session from Patient Package
@@ -189,12 +218,15 @@ export const ClinicProvider = ({ children }) => {
     const targetPkg = patientPackages.find(p => p.id === packageId);
     if (!targetPkg || targetPkg.remaining_sessions <= 0) return;
 
-    const newRemaining = targetPkg.remaining_sessions - 1;
-    await supabase.from('patient_packages').update({ remaining_sessions: newRemaining }).eq('id', packageId);
-
+    const { error } = await supabase.rpc('redeem_package_session', { p_package_id: packageId });
+    if (error) {
+      console.error("Error redeeming package session:", error);
+      throw error;
+    }
+    
     setPatientPackages(prev => prev.map(pkg => {
       if (pkg.id === packageId && pkg.remaining_sessions > 0) {
-        return { ...pkg, remaining_sessions: newRemaining };
+        return { ...pkg, remaining_sessions: pkg.remaining_sessions - 1 };
       }
       return pkg;
     }));
@@ -202,49 +234,62 @@ export const ClinicProvider = ({ children }) => {
 
   const addAppointment = async (appt) => {
     const { data, error } = await supabase.from('appointments').insert([appt]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error creating appointment:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setAppointments(prev => [...prev, data[0]]);
       return data[0];
-    } else {
-      const fallback = { id: 'appt_' + Date.now(), ...appt };
-      setAppointments(prev => [...prev, fallback]);
-      return fallback;
     }
+    return null;
   };
 
   // Update Appointment Status with Automatic Package Deduction on Completion
   const updateAppointmentStatus = async (apptId, newStatus) => {
     const appt = appointments.find(a => a.id === apptId);
-    await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
+    const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
+    if (error) {
+      console.error("Error updating appointment status:", error);
+      throw error;
+    }
     setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status: newStatus } : a));
 
     // Auto-deduct 1 session if marked completed and patient has an active package!
     if (newStatus === 'completed' && appt?.patient_id) {
       const activePkg = patientPackages.find(p => p.patient_id === appt.patient_id && p.remaining_sessions > 0);
       if (activePkg) {
-        redeemPackageSession(activePkg.id);
+        await redeemPackageSession(activePkg.id);
       }
     }
   };
 
   const addLead = async (lead) => {
     const { data, error } = await supabase.from('leads').insert([lead]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error creating lead:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setLeads(prev => [...prev, data[0]]);
       return data[0];
-    } else {
-      const fallback = { id: 'lead_' + Date.now(), ...lead };
-      setLeads(prev => [...prev, fallback]);
-      return fallback;
     }
+    return null;
   };
 
   const addTask = async (task) => {
     const payload = { ...task };
     if (!payload.patient_id) delete payload.patient_id;
     const { data, error } = await supabase.from('tasks').insert([payload]).select();
-    if (!error && data) setTasks(prev => [...prev, data[0]]);
-    else setTasks(prev => [...prev, { id: 'task_' + Date.now(), ...payload }]);
+    if (error) {
+      console.error("Error creating task:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setTasks(prev => [...prev, data[0]]);
+      return data[0];
+    }
+    return null;
   };
 
   const addPayment = async (payment) => {
@@ -253,31 +298,49 @@ export const ClinicProvider = ({ children }) => {
       payment_date: payment.payment_date || new Date().toISOString()
     };
     const { data, error } = await supabase.from('payments').insert([payload]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error adding payment:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setPayments(prev => [...prev, data[0]]);
-    } else {
-      setPayments(prev => [...prev, { id: 'pay_' + Date.now(), ...payload }]);
+      
+      // If a package item was bought for a patient, auto-issue it!
+      if (payment.item_type === 'package' && payment.patient_id) {
+        const catalogItem = services.find(s => s.id === payment.catalog_item_id) || { name: 'כרטיסיית טיפולים', session_count: 10 };
+        await issuePackageToPatient(payment.patient_id, catalogItem);
+      }
+      return data[0];
     }
-    
-    // If a package item was bought for a patient, auto-issue it!
-    if (payment.item_type === 'package' && payment.patient_id) {
-      const catalogItem = services.find(s => s.id === payment.catalog_item_id) || { name: 'כרטיסיית טיפולים', session_count: 10 };
-      issuePackageToPatient(payment.patient_id, catalogItem);
-    }
+    return null;
   };
 
   const updatePayment = async (paymentId, updates) => {
     const { data, error } = await supabase.from('payments').update(updates).eq('id', paymentId).select();
-    setPayments(prev => prev.map(p => p.id === paymentId ? (data && data[0] ? data[0] : { ...p, ...updates }) : p));
+    if (error) {
+      console.error("Error updating payment:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setPayments(prev => prev.map(p => p.id === paymentId ? data[0] : p));
+    }
   };
 
   const deletePayment = async (paymentId) => {
-    await supabase.from('payments').delete().eq('id', paymentId);
+    const { error } = await supabase.from('payments').delete().eq('id', paymentId);
+    if (error) {
+      console.error("Error deleting payment:", error);
+      throw error;
+    }
     setPayments(prev => prev.filter(p => p.id !== paymentId));
   };
 
   const updatePaymentStatus = async (paymentId, newStatus) => {
-    await supabase.from('payments').update({ status: newStatus }).eq('id', paymentId);
+    const { error } = await supabase.from('payments').update({ status: newStatus }).eq('id', paymentId);
+    if (error) {
+      console.error("Error updating payment status:", error);
+      throw error;
+    }
     setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
   };
 
@@ -291,30 +354,45 @@ export const ClinicProvider = ({ children }) => {
       expense_date: expense.expense_date || todayStr
     };
     const { data, error } = await supabase.from('expenses').insert([payload]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error adding expense:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setExpenses(prev => [...prev, data[0]]);
       return data[0];
-    } else {
-      const fallback = { id: 'exp_' + Date.now(), ...payload };
-      setExpenses(prev => [...prev, fallback]);
-      return fallback;
     }
+    return null;
   };
 
   const updateExpense = async (expenseId, updates) => {
     const { data, error } = await supabase.from('expenses').update(updates).eq('id', expenseId).select();
-    setExpenses(prev => prev.map(e => e.id === expenseId ? (data && data[0] ? data[0] : { ...e, ...updates }) : e));
+    if (error) {
+      console.error("Error updating expense:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setExpenses(prev => prev.map(e => e.id === expenseId ? data[0] : e));
+    }
   };
 
   const deleteExpense = async (expenseId) => {
-    await supabase.from('expenses').delete().eq('id', expenseId);
+    const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+    if (error) {
+      console.error("Error deleting expense:", error);
+      throw error;
+    }
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
   };
 
   // Forms API
   const addForm = async (form) => {
     const { data, error } = await supabase.from('forms').insert([form]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error creating form:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setForms(prev => [...prev, data[0]]);
       return data[0];
     }
@@ -323,14 +401,22 @@ export const ClinicProvider = ({ children }) => {
 
   const updateForm = async (formId, updates) => {
     const { data, error } = await supabase.from('forms').update(updates).eq('id', formId).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error updating form:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setForms(prev => prev.map(f => f.id === formId ? data[0] : f));
     }
   };
 
   const addFormSubmission = async (submission) => {
     const { data, error } = await supabase.from('form_submissions').insert([submission]).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error submitting form:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setFormSubmissions(prev => [...prev, data[0]]);
       return data[0];
     }
@@ -339,27 +425,46 @@ export const ClinicProvider = ({ children }) => {
 
   // Updates
   const updateLeadStatus = async (leadId, newStatus) => {
-    await supabase.from('leads').update({ status: newStatus }).eq('id', leadId);
+    const { error } = await supabase.from('leads').update({ status: newStatus }).eq('id', leadId);
+    if (error) {
+      console.error("Error updating lead status:", error);
+      throw error;
+    }
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
   };
 
   const updateTaskStatus = async (taskId, newStatus) => {
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    if (error) {
+      console.error("Error updating task status:", error);
+      throw error;
+    }
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
   };
 
-  const updateBusinessHour = (dayOfWeek, updates) => {
-    setBusinessHours(prev => prev.map(bh => bh.dayOfWeek === dayOfWeek ? { ...bh, ...updates } : bh));
+  const updateBusinessHour = async (dayOfWeek, updates) => {
+    const target = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+    if (target) {
+      const updated = { ...target, ...updates };
+      await supabase.from('business_hours').upsert({
+        day_index: updated.dayIndex,
+        day_of_week: updated.dayOfWeek,
+        is_open: updated.isOpen,
+        start_time: updated.startTime,
+        end_time: updated.endTime
+      });
+      setBusinessHours(prev => prev.map(bh => bh.dayOfWeek === dayOfWeek ? updated : bh));
+    }
   };
 
   const getPatientName = (patientId) => {
     if (!patientId) return '';
     const patient = patients.find(p => p.id === patientId);
-    return patient ? patient.full_name : 'Unknown Patient';
+    return patient ? patient.full_name : '';
   };
   const getServiceName = (serviceId) => {
     const svc = services.find(s => s.id === serviceId);
-    return svc ? svc.name : 'Unknown Service';
+    return svc ? svc.name : '';
   };
   const getPaymentForAppointment = (apptId) => payments.find(p => p.appointment_id === apptId);
 
@@ -425,34 +530,41 @@ export const ClinicProvider = ({ children }) => {
   // Patient CRM functions
   const updatePatient = async (patientId, updates) => {
     const { data, error } = await supabase.from('patients').update(updates).eq('id', patientId).select();
-    if (!error && data) {
+    if (error) {
+      console.error("Error updating patient:", error);
+      throw error;
+    }
+    if (data && data[0]) {
       setPatients(prev => prev.map(p => p.id === patientId ? data[0] : p));
       return data[0];
-    } else {
-      setPatients(prev => prev.map(p => p.id === patientId ? { ...p, ...updates } : p));
-      const current = patients.find(p => p.id === patientId);
-      return { ...current, ...updates };
     }
+    return null;
   };
 
-  const addClinicalNote = async (patientId, noteText, author = 'ד"ר אוקונסקי') => {
+  const addClinicalNote = async (patientId, noteText, author = null) => {
+    const defaultAuthor = author || user?.user_metadata?.full_name || 'מטפל/ת';
     const newNote = {
       patient_id: patientId,
-      author,
+      author: defaultAuthor,
       content: noteText,
       created_at: new Date().toISOString()
     };
     const { data, error } = await supabase.from('patient_clinical_notes').insert([newNote]).select();
-    const created = (!error && data) ? data[0] : { id: 'note_' + Date.now(), ...newNote };
-
-    setPatients(prev => prev.map(p => {
-      if (p.id === patientId) {
-        const notes = p.clinical_notes || [];
-        return { ...p, clinical_notes: [created, ...notes] };
-      }
-      return p;
-    }));
-    return created;
+    if (error) {
+      console.error("Error adding clinical note:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setPatients(prev => prev.map(p => {
+        if (p.id === patientId) {
+          const notes = p.clinical_notes || [];
+          return { ...p, clinical_notes: [data[0], ...notes] };
+        }
+        return p;
+      }));
+      return data[0];
+    }
+    return null;
   };
 
   const addPatientDocument = async (patientId, docName, docUrl = '#') => {
@@ -464,16 +576,21 @@ export const ClinicProvider = ({ children }) => {
       uploaded_at: new Date().toISOString().split('T')[0]
     };
     const { data, error } = await supabase.from('patient_documents').insert([newDoc]).select();
-    const created = (!error && data) ? data[0] : { id: 'doc_' + Date.now(), ...newDoc };
-
-    setPatients(prev => prev.map(p => {
-      if (p.id === patientId) {
-        const docs = p.documents || [];
-        return { ...p, documents: [created, ...docs] };
-      }
-      return p;
-    }));
-    return created;
+    if (error) {
+      console.error("Error adding document:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setPatients(prev => prev.map(p => {
+        if (p.id === patientId) {
+          const docs = p.documents || [];
+          return { ...p, documents: [data[0], ...docs] };
+        }
+        return p;
+      }));
+      return data[0];
+    }
+    return null;
   };
 
   const addLeadCommunication = async (leadId, type, note) => {
@@ -484,23 +601,32 @@ export const ClinicProvider = ({ children }) => {
       created_at: new Date().toISOString()
     };
     const { data, error } = await supabase.from('lead_communications').insert([newComm]).select();
-    const created = (!error && data) ? data[0] : { id: 'comm_' + Date.now(), ...newComm };
-
-    setLeads(prev => prev.map(l => {
-      if (l.id === leadId) {
-        const comms = l.communication_log || [];
-        return { ...l, communication_log: [created, ...comms] };
-      }
-      return l;
-    }));
-    return created;
+    if (error) {
+      console.error("Error adding lead communication:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setLeads(prev => prev.map(l => {
+        if (l.id === leadId) {
+          const comms = l.communication_log || [];
+          return { ...l, communication_log: [data[0], ...comms] };
+        }
+        return l;
+      }));
+      return data[0];
+    }
+    return null;
   };
 
   const updateLeadFollowUp = async (leadId, followUpDate, lostReason = null) => {
     const updates = { follow_up_date: followUpDate };
     if (lostReason) updates.lost_reason = lostReason;
     
-    await supabase.from('leads').update(updates).eq('id', leadId);
+    const { error } = await supabase.from('leads').update(updates).eq('id', leadId);
+    if (error) {
+      console.error("Error updating lead follow-up:", error);
+      throw error;
+    }
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
   };
 

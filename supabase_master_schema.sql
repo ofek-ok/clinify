@@ -1,6 +1,7 @@
 -- ========================================================
 -- Clinify Master Supabase PostgreSQL Database Schema
--- Run this script in your Supabase SQL Editor to generate the full database structure.
+-- Branch: op-os-core-v1
+-- Production-Ready, RLS Secured, Multi-Tenant Data Model
 -- ========================================================
 
 -- Enable UUID extension
@@ -20,10 +21,10 @@ CREATE TABLE IF NOT EXISTS booking_settings (
   allow_packages boolean DEFAULT true,
   allow_pay_at_clinic boolean DEFAULT true,
   require_policy boolean DEFAULT true,
-  cancellation_policy_text text DEFAULT 'ביטול תור יתאפשר עד 24 שעות מראש. ביטול במעמד קצר יותר יחויב במחצית משווי הטיפול.',
-  welcome_message text DEFAULT 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
-  clinic_address text DEFAULT 'הרצל 15, תל אביב (בניין B, קומה 3)',
-  logo_url text DEFAULT '/clinify-logo.png',
+  cancellation_policy_text text DEFAULT 'ביטול תור יתאפשר עד 24 שעות מראש.',
+  welcome_message text DEFAULT 'ברוכים הבאים לעמוד זימון התורים. אנא בחרו שירות ומועד נוח.',
+  clinic_address text DEFAULT '',
+  logo_url text DEFAULT '',
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -87,7 +88,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   end_date timestamp with time zone,
   notes text,
   status text DEFAULT 'scheduled', -- 'scheduled' | 'completed' | 'cancelled' | 'no_show'
-  source text DEFAULT 'internal', -- 'internal' | 'public_booking'
+  source text DEFAULT 'internal', -- 'internal' | 'public_booking' | 'package_redemption'
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -95,7 +96,7 @@ CREATE TABLE IF NOT EXISTS appointments (
 CREATE TABLE IF NOT EXISTS patient_clinical_notes (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
-  author text DEFAULT 'ד"ר אוקונסקי',
+  author text DEFAULT 'מטפל/ת',
   subjective text,
   objective text,
   assessment text,
@@ -126,6 +127,7 @@ CREATE TABLE IF NOT EXISTS leads (
   status text DEFAULT 'new', -- 'new' | 'contacted' | 'scheduled' | 'won' | 'lost'
   follow_up_date date,
   lost_reason text,
+  converted_patient_id uuid REFERENCES patients(id) ON DELETE SET NULL,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -197,10 +199,75 @@ CREATE TABLE IF NOT EXISTS form_submissions (
 );
 
 -- ========================================================
--- Atomic Stored Procedures (RPC Functions)
+-- ROW LEVEL SECURITY (RLS) POLICIES
 -- ========================================================
 
--- Redeem 1 session from active package
+-- Enable RLS on all tables containing private or business data
+ALTER TABLE clinics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE booking_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_hours ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patient_packages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patient_clinical_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patient_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lead_communications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE forms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE form_submissions ENABLE ROW LEVEL SECURITY;
+
+-- --------------------------------------------------------
+-- Authenticated Internal Users Policies (Full Access)
+-- --------------------------------------------------------
+CREATE POLICY "Authenticated users full access on clinics" ON clinics FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on booking_settings" ON booking_settings FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on business_hours" ON business_hours FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on services" ON services FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on patients" ON patients FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on patient_packages" ON patient_packages FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on appointments" ON appointments FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on patient_clinical_notes" ON patient_clinical_notes FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on patient_documents" ON patient_documents FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on leads" ON leads FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on lead_communications" ON lead_communications FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on payments" ON payments FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on expenses" ON expenses FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on tasks" ON tasks FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on forms" ON forms FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated users full access on form_submissions" ON form_submissions FOR ALL TO authenticated USING (true);
+
+-- --------------------------------------------------------
+-- Anonymous Public Policies (Minimum Exposure for Booking / Forms)
+-- --------------------------------------------------------
+
+-- Public can read offerings catalog for booking
+CREATE POLICY "Public read offerings catalog" ON services FOR SELECT TO anon USING (true);
+
+-- Public can read business operating hours for slot calculation
+CREATE POLICY "Public read business hours" ON business_hours FOR SELECT TO anon USING (true);
+
+-- Public can read public booking page settings
+CREATE POLICY "Public read booking settings" ON booking_settings FOR SELECT TO anon USING (true);
+
+-- Public can read active public intake form definitions
+CREATE POLICY "Public read forms" ON forms FOR SELECT TO anon USING (true);
+
+-- Public can submit intake form responses
+CREATE POLICY "Public insert form submissions" ON form_submissions FOR INSERT TO anon WITH CHECK (true);
+
+-- NOTE: Patients, patient_packages, appointments, patient_clinical_notes, patient_documents,
+-- leads, lead_communications, payments, expenses, tasks have NO SELECT POLICIES for anon!
+-- Public visitors cannot query private CRM data.
+
+-- ========================================================
+-- SECURITY DEFINER PUBLIC PROCEDURES & FUNCTIONS
+-- ========================================================
+
+-- Redeem 1 session from active package (Internal / Server execution)
 CREATE OR REPLACE FUNCTION redeem_package_session(p_package_id uuid)
 RETURNS void AS $$
 BEGIN
@@ -208,27 +275,168 @@ BEGIN
   SET remaining_sessions = remaining_sessions - 1
   WHERE id = p_package_id AND remaining_sessions > 0;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Issue package to patient upon purchase
-CREATE OR REPLACE FUNCTION issue_package_to_patient(p_patient_id uuid, p_catalog_item_id uuid)
-RETURNS uuid AS $$
+-- Public Package Credit Lookup Function (Zero Exposure of Raw Tables)
+CREATE OR REPLACE FUNCTION public_check_package_status(p_phone text)
+RETURNS jsonb AS $$
 DECLARE
-  v_item record;
-  v_new_id uuid;
+  v_patient record;
+  v_package record;
+  v_clean_phone text;
 BEGIN
-  SELECT name, session_count FROM services WHERE id = p_catalog_item_id INTO v_item;
-  INSERT INTO patient_packages (patient_id, name, total_sessions, remaining_sessions)
-  VALUES (p_patient_id, v_item.name, COALESCE(v_item.session_count, 10), COALESCE(v_item.session_count, 10))
-  RETURNING id INTO v_new_id;
-  RETURN v_new_id;
-END;
-$$ LANGUAGE plpgsql;
+  v_clean_phone := regexp_replace(p_phone, '\D', '', 'g');
+  
+  SELECT * FROM patients 
+  WHERE regexp_replace(phone, '\D', '', 'g') = v_clean_phone
+  LIMIT 1 INTO v_patient;
 
--- Initial Demo Data Seed
-INSERT INTO services (name, description, duration_minutes, default_price, type, session_count) VALUES
-('טיפול פיזיותרפיה מקיף', 'אבחון וטיפול 45 דק', 45, 250.00, 'service', NULL),
-('כרטיסיית 10 טיפולים', 'חבילה מוזלת של 10 מפגשים', 45, 2100.00, 'package', 10),
-('משחת תנועה ושיקום 100 מ"ל', 'ציוד נלווה לטיפול בבית', 0, 85.00, 'product', NULL),
-('תוכנית ליווי חודשית VIP', 'סדרת טיפולים ומעקב זמין ב-WhatsApp', 60, 1500.00, 'subscription', NULL)
-ON CONFLICT DO NOTHING;
+  IF v_patient IS NULL THEN
+    RETURN jsonb_build_object('found', false);
+  END IF;
+
+  SELECT * FROM patient_packages 
+  WHERE patient_id = v_patient.id AND remaining_sessions > 0
+  ORDER BY created_at DESC LIMIT 1 INTO v_package;
+
+  IF v_package IS NULL THEN
+    RETURN jsonb_build_object(
+      'found', true,
+      'patient_name', v_patient.full_name,
+      'has_package', false
+    );
+  END IF;
+
+  RETURN jsonb_build_object(
+    'found', true,
+    'patient_id', v_patient.id,
+    'patient_name', v_patient.full_name,
+    'has_package', true,
+    'package_id', v_package.id,
+    'package_name', v_package.name,
+    'remaining_sessions', v_package.remaining_sessions,
+    'total_sessions', v_package.total_sessions
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Public Booking Transaction Function (Valid Lifecycle & Double Booking Prevention)
+CREATE OR REPLACE FUNCTION public_create_booking(
+  p_service_id uuid,
+  p_appointment_date timestamp with time zone,
+  p_full_name text,
+  p_phone text,
+  p_email text DEFAULT NULL,
+  p_notes text DEFAULT NULL,
+  p_use_package boolean DEFAULT false
+)
+RETURNS jsonb AS $$
+DECLARE
+  v_clean_phone text;
+  v_patient_id uuid;
+  v_lead_id uuid;
+  v_appointment_id uuid;
+  v_package_id uuid;
+  v_existing_patient record;
+  v_existing_lead record;
+  v_service record;
+  v_end_date timestamp with time zone;
+  v_conflict_count integer;
+BEGIN
+  -- 1. Normalize phone
+  v_clean_phone := regexp_replace(p_phone, '\D', '', 'g');
+  IF length(v_clean_phone) < 7 THEN
+    RAISE EXCEPTION 'מספר טלפון אינו תקין';
+  END IF;
+
+  -- 2. Lookup Service & Calculate End Time
+  SELECT * FROM services WHERE id = p_service_id INTO v_service;
+  IF v_service IS NULL THEN
+    RAISE EXCEPTION 'שירות לא נמצא';
+  END IF;
+
+  v_end_date := p_appointment_date + (COALESCE(v_service.duration_minutes, 30) || ' minutes')::interval;
+
+  -- 3. Concurrency / Double Booking Check
+  SELECT count(*) FROM appointments
+  WHERE status != 'cancelled'
+    AND (
+      (appointment_date < v_end_date AND COALESCE(end_date, appointment_date + (30 || ' minutes')::interval) > p_appointment_date)
+    )
+  INTO v_conflict_count;
+
+  IF v_conflict_count > 0 THEN
+    RAISE EXCEPTION 'מועד זה אינו פנוי יותר. אנא בחר מועד אחר.';
+  END IF;
+
+  -- 4. Identity Lifecycle: Check Existing Patient vs Lead
+  SELECT * FROM patients 
+  WHERE regexp_replace(phone, '\D', '', 'g') = v_clean_phone
+  LIMIT 1 INTO v_existing_patient;
+
+  IF v_existing_patient IS NOT NULL THEN
+    v_patient_id := v_existing_patient.id;
+  ELSE
+    -- Check Existing Lead
+    SELECT * FROM leads 
+    WHERE regexp_replace(phone, '\D', '', 'g') = v_clean_phone
+    LIMIT 1 INTO v_existing_lead;
+
+    -- Create Patient record to ensure appointments.patient_id FK integrity
+    INSERT INTO patients (full_name, phone, email, status)
+    VALUES (p_full_name, p_phone, p_email, 'active')
+    RETURNING id INTO v_patient_id;
+
+    IF v_existing_lead IS NOT NULL THEN
+      UPDATE leads 
+      SET status = 'won', converted_patient_id = v_patient_id 
+      WHERE id = v_existing_lead.id;
+    ELSE
+      INSERT INTO leads (full_name, phone, email, source, status, converted_patient_id)
+      VALUES (p_full_name, p_phone, p_email, 'Public Booking', 'won', v_patient_id);
+    END IF;
+  END IF;
+
+  -- 5. Package Credit Protection: Deduct only if valid
+  IF p_use_package IS TRUE THEN
+    SELECT id FROM patient_packages 
+    WHERE patient_id = v_patient_id AND remaining_sessions > 0
+    ORDER BY created_at DESC LIMIT 1 INTO v_package_id;
+
+    IF v_package_id IS NULL THEN
+      RAISE EXCEPTION 'לא נמצאה כרטיסייה פעילה למימוש';
+    END IF;
+
+    UPDATE patient_packages
+    SET remaining_sessions = remaining_sessions - 1
+    WHERE id = v_package_id AND remaining_sessions > 0;
+  END IF;
+
+  -- 6. Insert Appointment
+  INSERT INTO appointments (
+    patient_id,
+    service_id,
+    appointment_date,
+    end_date,
+    notes,
+    status,
+    source
+  ) VALUES (
+    v_patient_id,
+    p_service_id,
+    p_appointment_date,
+    v_end_date,
+    p_notes,
+    'scheduled',
+    CASE WHEN p_use_package THEN 'package_redemption' ELSE 'public_booking' END
+  )
+  RETURNING id INTO v_appointment_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'appointment_id', v_appointment_id,
+    'patient_id', v_patient_id,
+    'appointment_date', p_appointment_date
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

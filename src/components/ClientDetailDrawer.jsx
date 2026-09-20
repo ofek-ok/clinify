@@ -536,7 +536,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     { 
                       id: 'demo_soap_1', 
                       created_at: new Date().toISOString(), 
-                      author: 'ד"ר אוקונסקי', 
+                      author: 'מטפל/ת', 
                       content: JSON.stringify({
                         isSoap: true,
                         subjective: 'המטופל מדווח על כאב גב תחתון דרגה 6/10 לאחר פעילות ספורטיבית.',

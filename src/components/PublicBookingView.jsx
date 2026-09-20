@@ -1,25 +1,27 @@
-import React, { useState, useContext, useMemo } from 'react';
-import { ClinicContext } from '../context/ClinicContext';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { supabase } from '../supabaseClient';
 import { LanguageContext } from '../context/LanguageContext';
 
 const PublicBookingView = () => {
-  const { 
-    services = [], 
-    bookingSettings = {}, 
-    getAvailableSlotsForDate, 
-    addAppointment, 
-    addLead, 
-    patients = [],
-    patientPackages = [],
-    redeemPackageSession
-  } = useContext(ClinicContext);
-  
   const { t } = useContext(LanguageContext);
+
+  const [services, setServices] = useState([]);
+  const [businessHours, setBusinessHours] = useState([]);
+  const [bookingSettings, setBookingSettings] = useState({
+    allowPackages: true,
+    allowPayAtClinic: true,
+    requirePolicy: true,
+    cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש.',
+    welcomeMessage: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
+    clinicAddress: '',
+    logoUrl: ''
+  });
 
   const [step, setStep] = useState(1); // 1: Service, 2: Date/Slot, 3: Patient Info, 4: Confirmation
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [isLoadingPublicData, setIsLoadingPublicData] = useState(true);
   
   const [patientInfo, setPatientInfo] = useState({
     phone: '',
@@ -27,94 +29,137 @@ const PublicBookingView = () => {
     email: '',
     notes: '',
     acceptedTerms: false,
-    usePackage: false,
-    selectedPackageId: ''
+    usePackage: false
   });
 
-  const [existingPatient, setExistingPatient] = useState(null);
-  const [activePackage, setActivePackage] = useState(null);
+  const [activePackageInfo, setActivePackageInfo] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [completedAppointment, setCompletedAppointment] = useState(null);
+  const [bookingError, setBookingError] = useState('');
+  const [completedBooking, setCompletedBooking] = useState(null);
 
-  // Available slots calculation
+  // Fetch Public Data Only (Offerings, Schedule & Page Settings)
+  useEffect(() => {
+    const fetchPublicData = async () => {
+      setIsLoadingPublicData(true);
+      try {
+        const [servicesRes, hoursRes, settingsRes] = await Promise.all([
+          supabase.from('services').select('id, name, description, duration_minutes, default_price, type, session_count'),
+          supabase.from('business_hours').select('day_index, day_of_week, is_open, start_time, end_time'),
+          supabase.from('booking_settings').select('allow_packages, allow_pay_at_clinic, require_policy, cancellation_policy_text, welcome_message, clinic_address, logo_url').maybeSingle()
+        ]);
+
+        if (servicesRes.data) setServices(servicesRes.data);
+        if (hoursRes.data) setBusinessHours(hoursRes.data);
+        if (settingsRes.data) setBookingSettings(prev => ({ ...prev, ...settingsRes.data }));
+      } catch (err) {
+        console.error("Error loading public booking data:", err);
+      } finally {
+        setIsLoadingPublicData(false);
+      }
+    };
+
+    fetchPublicData();
+  }, []);
+
+  // Calculate available time slots locally using public business_hours
   const availableSlots = useMemo(() => {
-    if (!selectedDate || !selectedService) return [];
-    return getAvailableSlotsForDate(selectedDate, selectedService.duration_minutes || 30);
-  }, [selectedDate, selectedService, getAvailableSlotsForDate]);
-
-  // Handle phone blur to check for existing patient and active package
-  const handlePhoneBlur = () => {
-    if (!patientInfo.phone) return;
-    const cleanPhone = patientInfo.phone.trim();
-    const found = patients.find(p => p.phone && p.phone.trim() === cleanPhone);
+    if (!selectedDate || !selectedService || businessHours.length === 0) return [];
     
-    if (found) {
-      setExistingPatient(found);
-      if (found.full_name && !patientInfo.fullName) {
-        setPatientInfo(prev => ({ ...prev, fullName: found.full_name, email: found.email || prev.email }));
-      }
-      // Check active package
-      const pkg = patientPackages.find(p => p.patient_id === found.id && p.remaining_sessions > 0);
-      if (pkg) {
-        setActivePackage(pkg);
-        setPatientInfo(prev => ({ ...prev, usePackage: true, selectedPackageId: pkg.id }));
+    const dt = new Date(selectedDate);
+    const dayName = dt.toLocaleDateString('en-US', { weekday: 'long' });
+    const hours = businessHours.find(h => h.day_of_week === dayName);
+
+    if (!hours || !hours.is_open) return [];
+
+    const slots = [];
+    let current = new Date(`${selectedDate}T${hours.start_time}`);
+    const end = new Date(`${selectedDate}T${hours.end_time}`);
+    const durationMinutes = selectedService.duration_minutes || 30;
+
+    while (current.getTime() + durationMinutes * 60000 <= end.getTime()) {
+      const timeDisplay = current.toTimeString().substring(0, 5);
+      slots.push(timeDisplay);
+      current = new Date(current.getTime() + 30 * 60000);
+    }
+    return slots;
+  }, [selectedDate, selectedService, businessHours]);
+
+  // Handle phone blur: check active package using public RPC (Zero raw table exposure!)
+  const handlePhoneBlur = async () => {
+    if (!patientInfo.phone || patientInfo.phone.trim().length < 7) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('public_check_package_status', {
+        p_phone: patientInfo.phone.trim()
+      });
+
+      if (!error && data && data.found) {
+        if (data.patient_name && !patientInfo.fullName) {
+          setPatientInfo(prev => ({ ...prev, fullName: data.patient_name }));
+        }
+        if (data.has_package) {
+          setActivePackageInfo(data);
+          setPatientInfo(prev => ({ ...prev, usePackage: true }));
+        } else {
+          setActivePackageInfo(null);
+        }
       } else {
-        setActivePackage(null);
+        setActivePackageInfo(null);
       }
-    } else {
-      setExistingPatient(null);
-      setActivePackage(null);
+    } catch (err) {
+      console.error("Error checking package status:", err);
     }
   };
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    if (bookingSettings.requirePolicy && !patientInfo.acceptedTerms) {
-      alert(t('Please accept the cancellation policy to proceed.', 'אנא אישור את מדיניות הביטולים כדי להמשיך.'));
+    setBookingError('');
+
+    if (bookingSettings.require_policy && !patientInfo.acceptedTerms) {
+      setBookingError(t('Please accept the cancellation policy to proceed.', 'אנא אישור את מדיניות הביטולים כדי להמשיך.'));
       return;
     }
     if (!selectedService || !selectedDate || !selectedSlot) {
-      alert(t('Please complete slot selection.', 'אנא השלם את בחירת המועד.'));
+      setBookingError(t('Please complete slot selection.', 'אנא השלם את בחירת המועד.'));
       return;
     }
 
     setIsSubmitting(true);
     try {
-      let patientId = existingPatient ? existingPatient.id : null;
-
-      // If new patient, create a Lead record automatically
-      if (!existingPatient) {
-        const newLead = await addLead({
-          full_name: patientInfo.fullName,
-          phone: patientInfo.phone,
-          email: patientInfo.email || null,
-          source: 'Public Self-Booking',
-          status: 'new'
-        });
-        if (newLead) patientId = newLead.id;
-      }
-
-      // If patient selected to redeem session credit
-      if (patientInfo.usePackage && activePackage) {
-        await redeemPackageSession(activePackage.id);
-      }
-
-      // Create Appointment
-      const apptDateIso = `${selectedDate}T${selectedSlot}:00`;
-      const newAppt = await addAppointment({
-        patient_id: patientId,
-        service_id: selectedService.id,
-        appointment_date: apptDateIso,
-        notes: patientInfo.notes || (patientInfo.usePackage ? 'Self-booked via package credit' : 'Self-booked via online portal'),
-        status: 'scheduled',
-        source: patientInfo.usePackage ? 'package_redemption' : 'public_booking'
+      const apptDateIso = `${selectedDate}T${selectedSlot}:00Z`;
+      
+      // Execute Public Booking RPC (Enforces Identity Lifecycle, Double Booking Check & Transactional Package Deduction)
+      const { data, error } = await supabase.rpc('public_create_booking', {
+        p_service_id: selectedService.id,
+        p_appointment_date: apptDateIso,
+        p_full_name: patientInfo.fullName,
+        p_phone: patientInfo.phone,
+        p_email: patientInfo.email || null,
+        p_notes: patientInfo.notes || null,
+        p_use_package: patientInfo.usePackage
       });
 
-      setCompletedAppointment(newAppt || { appointment_date: apptDateIso });
-      setStep(4);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data && data.success) {
+        setCompletedBooking({
+          appointment_id: data.appointment_id,
+          date: selectedDate,
+          slot: selectedSlot
+        });
+        setStep(4);
+      } else {
+        throw new Error(t('Booking failed. Please try again.', 'רישום התור נכשל. אנא נסה שנית.'));
+      }
     } catch (err) {
-      console.error(err);
-      alert(t('Error completing booking. Please try again.', 'שגיאה ברישום התור. אנא נסה שנית.'));
+      console.error("Booking submission error:", err);
+      let errorMsg = err.message || t('Error completing booking.', 'ארעה שגיאה ברישום התור.');
+      if (errorMsg.includes('אינו פנוי')) {
+        errorMsg = t('This slot is no longer available. Please select another time.', 'מועד זה תפוס. אנא בחר שעה אחרת.');
+      }
+      setBookingError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,9 +173,18 @@ const PublicBookingView = () => {
     const endStr = `${dtEnd.toISOString().split('T')[0].replace(/-/g, '')}T${dtEnd.toTimeString().substring(0, 5).replace(':', '')}00`;
     
     const title = encodeURIComponent(`${selectedService.name} - Clinify`);
-    const details = encodeURIComponent(bookingSettings.clinicAddress || 'Clinify Clinic');
+    const details = encodeURIComponent(bookingSettings.clinic_address || 'Clinify Clinic');
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${details}`;
   }, [selectedService, selectedDate, selectedSlot, bookingSettings]);
+
+  if (isLoadingPublicData) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-10 h-10 border-4 border-slate-800 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-slate-500 font-medium text-xs">{t('Loading booking portal...', 'טוען עמוד זימון תורים...')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 text-start font-sans">
@@ -138,21 +192,19 @@ const PublicBookingView = () => {
 
         {/* Brand & Clinic Header */}
         <div className="text-center bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-md shrink-0">
-            {bookingSettings.logoUrl ? (
-              <img src={bookingSettings.logoUrl} alt="Clinic Logo" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-slate-900 flex items-center justify-center text-sky-400 font-extrabold text-xl">C</div>
-            )}
-          </div>
+          {bookingSettings.logo_url && (
+            <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-md shrink-0">
+              <img src={bookingSettings.logo_url} alt="Clinic Logo" className="w-full h-full object-cover" />
+            </div>
+          )}
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Clinify</h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1.5 font-medium max-w-md mx-auto">
-            {bookingSettings.welcomeMessage || t('Online Appointment Booking Portal', 'פורטל זימון תורים עצמאי לקליניקה')}
+            {bookingSettings.welcome_message || t('Online Appointment Booking Portal', 'פורטל זימון תורים עצמאי לקליניקה')}
           </p>
-          {bookingSettings.clinicAddress && (
+          {bookingSettings.clinic_address && (
             <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">
               <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
-              {bookingSettings.clinicAddress}
+              {bookingSettings.clinic_address}
             </span>
           )}
         </div>
@@ -166,32 +218,38 @@ const PublicBookingView = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {services.map(svc => (
-                <div 
-                  key={svc.id}
-                  onClick={() => {
-                    setSelectedService(svc);
-                    setStep(2);
-                  }}
-                  className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex justify-between items-center group ${
-                    selectedService?.id === svc.id 
-                      ? 'border-emerald-500 bg-emerald-50/30 shadow-sm' 
-                      : 'border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-white'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <h3 className="font-extrabold text-slate-800 text-base group-hover:text-emerald-700 transition-colors">{svc.name}</h3>
-                    {svc.description && <p className="text-xs text-slate-500 line-clamp-1">{svc.description}</p>}
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 pt-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                      {svc.duration_minutes || 30} {t('minutes', 'דקות')}
-                    </span>
-                  </div>
-                  <div className="text-end shrink-0">
-                    <span className="text-xl font-black text-slate-800" dir="ltr">₪{svc.default_price}</span>
-                  </div>
+              {services.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-medium">
+                  {t('No public services currently available.', 'אין שירותים זמינים כעת לזימון.')}
                 </div>
-              ))}
+              ) : (
+                services.map(svc => (
+                  <div 
+                    key={svc.id}
+                    onClick={() => {
+                      setSelectedService(svc);
+                      setStep(2);
+                    }}
+                    className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex justify-between items-center group ${
+                      selectedService?.id === svc.id 
+                        ? 'border-emerald-500 bg-emerald-50/30 shadow-sm' 
+                        : 'border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-white'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <h3 className="font-extrabold text-slate-800 text-base group-hover:text-emerald-700 transition-colors">{svc.name}</h3>
+                      {svc.description && <p className="text-xs text-slate-500 line-clamp-1">{svc.description}</p>}
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 pt-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {svc.duration_minutes || 30} {t('minutes', 'דקות')}
+                      </span>
+                    </div>
+                    <div className="text-end shrink-0">
+                      <span className="text-xl font-black text-slate-800" dir="ltr">₪{svc.default_price}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -230,7 +288,11 @@ const PublicBookingView = () => {
             {/* Time Slot Chips */}
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">{t('Available Time Slots', 'חלונות זמן פנויים בזמן אמת')}</label>
-              {availableSlots.length === 0 ? (
+              {!selectedDate ? (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm font-medium">
+                  {t('Please select a date to view available time slots.', 'אנא בחר תאריך כדי להציג שעות פנויות.')}
+                </div>
+              ) : availableSlots.length === 0 ? (
                 <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm font-medium">
                   {t('No available slots for this date. Please pick another date.', 'אין תורים פנויים בתאריך שנבחר. אנא בחר תאריך אחר.')}
                 </div>
@@ -278,6 +340,14 @@ const PublicBookingView = () => {
               <span className="text-xs font-bold text-slate-400">3 / 3</span>
             </div>
 
+            {/* Error Message Alert */}
+            {bookingError && (
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-semibold flex items-center gap-2">
+                <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>{bookingError}</span>
+              </div>
+            )}
+
             {/* Selected Summary Card */}
             <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-800 flex justify-between items-center">
               <div>
@@ -304,16 +374,16 @@ const PublicBookingView = () => {
                 />
               </div>
 
-              {/* Package Banner & Checkbox if active package found */}
-              {existingPatient && activePackage && bookingSettings.allowPackages && (
+              {/* Package Banner & Checkbox if active package found via public RPC */}
+              {activePackageInfo && bookingSettings.allow_packages && (
                 <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-extrabold text-sm text-amber-900">🎟️ {t('Active Package Found!', 'שלום ' + existingPatient.full_name + ', נמצאה כרטיסייה פעילה!')}</p>
-                      <p className="text-xs text-amber-700 mt-0.5">{activePackage.name} — נותרו {activePackage.remaining_sessions} מתוך {activePackage.total_sessions} טיפולים</p>
+                      <p className="font-extrabold text-sm text-amber-900">🎟️ {t('Active Package Found!', 'נמצאה כרטיסייה פעילה בחשבונך!')}</p>
+                      <p className="text-xs text-amber-700 mt-0.5">{activePackageInfo.package_name} — נותרו {activePackageInfo.remaining_sessions} מתוך {activePackageInfo.total_sessions} טיפולים</p>
                     </div>
                     <span className="bg-amber-600 text-white font-black px-2.5 py-1 rounded-md text-[10px] uppercase">
-                      {activePackage.remaining_sessions} {t('Left', 'נותרו')}
+                      {activePackageInfo.remaining_sessions} {t('Left', 'נותרו')}
                     </span>
                   </div>
 
@@ -363,7 +433,7 @@ const PublicBookingView = () => {
               </div>
 
               {/* Cancellation Policy Acceptance Checkbox */}
-              {bookingSettings.requirePolicy && (
+              {bookingSettings.require_policy && (
                 <label className="flex items-start gap-2.5 p-3.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
                   <input 
                     type="checkbox"
@@ -374,7 +444,7 @@ const PublicBookingView = () => {
                   />
                   <span className="text-xs text-slate-600 leading-relaxed font-medium">
                     {t('I agree to the cancellation policy: ', 'אני מאשר/ת את מדיניות הביטולים: ')} 
-                    <strong className="text-slate-800">{bookingSettings.cancellationPolicyText}</strong>
+                    <strong className="text-slate-800">{bookingSettings.cancellation_policy_text}</strong>
                   </span>
                 </label>
               )}
@@ -439,7 +509,8 @@ const PublicBookingView = () => {
                   setSelectedService(null);
                   setSelectedDate('');
                   setSelectedSlot('');
-                  setPatientInfo({ phone: '', fullName: '', email: '', notes: '', acceptedTerms: false, usePackage: false, selectedPackageId: '' });
+                  setPatientInfo({ phone: '', fullName: '', email: '', notes: '', acceptedTerms: false, usePackage: false });
+                  setActivePackageInfo(null);
                 }}
                 className="text-xs text-slate-400 hover:text-slate-600 font-bold underline"
               >

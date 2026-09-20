@@ -121,7 +121,7 @@ const AuthView = () => {
               <input 
                 type="text"
                 required
-                placeholder={t('e.g. Dr. Ofek Okonski', 'למשל: ד"ר אופק אוקונסקי')}
+                placeholder={t('e.g. Clinic Name', 'למשל: קליניקת פיזיו-שיקום')}
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-700 rounded-xl text-sm font-medium text-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none"
@@ -175,7 +175,7 @@ const AuthView = () => {
 
         {/* Footer Note */}
         <div className="pt-2 text-center text-[11px] text-slate-500 border-t border-slate-800">
-          🔒 {t('Secured with HIPAA & ISO compliant 256-bit encryption', 'מאובטח בתקן הצפנה מתקדם להגנה על פרטיות המטופלים')}
+          🔒 {t('Secured Auth & Database Encryption', 'חיבור מאובטח ומוצפן ב-Supabase Auth')}
         </div>
 
       </div>
