@@ -25,6 +25,8 @@ export default async function handler(req, res) {
   if (!supabaseAnonKey) {
     return res.status(500).json({
       error: 'Server owner session configuration incomplete (supabaseAnonKey missing)',
+      rawViteKeyLen: (process.env.VITE_SUPABASE_ANON_KEY || '').length,
+      rawSupabaseKeyLen: (process.env.SUPABASE_ANON_KEY || '').length,
       envKeys: Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('PASSWORD')),
       runtimeConfig
     });
