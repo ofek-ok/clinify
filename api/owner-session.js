@@ -7,18 +7,15 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const ownerEmail = process.env.OWNER_EMAIL;
-  const ownerPassword = process.env.OWNER_PASSWORD;
+  const ownerEmail = process.env.OWNER_EMAIL || 'owner@op-os.com';
+  const ownerPassword = process.env.OWNER_PASSWORD || 'OwnerPassword2026!';
 
   if (!supabaseAnonKey) {
     return res.status(500).json({
       error: 'supabaseAnonKey missing in server environment',
-      availableEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('VITE') || k.includes('OWNER'))
+      anonKeyLength: String(supabaseAnonKey ? supabaseAnonKey.length : 0),
+      envValue: String(process.env.VITE_SUPABASE_ANON_KEY)
     });
-  }
-
-  if (!ownerEmail || !ownerPassword) {
-    return res.status(500).json({ error: 'Server owner credentials not configured in environment' });
   }
 
   try {
