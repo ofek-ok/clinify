@@ -52,16 +52,23 @@ const LeadsPipeline = ({ navigate, onSelectLead }) => {
   };
 
   const handleStatusChange = async (lead, newStatus) => {
-    let lostReason = lead.lost_reason;
-    if (newStatus === 'lost' && !lostReason) {
-      const reason = window.prompt(t('Please enter reason for lost lead:', 'אנא ציין סיבה לאובדן הליד:'));
-      if (reason) lostReason = reason.trim();
+    if (newStatus === 'lost') {
+      let lostReason = lead.lost_reason;
+      if (!lostReason || !lostReason.trim()) {
+        const reason = window.prompt(t('Please enter reason for lost lead:', 'אנא ציין סיבה לאובדן הליד:'));
+        if (!reason || !reason.trim()) {
+          // User cancelled or provided empty reason -> abort transition!
+          return;
+        }
+        lostReason = reason.trim();
+      }
+      await updateLeadStatus(lead.id, 'lost');
+      await updateLeadFollowUp(lead.id, lead.follow_up_date, lostReason);
+      return;
     }
     await updateLeadStatus(lead.id, newStatus);
-    if (newStatus === 'lost' && lostReason) {
-      await updateLeadFollowUp(lead.id, lead.follow_up_date, lostReason);
-    }
   };
+
 
   const handleFollowUpDateChange = async (lead, newDate) => {
     await updateLeadFollowUp(lead.id, newDate || null, lead.lost_reason);

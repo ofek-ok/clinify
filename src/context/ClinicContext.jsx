@@ -903,17 +903,19 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addLeadCommunication = async (leadId, type, note) => {
-    let targetLeadId = leadId;
-    const leadMatch = leads.find(l => l.id === leadId || l.person_id === leadId);
-    if (leadMatch) targetLeadId = leadMatch.id;
+    let targetLead = leads.find(l => l.id === leadId || l.person_id === leadId);
+    if (!targetLead) {
+      throw new Error('לא נמצא ליד תקין לשיוך תקשורת');
+    }
 
     const newComm = {
-      lead_id: targetLeadId,
+      lead_id: targetLead.id,
       type,
       note,
       created_at: new Date().toISOString()
     };
     const { data, error } = await supabase.from('lead_communications').insert([newComm]).select();
+
     if (error) {
       console.error("Error adding lead communication:", error);
       throw error;
