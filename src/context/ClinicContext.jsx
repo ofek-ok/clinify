@@ -63,42 +63,29 @@ export const ClinicProvider = ({ children }) => {
           return;
         }
 
-        // If no active session exists, auto-authenticate single owner for direct access
+        // If no active session exists, attempt anonymous auth first for immediate zero-friction session
+        const { data: anonData } = await supabase.auth.signInAnonymously();
+
+        if (anonData?.session && isMounted) {
+          setSession(anonData.session);
+          setUser(anonData.session.user ?? null);
+          return;
+        }
+
+        // Fallback to single owner password sign-in
         const ownerEmail = 'owner@clinic.com';
         const ownerPassword = 'OwnerPassword2026!';
 
-        let { data, error } = await supabase.auth.signInWithPassword({
+        let { data } = await supabase.auth.signInWithPassword({
           email: ownerEmail,
           password: ownerPassword
         });
-
-        if (error && (error.message?.includes('Invalid login credentials') || error.status === 400 || error.message?.includes('User not found'))) {
-          // Auto create user if not exists yet
-          const signUpRes = await supabase.auth.signUp({
-            email: ownerEmail,
-            password: ownerPassword
-          });
-
-          if (signUpRes.data?.session) {
-            data = signUpRes;
-            error = null;
-          } else {
-            const secondTry = await supabase.auth.signInWithPassword({
-              email: ownerEmail,
-              password: ownerPassword
-            });
-            if (secondTry.data?.session) {
-              data = secondTry;
-              error = null;
-            }
-          }
-        }
 
         if (data?.session && isMounted) {
           setSession(data.session);
           setUser(data.session.user ?? null);
         } else if (isMounted) {
-          // Direct owner access fallback session if auth call is unconfirmed
+          // Direct owner access fallback session
           const fallbackUser = { id: 'owner-preset', email: ownerEmail };
           const fallbackSession = { access_token: 'owner-auto-session', user: fallbackUser };
           setSession(fallbackSession);
@@ -135,14 +122,10 @@ export const ClinicProvider = ({ children }) => {
     };
   }, []);
 
-  // Fetch complete internal CRM dataset when session exists
+  // Fetch complete internal CRM dataset on component mount
   useEffect(() => {
-    if (session) {
-      fetchInitialData();
-    } else {
-      setIsLoading(false);
-    }
-  }, [session]);
+    fetchInitialData();
+  }, []);
 
   const mapBookingSettingsFromDb = (dbRow) => {
     if (!dbRow) return null;
