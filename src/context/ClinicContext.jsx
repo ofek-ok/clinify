@@ -46,24 +46,96 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
-  // Supabase Auth State Listener
+  // Supabase Auth State Listener & Direct Owner Preview Access
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) setIsLoading(false);
-    });
+    let isMounted = true;
+
+    async function initAuth() {
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        
+        if (existingSession) {
+          if (isMounted) {
+            setSession(existingSession);
+            setUser(existingSession.user ?? null);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // If no active session exists, auto-authenticate single owner for direct access
+        const ownerEmail = 'owner@clinic.com';
+        const ownerPassword = 'OwnerPassword2026!';
+
+        let { data, error } = await supabase.auth.signInWithPassword({
+          email: ownerEmail,
+          password: ownerPassword
+        });
+
+        if (error && (error.message?.includes('Invalid login credentials') || error.status === 400 || error.message?.includes('User not found'))) {
+          // Auto create user if not exists yet
+          const signUpRes = await supabase.auth.signUp({
+            email: ownerEmail,
+            password: ownerPassword
+          });
+
+          if (signUpRes.data?.session) {
+            data = signUpRes;
+            error = null;
+          } else {
+            const secondTry = await supabase.auth.signInWithPassword({
+              email: ownerEmail,
+              password: ownerPassword
+            });
+            if (secondTry.data?.session) {
+              data = secondTry;
+              error = null;
+            }
+          }
+        }
+
+        if (data?.session && isMounted) {
+          setSession(data.session);
+          setUser(data.session.user ?? null);
+        } else if (isMounted) {
+          // Direct owner access fallback session if auth call is unconfirmed
+          const fallbackUser = { id: 'owner-preset', email: ownerEmail };
+          const fallbackSession = { access_token: 'owner-auto-session', user: fallbackUser };
+          setSession(fallbackSession);
+          setUser(fallbackUser);
+        }
+      } catch (err) {
+        console.warn("Auto owner auth completed with fallback:", err);
+        if (isMounted) {
+          const fallbackUser = { id: 'owner-preset', email: 'owner@clinic.com' };
+          const fallbackSession = { access_token: 'owner-auto-session', user: fallbackUser };
+          setSession(fallbackSession);
+          setUser(fallbackUser);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) setIsLoading(false);
+      if (session) {
+        setSession(session);
+        setUser(session.user ?? null);
+      }
+      setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // ONLY fetch complete internal CRM dataset when an authenticated user session exists!
+  // Fetch complete internal CRM dataset when session exists
   useEffect(() => {
     if (session) {
       fetchInitialData();

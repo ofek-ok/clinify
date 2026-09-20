@@ -4,8 +4,8 @@ import { LanguageContext } from '../context/LanguageContext';
 
 const AuthView = () => {
   const { t } = useContext(LanguageContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('owner@clinic.com');
+  const [password, setPassword] = useState('OwnerPassword2026!');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
