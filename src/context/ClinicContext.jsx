@@ -10,6 +10,7 @@ export const ClinicProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  const [people, setPeople] = useState([]);
   const [patients, setPatients] = useState([]);
   const [services, setServices] = useState([]);
   const [patientPackages, setPatientPackages] = useState([]);
@@ -72,9 +73,10 @@ export const ClinicProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const [
-        patientsRes, servicesRes, appointmentsRes, leadsRes, 
+        peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
         tasksRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes
       ] = await Promise.all([
+        supabase.from('people').select('*'),
         supabase.from('patients').select('*'),
         supabase.from('services').select('*'),
         supabase.from('appointments').select('*'),
@@ -89,6 +91,7 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('business_hours').select('*')
       ]);
 
+      if (peopleRes.data) setPeople(peopleRes.data);
       if (patientsRes.data) setPatients(patientsRes.data);
       if (servicesRes.data) setServices(servicesRes.data);
       if (appointmentsRes.data) setAppointments(appointmentsRes.data);
@@ -120,6 +123,7 @@ export const ClinicProvider = ({ children }) => {
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
+    setPeople([]);
     setPatients([]);
     setAppointments([]);
     setLeads([]);
@@ -138,10 +142,105 @@ export const ClinicProvider = ({ children }) => {
     setBookingSettings(next);
   };
 
-  const addPatient = async (patient) => {
-    const { data, error } = await supabase.from('patients').insert([patient]).select();
+  const upsertPerson = async ({ full_name, fullName, phone, email, source = 'Website', clientStatus = 'lead' }) => {
+    const nameVal = (full_name || fullName || '').trim();
+    const phoneVal = (phone || '').trim();
+    const emailVal = email ? email.trim() : null;
+    const cleanPhone = phoneVal.replace(/\D/g, '');
+    const cleanEmail = emailVal ? emailVal.toLowerCase() : null;
+
+    if (!cleanPhone || cleanPhone.length < 7) {
+      throw new Error('מספר טלפון תקין נדרש ליצירת זהות');
+    }
+
+    let existingPerson = people.find(p => p.normalized_phone === cleanPhone);
+    if (!existingPerson) {
+      const { data: dbPerson } = await supabase
+        .from('people')
+        .select('*')
+        .eq('normalized_phone', cleanPhone)
+        .maybeSingle();
+      if (dbPerson) existingPerson = dbPerson;
+    }
+
+    if (existingPerson) {
+      const updates = {};
+      if (nameVal && nameVal !== existingPerson.full_name) updates.full_name = nameVal;
+      if (cleanEmail && cleanEmail !== existingPerson.normalized_email) {
+        updates.email = emailVal;
+        updates.normalized_email = cleanEmail;
+      }
+      if (clientStatus === 'customer' && existingPerson.client_status !== 'customer') {
+        updates.client_status = 'customer';
+        updates.customer_since = new Date().toISOString();
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { data: updatedData, error } = await supabase
+          .from('people')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', existingPerson.id)
+          .select();
+
+        if (!error && updatedData && updatedData[0]) {
+          const updated = updatedData[0];
+          setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
+          return updated;
+        }
+      }
+      return existingPerson;
+    }
+
+    const newPersonPayload = {
+      full_name: nameVal,
+      phone: phoneVal,
+      normalized_phone: cleanPhone,
+      email: emailVal,
+      normalized_email: cleanEmail,
+      client_status: clientStatus,
+      source: source
+    };
+
+    const { data: createdData, error: createErr } = await supabase
+      .from('people')
+      .insert([newPersonPayload])
+      .select();
+
+    if (createErr) throw createErr;
+    if (createdData && createdData[0]) {
+      const newPerson = createdData[0];
+      setPeople(prev => [...prev, newPerson]);
+      return newPerson;
+    }
+    return null;
+  };
+
+  const addPatient = async (input) => {
+    const person = await upsertPerson({
+      full_name: input.full_name || input.fullName,
+      phone: input.phone,
+      email: input.email,
+      source: input.source || 'Internal',
+      clientStatus: 'customer'
+    });
+
+    if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
+
+    const existingPatient = patients.find(p => p.person_id === person.id);
+    if (existingPatient) return existingPatient;
+
+    const patientPayload = {
+      person_id: person.id,
+      status: input.status || 'active',
+      medical_history: input.medical_history || null,
+      allergies: input.allergies || null,
+      emergency_contact: input.emergency_contact || null,
+      tags: input.tags || []
+    };
+
+    const { data, error } = await supabase.from('patients').insert([patientPayload]).select();
     if (error) {
-      console.error("Error adding patient to database:", error);
+      console.error("Error adding patient profile:", error);
       throw error;
     }
     if (data && data[0]) {
@@ -194,7 +293,11 @@ export const ClinicProvider = ({ children }) => {
 
   // Issue Package to Patient
   const issuePackageToPatient = async (patientId, catalogItem) => {
+    const patient = patients.find(p => p.id === patientId);
+    const personId = patient ? patient.person_id : null;
+
     const newPkg = {
+      person_id: personId,
       patient_id: patientId,
       name: catalogItem.name,
       total_sessions: catalogItem.session_count || 10,
@@ -233,7 +336,18 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addAppointment = async (appt) => {
-    const { data, error } = await supabase.from('appointments').insert([appt]).select();
+    let personId = appt.person_id;
+    if (!personId && appt.patient_id) {
+      const patient = patients.find(p => p.id === appt.patient_id);
+      if (patient) personId = patient.person_id;
+    }
+
+    const payload = {
+      ...appt,
+      person_id: personId
+    };
+
+    const { data, error } = await supabase.from('appointments').insert([payload]).select();
     if (error) {
       console.error("Error creating appointment:", error);
       throw error;
@@ -264,8 +378,29 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const addLead = async (lead) => {
-    const { data, error } = await supabase.from('leads').insert([lead]).select();
+  const addLead = async (input) => {
+    const person = await upsertPerson({
+      full_name: input.full_name || input.fullName,
+      phone: input.phone,
+      email: input.email,
+      source: input.source || 'Website',
+      clientStatus: 'lead'
+    });
+
+    if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
+
+    const existingLead = leads.find(l => l.person_id === person.id);
+    if (existingLead) return existingLead;
+
+    const leadPayload = {
+      person_id: person.id,
+      source: input.source || 'Website',
+      status: input.status || 'new',
+      follow_up_date: input.follow_up_date || null,
+      lost_reason: input.lost_reason || null
+    };
+
+    const { data, error } = await supabase.from('leads').insert([leadPayload]).select();
     if (error) {
       console.error("Error creating lead:", error);
       throw error;
@@ -278,8 +413,15 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addTask = async (task) => {
-    const payload = { ...task };
+    let personId = task.person_id;
+    if (!personId && task.patient_id) {
+      const patient = patients.find(p => p.id === task.patient_id);
+      if (patient) personId = patient.person_id;
+    }
+
+    const payload = { ...task, person_id: personId };
     if (!payload.patient_id) delete payload.patient_id;
+
     const { data, error } = await supabase.from('tasks').insert([payload]).select();
     if (error) {
       console.error("Error creating task:", error);
@@ -293,8 +435,15 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addPayment = async (payment) => {
+    let personId = payment.person_id;
+    if (!personId && payment.patient_id) {
+      const patient = patients.find(p => p.id === payment.patient_id);
+      if (patient) personId = patient.person_id;
+    }
+
     const payload = {
       ...payment,
+      person_id: personId,
       payment_date: payment.payment_date || new Date().toISOString()
     };
     const { data, error } = await supabase.from('payments').insert([payload]).select();
@@ -457,11 +606,53 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
+  const enrichedPatients = useMemo(() => {
+    const peopleMap = new Map(people.map(p => [p.id, p]));
+    return patients.map(pt => {
+      const person = peopleMap.get(pt.person_id) || {};
+      return {
+        ...pt,
+        full_name: person.full_name || '',
+        phone: person.phone || '',
+        normalized_phone: person.normalized_phone || '',
+        email: person.email || '',
+        normalized_email: person.normalized_email || '',
+        client_status: person.client_status || 'customer',
+        customer_since: person.customer_since
+      };
+    });
+  }, [patients, people]);
+
+  const enrichedLeads = useMemo(() => {
+    const peopleMap = new Map(people.map(p => [p.id, p]));
+    return leads.map(l => {
+      const person = peopleMap.get(l.person_id) || {};
+      return {
+        ...l,
+        full_name: person.full_name || '',
+        phone: person.phone || '',
+        normalized_phone: person.normalized_phone || '',
+        email: person.email || '',
+        normalized_email: person.normalized_email || '',
+        client_status: person.client_status || 'lead'
+      };
+    });
+  }, [leads, people]);
+
   const getPatientName = (patientId) => {
     if (!patientId) return '';
     const patient = patients.find(p => p.id === patientId);
-    return patient ? patient.full_name : '';
+    if (!patient) return '';
+    const person = people.find(p => p.id === patient.person_id);
+    return person ? person.full_name : '';
   };
+
+  const getPersonName = (personId) => {
+    if (!personId) return '';
+    const person = people.find(p => p.id === personId);
+    return person ? person.full_name : '';
+  };
+
   const getServiceName = (serviceId) => {
     const svc = services.find(s => s.id === serviceId);
     return svc ? svc.name : '';
@@ -543,7 +734,11 @@ export const ClinicProvider = ({ children }) => {
 
   const addClinicalNote = async (patientId, noteText, author = null) => {
     const defaultAuthor = author || user?.user_metadata?.full_name || 'מטפל/ת';
+    const patient = patients.find(p => p.id === patientId);
+    const personId = patient ? patient.person_id : null;
+
     const newNote = {
+      person_id: personId,
       patient_id: patientId,
       author: defaultAuthor,
       content: noteText,
@@ -568,7 +763,11 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addPatientDocument = async (patientId, docName, docUrl = '#') => {
+    const patient = patients.find(p => p.id === patientId);
+    const personId = patient ? patient.person_id : null;
+
     const newDoc = {
+      person_id: personId,
       patient_id: patientId,
       name: docName,
       file_url: docUrl,
@@ -633,7 +832,8 @@ export const ClinicProvider = ({ children }) => {
   return (
     <ClinicContext.Provider value={{
       session, user, signOut, isLoading,
-      patients, services, businessHours, appointments, leads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
+      people, upsertPerson, getPersonName,
+      patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead, addTask, 
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 

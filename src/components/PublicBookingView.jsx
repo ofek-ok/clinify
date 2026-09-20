@@ -28,11 +28,9 @@ const PublicBookingView = () => {
     fullName: '',
     email: '',
     notes: '',
-    acceptedTerms: false,
-    usePackage: false
+    acceptedTerms: false
   });
 
-  const [activePackageInfo, setActivePackageInfo] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [completedBooking, setCompletedBooking] = useState(null);
@@ -84,26 +82,6 @@ const PublicBookingView = () => {
     return slots;
   }, [selectedDate, selectedService, businessHours]);
 
-  // Handle phone blur: check active package via audited RPC (Zero private patient info or IDs returned!)
-  const handlePhoneBlur = async () => {
-    if (!patientInfo.phone || patientInfo.phone.trim().length < 7) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('public_check_package_status', {
-        p_phone: patientInfo.phone.trim()
-      });
-
-      if (!error && data && data.has_active_package) {
-        setActivePackageInfo(data);
-        setPatientInfo(prev => ({ ...prev, usePackage: true }));
-      } else {
-        setActivePackageInfo(null);
-      }
-    } catch (err) {
-      console.error("Error checking package status:", err);
-    }
-  };
-
   // Helper for Israel Timezone ISO String construction (Asia/Jerusalem)
   const getIsraelIsoTimestamp = (dateStr, slotStr) => {
     const dt = new Date(`${dateStr}T${slotStr}:00`);
@@ -134,15 +112,14 @@ const PublicBookingView = () => {
     try {
       const apptDateIso = getIsraelIsoTimestamp(selectedDate, selectedSlot);
       
-      // Execute Public Booking RPC (Enforces Identity Lifecycle, Double Booking Check & Transactional Package Deduction)
+      // Execute Public Booking RPC
       const { data, error } = await supabase.rpc('public_create_booking', {
         p_service_id: selectedService.id,
         p_appointment_date: apptDateIso,
         p_full_name: patientInfo.fullName,
         p_phone: patientInfo.phone,
         p_email: patientInfo.email || null,
-        p_notes: patientInfo.notes || null,
-        p_use_package: patientInfo.usePackage
+        p_notes: patientInfo.notes || null
       });
 
       if (error) {
@@ -360,7 +337,7 @@ const PublicBookingView = () => {
                 <p className="text-sm font-black text-white mt-0.5">{selectedDate} ({selectedSlot})</p>
               </div>
               <span className="text-lg font-black text-white" dir="ltr">
-                {patientInfo.usePackage ? '₪0 (מכרטיסייה)' : `₪${selectedService?.default_price}`}
+                ₪{selectedService?.default_price}
               </span>
             </div>
 
@@ -374,37 +351,9 @@ const PublicBookingView = () => {
                   placeholder="050-0000000"
                   value={patientInfo.phone}
                   onChange={e => setPatientInfo({ ...patientInfo, phone: e.target.value })}
-                  onBlur={handlePhoneBlur}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                 />
               </div>
-
-              {/* Package Banner & Checkbox if active package found via audited public RPC */}
-              {activePackageInfo && bookingSettings.allow_packages && (
-                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-extrabold text-sm text-amber-900">🎟️ {t('Active Package Found!', 'נמצאה כרטיסייה פעילה בחשבונך!')}</p>
-                      <p className="text-xs text-amber-700 mt-0.5">נותרו {activePackageInfo.remaining_sessions} טיפולים למימוש</p>
-                    </div>
-                    <span className="bg-amber-600 text-white font-black px-2.5 py-1 rounded-md text-[10px] uppercase">
-                      {activePackageInfo.remaining_sessions} {t('Left', 'נותרו')}
-                    </span>
-                  </div>
-
-                  <label className="flex items-center gap-2.5 pt-2 border-t border-amber-200/80 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={patientInfo.usePackage}
-                      onChange={e => setPatientInfo({ ...patientInfo, usePackage: e.target.checked })}
-                      className="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500"
-                    />
-                    <span className="text-xs font-bold text-amber-900">
-                      {t('Deduct 1 session credit from active package (Pay ₪0 now)', 'נכה 1 טיפול מהכרטיסייה (תשלום: ₪0 במעמד הזימון)')}
-                    </span>
-                  </label>
-                </div>
-              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Full Name', 'שם מלא')} *</label>
@@ -463,7 +412,7 @@ const PublicBookingView = () => {
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <span>{patientInfo.usePackage ? t('Confirm Package Redemption & Booking', 'אישור זימון ומימוש טיפול מהכרטיסייה (₪0)') : t('Confirm & Complete Booking', 'אישור וקביעת תור')}</span>
+                <span>{t('Confirm & Complete Booking', 'אישור וקביעת תור')}</span>
               )}
             </button>
           </form>

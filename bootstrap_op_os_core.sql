@@ -99,11 +99,8 @@ CREATE UNIQUE INDEX idx_people_normalized_phone ON people (normalized_phone);
 -- 6. Patients Table (Clinical Profile Linked to Canonical Person)
 CREATE TABLE patients (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  person_id uuid NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  person_id uuid UNIQUE NOT NULL REFERENCES people(id) ON DELETE CASCADE,
   clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  full_name text NOT NULL,
-  email text,
-  phone text NOT NULL,
   status text DEFAULT 'active',
   medical_history text,
   allergies text,
@@ -115,7 +112,7 @@ CREATE TABLE patients (
 -- 7. Patient Packages (Active Punch Cards & Session Balances)
 CREATE TABLE patient_packages (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  person_id uuid REFERENCES people(id) ON DELETE CASCADE,
+  person_id uuid NOT NULL REFERENCES people(id) ON DELETE CASCADE,
   patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
   name text NOT NULL,
   total_sessions integer NOT NULL DEFAULT 10,
@@ -127,7 +124,7 @@ CREATE TABLE patient_packages (
 -- 8. Appointments Table (Israel Timezone Safe TIMESTAMPTZ)
 CREATE TABLE appointments (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  person_id uuid REFERENCES people(id) ON DELETE CASCADE,
+  person_id uuid NOT NULL REFERENCES people(id) ON DELETE CASCADE,
   patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
   clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
   service_id uuid REFERENCES services(id) ON DELETE SET NULL,
@@ -143,7 +140,7 @@ CREATE TABLE appointments (
 CREATE TABLE patient_clinical_notes (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   person_id uuid REFERENCES people(id) ON DELETE CASCADE,
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
+  patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   author text DEFAULT 'מטפל/ת',
   subjective text,
   objective text,
@@ -157,7 +154,7 @@ CREATE TABLE patient_clinical_notes (
 CREATE TABLE patient_documents (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   person_id uuid REFERENCES people(id) ON DELETE CASCADE,
-  patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
+  patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   name text NOT NULL,
   file_url text NOT NULL,
   file_size text,
@@ -170,9 +167,6 @@ CREATE TABLE leads (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   person_id uuid NOT NULL REFERENCES people(id) ON DELETE CASCADE,
   clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  full_name text NOT NULL,
-  email text,
-  phone text NOT NULL,
   source text DEFAULT 'Website',
   status text DEFAULT 'new', -- 'new' | 'contacted' | 'scheduled' | 'won' | 'lost'
   follow_up_date date,
@@ -417,16 +411,16 @@ BEGIN
   -- Ensure Patient record linked to Person
   SELECT id FROM patients WHERE person_id = v_person_id LIMIT 1 INTO v_patient_id;
   IF v_patient_id IS NULL THEN
-    INSERT INTO patients (person_id, full_name, phone, email, status)
-    VALUES (v_person_id, p_full_name, p_phone, p_email, 'active')
+    INSERT INTO patients (person_id, status)
+    VALUES (v_person_id, 'active')
     RETURNING id INTO v_patient_id;
   END IF;
 
   -- Ensure Lead relationship record linked to Person with status 'scheduled' (NOT 'won' or 'customer'!)
   SELECT id FROM leads WHERE person_id = v_person_id LIMIT 1 INTO v_lead_id;
   IF v_lead_id IS NULL THEN
-    INSERT INTO leads (person_id, full_name, phone, email, source, status)
-    VALUES (v_person_id, p_full_name, p_phone, p_email, 'Public Booking', 'scheduled')
+    INSERT INTO leads (person_id, source, status)
+    VALUES (v_person_id, 'Public Booking', 'scheduled')
     RETURNING id INTO v_lead_id;
   ELSE
     UPDATE leads 

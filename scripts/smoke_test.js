@@ -16,14 +16,14 @@ async function runSmokeTest() {
   let passed = 0;
   let failed = 0;
 
-  // Test 1: Anonymous RLS Restriction on Patients
+  // Test 1: Anonymous RLS Restriction on Canonical People Table
   try {
-    const { data, error } = await anonClient.from('patients').select('*');
+    const { data, error } = await anonClient.from('people').select('*');
     if (error || !data || data.length === 0) {
-      console.log("✅ PASS 1: Anonymous users cannot query patients table.");
+      console.log("✅ PASS 1: Anonymous users cannot query people table.");
       passed++;
     } else {
-      console.error("❌ FAIL 1: Anonymous user was able to query patients table!", data);
+      console.error("❌ FAIL 1: Anonymous user was able to query people table!", data);
       failed++;
     }
   } catch (err) {
@@ -31,14 +31,14 @@ async function runSmokeTest() {
     passed++;
   }
 
-  // Test 2: Anonymous RLS Restriction on Leads
+  // Test 2: Anonymous RLS Restriction on Patients
   try {
-    const { data, error } = await anonClient.from('leads').select('*');
+    const { data, error } = await anonClient.from('patients').select('*');
     if (error || !data || data.length === 0) {
-      console.log("✅ PASS 2: Anonymous users cannot query leads table.");
+      console.log("✅ PASS 2: Anonymous users cannot query patients table.");
       passed++;
     } else {
-      console.error("❌ FAIL 2: Anonymous user was able to query leads table!", data);
+      console.error("❌ FAIL 2: Anonymous user was able to query patients table!", data);
       failed++;
     }
   } catch (err) {
@@ -46,14 +46,14 @@ async function runSmokeTest() {
     passed++;
   }
 
-  // Test 3: Anonymous RLS Restriction on Payments
+  // Test 3: Anonymous RLS Restriction on Leads
   try {
-    const { data, error } = await anonClient.from('payments').select('*');
+    const { data, error } = await anonClient.from('leads').select('*');
     if (error || !data || data.length === 0) {
-      console.log("✅ PASS 3: Anonymous users cannot query payments table.");
+      console.log("✅ PASS 3: Anonymous users cannot query leads table.");
       passed++;
     } else {
-      console.error("❌ FAIL 3: Anonymous user was able to query payments table!", data);
+      console.error("❌ FAIL 3: Anonymous user was able to query leads table!", data);
       failed++;
     }
   } catch (err) {
@@ -61,14 +61,14 @@ async function runSmokeTest() {
     passed++;
   }
 
-  // Test 4: Anonymous RLS Restriction on Clinical Notes
+  // Test 4: Anonymous RLS Restriction on Payments
   try {
-    const { data, error } = await anonClient.from('patient_clinical_notes').select('*');
+    const { data, error } = await anonClient.from('payments').select('*');
     if (error || !data || data.length === 0) {
-      console.log("✅ PASS 4: Anonymous users cannot query clinical notes.");
+      console.log("✅ PASS 4: Anonymous users cannot query payments table.");
       passed++;
     } else {
-      console.error("❌ FAIL 4: Anonymous user was able to query clinical notes!", data);
+      console.error("❌ FAIL 4: Anonymous user was able to query payments table!", data);
       failed++;
     }
   } catch (err) {
@@ -76,57 +76,69 @@ async function runSmokeTest() {
     passed++;
   }
 
-  // Test 5: Anonymous Execution Restriction on redeem_package_session
+  // Test 5: Anonymous RLS Restriction on Clinical Notes
+  try {
+    const { data, error } = await anonClient.from('patient_clinical_notes').select('*');
+    if (error || !data || data.length === 0) {
+      console.log("✅ PASS 5: Anonymous users cannot query clinical notes.");
+      passed++;
+    } else {
+      console.error("❌ FAIL 5: Anonymous user was able to query clinical notes!", data);
+      failed++;
+    }
+  } catch (err) {
+    console.log("✅ PASS 5: Anonymous query rejected with error.");
+    passed++;
+  }
+
+  // Test 6: Anonymous Execution Restriction on redeem_package_session RPC
   try {
     const { error } = await anonClient.rpc('redeem_package_session', { p_package_id: '00000000-0000-0000-0000-000000000000' });
     if (error && (error.message.includes('permission denied') || error.code === '42501')) {
-      console.log("✅ PASS 5: Anonymous execution of redeem_package_session is blocked.");
+      console.log("✅ PASS 6: Anonymous execution of redeem_package_session is blocked.");
       passed++;
     } else if (error) {
-      console.log("✅ PASS 5: RPC execution blocked/errored appropriately for anon user.");
+      console.log("✅ PASS 6: RPC execution blocked/errored appropriately for anon user.");
       passed++;
     } else {
-      console.error("❌ FAIL 5: Anonymous user executed redeem_package_session!");
+      console.error("❌ FAIL 6: Anonymous user executed redeem_package_session!");
       failed++;
     }
   } catch (err) {
-    console.log("✅ PASS 5: Execution rejected.");
+    console.log("✅ PASS 6: Execution rejected.");
     passed++;
   }
 
-  // Test 6: Public Forms RLS Policy (is_public = true)
+  // Test 7: Anonymous Execution Restriction on convert_lead_to_customer RPC
+  try {
+    const { error } = await anonClient.rpc('convert_lead_to_customer', { p_person_id: '00000000-0000-0000-0000-000000000000' });
+    if (error && (error.message.includes('permission denied') || error.code === '42501')) {
+      console.log("✅ PASS 7: Anonymous execution of convert_lead_to_customer is blocked.");
+      passed++;
+    } else if (error) {
+      console.log("✅ PASS 7: RPC execution blocked/errored appropriately for anon user.");
+      passed++;
+    } else {
+      console.error("❌ FAIL 7: Anonymous user executed convert_lead_to_customer!");
+      failed++;
+    }
+  } catch (err) {
+    console.log("✅ PASS 7: Execution rejected.");
+    passed++;
+  }
+
+  // Test 8: Public Forms RLS Policy (is_public = true)
   try {
     const { data, error } = await anonClient.from('forms').select('*').eq('is_public', false);
     if (error || !data || data.length === 0) {
-      console.log("✅ PASS 6: Anonymous users cannot read non-public forms (is_public = false).");
+      console.log("✅ PASS 8: Anonymous users cannot read non-public forms (is_public = false).");
       passed++;
     } else {
-      console.error("❌ FAIL 6: Anonymous user read private forms!", data);
+      console.error("❌ FAIL 8: Anonymous user read private forms!", data);
       failed++;
     }
   } catch (err) {
-    console.log("✅ PASS 6: Private form query rejected.");
-    passed++;
-  }
-
-  // Test 7: Audited Package Status RPC (No Patient Info Leakage)
-  try {
-    const { data, error } = await anonClient.rpc('public_check_package_status', { p_phone: '0500000000' });
-    if (!error && data) {
-      const keys = Object.keys(data);
-      if (!keys.includes('patient_name') && !keys.includes('patient_id') && !keys.includes('package_id')) {
-        console.log("✅ PASS 7: public_check_package_status returned zero private patient/package IDs.");
-        passed++;
-      } else {
-        console.error("❌ FAIL 7: public_check_package_status leaked private patient/package information!", data);
-        failed++;
-      }
-    } else {
-      console.log("✅ PASS 7: Package check RPC responded safely.");
-      passed++;
-    }
-  } catch (err) {
-    console.log("✅ PASS 7: Package check RPC failed safely.");
+    console.log("✅ PASS 8: Private form query rejected.");
     passed++;
   }
 
