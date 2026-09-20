@@ -1,22 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL as configUrl, SUPABASE_ANON_KEY as configKey } from './_config.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || configUrl || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || configKey;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const ownerEmail = process.env.OWNER_EMAIL;
   const ownerPassword = process.env.OWNER_PASSWORD;
 
   if (!supabaseAnonKey) {
-    return res.status(500).json({ error: 'Server owner session configuration incomplete (supabaseAnonKey missing)' });
+    return res.status(500).json({
+      error: 'supabaseAnonKey missing in server environment',
+      availableEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('VITE') || k.includes('OWNER'))
+    });
   }
 
   if (!ownerEmail || !ownerPassword) {
-    return res.status(500).json({ error: 'Server owner credentials not configured in environment (OWNER_EMAIL, OWNER_PASSWORD)' });
+    return res.status(500).json({ error: 'Server owner credentials not configured in environment' });
   }
 
   try {
