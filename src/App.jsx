@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ClinicProvider, ClinicContext } from './context/ClinicContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
-import AuthView from './components/AuthView';
 import PublicFormView from './components/PublicFormView';
 import PublicBookingView from './components/PublicBookingView';
 import './index.css';

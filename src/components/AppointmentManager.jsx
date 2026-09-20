@@ -75,22 +75,27 @@ const AppointmentManager = () => {
 
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
-    if(paymentForm.appointment_id) {
+    if (paymentForm.appointment_id) {
       addPayment({
         appointment_id: paymentForm.appointment_id,
+        patient_id: paymentForm.patient_id || null,
+        person_id: paymentForm.person_id || null,
         amount: parseFloat(paymentForm.amount),
         payment_method: paymentForm.payment_method,
         status: 'paid'
       });
-      setPaymentForm({ appointment_id: null, amount: '', payment_method: 'Credit Card' });
+      setPaymentForm({ appointment_id: null, patient_id: null, person_id: null, amount: '', payment_method: 'Credit Card' });
       alert(t("Payment recorded successfully!", "תשלום נרשם בהצלחה!"));
     }
   };
 
   const openPaymentModal = (appt) => {
     const service = services.find(s => s.id === appt.service_id);
+    const patient = patients.find(p => p.id === appt.patient_id);
     setPaymentForm({
       appointment_id: appt.id,
+      patient_id: appt.patient_id || null,
+      person_id: appt.person_id || (patient ? patient.person_id : null),
       amount: service ? service.default_price : 0,
       payment_method: 'Credit Card'
     });

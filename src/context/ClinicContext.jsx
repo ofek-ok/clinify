@@ -46,7 +46,7 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
-  // Supabase Auth State Listener & Direct Owner Preview Access
+  // Supabase Auth Initialization (Environment-authenticated owner session)
   useEffect(() => {
     let isMounted = true;
 
@@ -54,51 +54,30 @@ export const ClinicProvider = ({ children }) => {
       try {
         const { data: { session: existingSession } } = await supabase.auth.getSession();
         
-        if (existingSession) {
-          if (isMounted) {
-            setSession(existingSession);
-            setUser(existingSession.user ?? null);
-            setIsLoading(false);
+        if (existingSession && isMounted) {
+          setSession(existingSession);
+          setUser(existingSession.user ?? null);
+          setIsLoading(false);
+          return;
+        }
+
+        // Deployment environment owner credentials if provided via environment
+        const ownerEmail = import.meta.env.VITE_OWNER_EMAIL;
+        const ownerPassword = import.meta.env.VITE_OWNER_PASSWORD;
+
+        if (ownerEmail && ownerPassword) {
+          const { data } = await supabase.auth.signInWithPassword({
+            email: ownerEmail,
+            password: ownerPassword
+          });
+
+          if (data?.session && isMounted) {
+            setSession(data.session);
+            setUser(data.session.user ?? null);
           }
-          return;
-        }
-
-        // If no active session exists, attempt anonymous auth first for immediate zero-friction session
-        const { data: anonData } = await supabase.auth.signInAnonymously();
-
-        if (anonData?.session && isMounted) {
-          setSession(anonData.session);
-          setUser(anonData.session.user ?? null);
-          return;
-        }
-
-        // Fallback to single owner password sign-in
-        const ownerEmail = 'owner@clinic.com';
-        const ownerPassword = 'OwnerPassword2026!';
-
-        let { data } = await supabase.auth.signInWithPassword({
-          email: ownerEmail,
-          password: ownerPassword
-        });
-
-        if (data?.session && isMounted) {
-          setSession(data.session);
-          setUser(data.session.user ?? null);
-        } else if (isMounted) {
-          // Direct owner access fallback session
-          const fallbackUser = { id: 'owner-preset', email: ownerEmail };
-          const fallbackSession = { access_token: 'owner-auto-session', user: fallbackUser };
-          setSession(fallbackSession);
-          setUser(fallbackUser);
         }
       } catch (err) {
-        console.warn("Auto owner auth completed with fallback:", err);
-        if (isMounted) {
-          const fallbackUser = { id: 'owner-preset', email: 'owner@clinic.com' };
-          const fallbackSession = { access_token: 'owner-auto-session', user: fallbackUser };
-          setSession(fallbackSession);
-          setUser(fallbackUser);
-        }
+        console.error("Auth init error:", err);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -109,7 +88,7 @@ export const ClinicProvider = ({ children }) => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+      if (session && isMounted) {
         setSession(session);
         setUser(session.user ?? null);
       }
@@ -582,14 +561,29 @@ export const ClinicProvider = ({ children }) => {
 
   const addPayment = async (payment) => {
     let personId = payment.person_id;
-    if (!personId && payment.patient_id) {
-      const patient = patients.find(p => p.id === payment.patient_id);
+    let patientId = payment.patient_id;
+
+    if (payment.appointment_id) {
+      const appt = appointments.find(a => a.id === payment.appointment_id);
+      if (appt) {
+        if (!patientId && appt.patient_id) patientId = appt.patient_id;
+        if (!personId && appt.person_id) personId = appt.person_id;
+        if (!personId && appt.patient_id) {
+          const patient = patients.find(p => p.id === appt.patient_id);
+          if (patient) personId = patient.person_id;
+        }
+      }
+    }
+
+    if (!personId && patientId) {
+      const patient = patients.find(p => p.id === patientId);
       if (patient) personId = patient.person_id;
     }
 
     const payload = {
       ...payment,
-      person_id: personId,
+      person_id: personId || null,
+      patient_id: patientId || null,
       payment_date: payment.payment_date || new Date().toISOString()
     };
     const { data, error } = await supabase.from('payments').insert([payload]).select();
@@ -979,7 +973,7 @@ export const ClinicProvider = ({ children }) => {
       const createdComm = data[0];
       setLeadCommunications(prev => [createdComm, ...prev]);
       setLeads(prev => prev.map(l => {
-        if (l.id === targetLeadId) {
+        if (l.id === targetLead.id) {
           const comms = l.communication_log || [];
           return { ...l, communication_log: [createdComm, ...comms] };
         }
