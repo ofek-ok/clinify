@@ -69,6 +69,34 @@ export const ClinicProvider = ({ children }) => {
     }
   }, [session]);
 
+  const mapBookingSettingsFromDb = (dbRow) => {
+    if (!dbRow) return null;
+    return {
+      id: dbRow.id,
+      clinicId: dbRow.clinic_id,
+      allowPackages: dbRow.allow_packages ?? true,
+      allowPayAtClinic: dbRow.allow_pay_at_clinic ?? true,
+      requirePolicy: dbRow.require_policy ?? true,
+      cancellationPolicyText: dbRow.cancellation_policy_text || 'ביטול תור יתאפשר עד 24 שעות מראש.',
+      welcomeMessage: dbRow.welcome_message || 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
+      clinicAddress: dbRow.clinic_address || '',
+      logoUrl: dbRow.logo_url || ''
+    };
+  };
+
+  const mapBookingSettingsToDb = (settings) => {
+    return {
+      allow_packages: settings.allowPackages,
+      allow_pay_at_clinic: settings.allowPayAtClinic,
+      require_policy: settings.requirePolicy,
+      cancellation_policy_text: settings.cancellationPolicyText,
+      welcome_message: settings.welcomeMessage,
+      clinic_address: settings.clinicAddress,
+      logo_url: settings.logoUrl,
+      updated_at: new Date().toISOString()
+    };
+  };
+
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
@@ -102,7 +130,10 @@ export const ClinicProvider = ({ children }) => {
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
       if (expensesRes.data) setExpenses(expensesRes.data);
       if (packagesRes.data) setPatientPackages(packagesRes.data);
-      if (bookingSetRes.data) setBookingSettings(prev => ({ ...prev, ...bookingSetRes.data }));
+      if (bookingSetRes.data) {
+        const mapped = mapBookingSettingsFromDb(bookingSetRes.data);
+        if (mapped) setBookingSettings(mapped);
+      }
       if (hoursRes.data && hoursRes.data.length > 0) {
         setBusinessHours(hoursRes.data.map(h => ({
           dayIndex: h.day_index,
@@ -133,13 +164,36 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const updateBookingSettings = async (updates) => {
-    const next = { ...bookingSettings, ...updates };
-    const { error } = await supabase.from('booking_settings').upsert({ id: 'default', ...next });
+    const nextSettings = { ...bookingSettings, ...updates };
+    const dbPayload = mapBookingSettingsToDb(nextSettings);
+
+    let data, error;
+    if (bookingSettings.id) {
+      const res = await supabase.from('booking_settings').update(dbPayload).eq('id', bookingSettings.id).select();
+      data = res.data;
+      error = res.error;
+    } else {
+      const { data: existingRow } = await supabase.from('booking_settings').select('id').maybeSingle();
+      if (existingRow?.id) {
+        const res = await supabase.from('booking_settings').update(dbPayload).eq('id', existingRow.id).select();
+        data = res.data;
+        error = res.error;
+      } else {
+        const res = await supabase.from('booking_settings').insert([dbPayload]).select();
+        data = res.data;
+        error = res.error;
+      }
+    }
+
     if (error) {
       console.error("Error updating booking settings:", error);
       throw error;
     }
-    setBookingSettings(next);
+
+    if (data && data[0]) {
+      const updatedMapped = mapBookingSettingsFromDb(data[0]);
+      setBookingSettings(updatedMapped);
+    }
   };
 
   const upsertPerson = async ({ full_name, fullName, phone, email, source = 'Website', clientStatus = 'lead' }) => {
@@ -153,24 +207,50 @@ export const ClinicProvider = ({ children }) => {
       throw new Error('מספר טלפון תקין נדרש ליצירת זהות');
     }
 
-    let existingPerson = people.find(p => p.normalized_phone === cleanPhone);
-    if (!existingPerson) {
-      const { data: dbPerson } = await supabase
+    // 1. Phone Lookup
+    let phonePerson = people.find(p => p.normalized_phone === cleanPhone);
+    if (!phonePerson) {
+      const { data: dbPhonePerson } = await supabase
         .from('people')
         .select('*')
         .eq('normalized_phone', cleanPhone)
         .maybeSingle();
-      if (dbPerson) existingPerson = dbPerson;
+      if (dbPhonePerson) phonePerson = dbPhonePerson;
     }
 
-    if (existingPerson) {
+    // 2. Email Lookup
+    let emailPerson = null;
+    if (cleanEmail) {
+      emailPerson = people.find(p => p.normalized_email === cleanEmail);
+      if (!emailPerson) {
+        const { data: dbEmailPerson } = await supabase
+          .from('people')
+          .select('*')
+          .eq('normalized_email', cleanEmail)
+          .maybeSingle();
+        if (dbEmailPerson) emailPerson = dbEmailPerson;
+      }
+    }
+
+    // 3. Identity Conflict Check
+    if (phonePerson && emailPerson && phonePerson.id !== emailPerson.id) {
+      throw new Error(`Identity Conflict: Phone (${phoneVal}) belongs to ${phonePerson.full_name} and Email (${emailVal}) belongs to ${emailPerson.full_name}. Merging different profiles is not allowed.`);
+    }
+
+    const targetPerson = phonePerson || emailPerson;
+
+    if (targetPerson) {
       const updates = {};
-      if (nameVal && nameVal !== existingPerson.full_name) updates.full_name = nameVal;
-      if (cleanEmail && cleanEmail !== existingPerson.normalized_email) {
+      if (nameVal && nameVal !== targetPerson.full_name) updates.full_name = nameVal;
+      if (cleanPhone && cleanPhone !== targetPerson.normalized_phone) {
+        updates.phone = phoneVal;
+        updates.normalized_phone = cleanPhone;
+      }
+      if (cleanEmail && cleanEmail !== targetPerson.normalized_email) {
         updates.email = emailVal;
         updates.normalized_email = cleanEmail;
       }
-      if (clientStatus === 'customer' && existingPerson.client_status !== 'customer') {
+      if (clientStatus === 'customer' && targetPerson.client_status !== 'customer') {
         updates.client_status = 'customer';
         updates.customer_since = new Date().toISOString();
       }
@@ -179,16 +259,21 @@ export const ClinicProvider = ({ children }) => {
         const { data: updatedData, error } = await supabase
           .from('people')
           .update({ ...updates, updated_at: new Date().toISOString() })
-          .eq('id', existingPerson.id)
+          .eq('id', targetPerson.id)
           .select();
 
-        if (!error && updatedData && updatedData[0]) {
+        if (error) {
+          console.error("Error updating person:", error);
+          throw error;
+        }
+
+        if (updatedData && updatedData[0]) {
           const updated = updatedData[0];
           setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
           return updated;
         }
       }
-      return existingPerson;
+      return targetPerson;
     }
 
     const newPersonPayload = {
@@ -197,8 +282,8 @@ export const ClinicProvider = ({ children }) => {
       normalized_phone: cleanPhone,
       email: emailVal,
       normalized_email: cleanEmail,
-      client_status: clientStatus,
-      source: source
+      client_status: clientStatus || 'lead',
+      source: source || 'Website'
     };
 
     const { data: createdData, error: createErr } = await supabase
@@ -221,7 +306,7 @@ export const ClinicProvider = ({ children }) => {
       phone: input.phone,
       email: input.email,
       source: input.source || 'Internal',
-      clientStatus: 'customer'
+      clientStatus: 'lead' // Creating a clinical profile is NOT customer conversion!
     });
 
     if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
@@ -593,16 +678,35 @@ export const ClinicProvider = ({ children }) => {
 
   const updateBusinessHour = async (dayOfWeek, updates) => {
     const target = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
-    if (target) {
-      const updated = { ...target, ...updates };
-      await supabase.from('business_hours').upsert({
-        day_index: updated.dayIndex,
-        day_of_week: updated.dayOfWeek,
-        is_open: updated.isOpen,
-        start_time: updated.startTime,
-        end_time: updated.endTime
-      });
-      setBusinessHours(prev => prev.map(bh => bh.dayOfWeek === dayOfWeek ? updated : bh));
+    if (!target) return;
+
+    const updated = { ...target, ...updates };
+    const dbPayload = {
+      day_index: updated.dayIndex,
+      day_of_week: updated.dayOfWeek,
+      is_open: updated.isOpen,
+      start_time: updated.startTime,
+      end_time: updated.endTime
+    };
+
+    const { data, error } = await supabase
+      .from('business_hours')
+      .upsert(dbPayload, { onConflict: 'day_index' })
+      .select();
+
+    if (error) {
+      console.error(`Error updating business hours for ${dayOfWeek}:`, error);
+      throw error;
+    }
+
+    if (data && data[0]) {
+      setBusinessHours(prev => prev.map(bh => bh.dayOfWeek === dayOfWeek ? {
+        dayIndex: data[0].day_index,
+        dayOfWeek: data[0].day_of_week,
+        isOpen: data[0].is_open,
+        startTime: data[0].start_time,
+        endTime: data[0].end_time
+      } : bh));
     }
   };
 

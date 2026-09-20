@@ -28,11 +28,10 @@ const LeadsPipeline = ({ navigate, onSelectLead }) => {
     reset();
   };
 
-  const convertToPatient = (lead, e) => {
+  const handleCreateClinicalProfile = async (lead, e) => {
     if (e) e.stopPropagation();
-    addPatient({ full_name: lead.full_name, email: lead.email, phone: lead.phone, status: 'active' });
-    updateLeadStatus(lead.id, 'converted');
-    if(window.confirm(t('Lead successfully converted to patient! Schedule an appointment now?', 'הליד הומר למטופל בהצלחה! האם תרצה לקבוע לו תור עכשיו?'))) {
+    await addPatient({ full_name: lead.full_name, email: lead.email, phone: lead.phone, status: 'active' });
+    if(window.confirm(t('Clinical profile created! Schedule an appointment now?', 'תיק טיפולי נפתח בהצלחה! האם תרצה לקבוע תור עכשיו?'))) {
       navigate('appointments');
     }
   };
@@ -40,7 +39,8 @@ const LeadsPipeline = ({ navigate, onSelectLead }) => {
   const statusColumns = [
     { id: 'new', title: t('New Lead', 'ליד חדש'), color: 'bg-blue-100 text-blue-700 border-blue-200' },
     { id: 'contacted', title: t('Contacted', 'נוצר קשר'), color: 'bg-amber-100 text-amber-700 border-amber-200' },
-    { id: 'converted', title: t('Converted', 'הומר למטופל'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    { id: 'scheduled', title: t('Scheduled', 'נקבע תור'), color: 'bg-purple-100 text-purple-700 border-purple-200' },
+    { id: 'won', title: t('Customer (Won)', 'לקוח משלם (Won)'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
     { id: 'lost', title: t('Lost', 'אבוד'), color: 'bg-slate-100 text-slate-600 border-slate-200' }
   ];
 
@@ -119,7 +119,7 @@ const LeadsPipeline = ({ navigate, onSelectLead }) => {
 
         {/* Pipeline Columns */}
         <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 h-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 h-full">
             {statusColumns.map(column => (
               <div key={column.id} className="glass-card rounded-3xl p-4 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-4">
@@ -148,29 +148,26 @@ const LeadsPipeline = ({ navigate, onSelectLead }) => {
                       )}
 
                       <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-100">
-                        {lead.status !== 'converted' && (
-                          <select 
-                            value={lead.status} 
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
-                            className="text-[10px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 outline-none cursor-pointer text-start"
-                          >
-                            <option value="new">{t('New', 'חדש')}</option>
-                            <option value="contacted">{t('Contacted', 'נוצר קשר')}</option>
-                            <option value="lost">{t('Lost', 'אבוד')}</option>
-                          </select>
-                        )}
+                        <select 
+                          value={lead.status} 
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                          className="text-[10px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 outline-none cursor-pointer text-start"
+                        >
+                          <option value="new">{t('New', 'חדש')}</option>
+                          <option value="contacted">{t('Contacted', 'נוצר קשר')}</option>
+                          <option value="scheduled">{t('Scheduled', 'נקבע תור')}</option>
+                          <option value="won">{t('Won', 'לקוח משלם')}</option>
+                          <option value="lost">{t('Lost', 'אבוד')}</option>
+                        </select>
 
-                        {lead.status !== 'converted' && (
-                          <button 
-                            onClick={(e) => convertToPatient(lead, e)} 
-                            className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors shrink-0 flex items-center gap-1" 
-                            title={t("Convert to Patient", "המר למטופל")}
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            <span>{t('Convert', 'המר')}</span>
-                          </button>
-                        )}
+                        <button 
+                          onClick={(e) => handleCreateClinicalProfile(lead, e)} 
+                          className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-[10px] font-black px-2 py-1 rounded-lg border border-emerald-200 transition-colors shrink-0 flex items-center gap-1" 
+                          title={t("Create Clinical Profile", "פתח תיק רפואי")}
+                        >
+                          <span>{t('Profile', 'תיק רפואי')}</span>
+                        </button>
                       </div>
                     </div>
                   ))}

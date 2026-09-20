@@ -58,7 +58,7 @@ CREATE TABLE booking_settings (
 CREATE TABLE business_hours (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   clinic_id uuid REFERENCES clinics(id) ON DELETE CASCADE,
-  day_index integer NOT NULL, -- 0=Sunday, 6=Saturday
+  day_index integer UNIQUE NOT NULL, -- 0=Sunday, 6=Saturday
   day_of_week text NOT NULL,
   is_open boolean DEFAULT true,
   start_time time NOT NULL DEFAULT '09:00',
@@ -311,7 +311,15 @@ BEGIN
   SET remaining_sessions = remaining_sessions - 1
   WHERE id = p_package_id AND remaining_sessions > 0;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Internal Package Session Deduction Function (Authenticated Only)
+CREATE OR REPLACE FUNCTION redeem_package_session(p_package_id uuid)
+RETURNS void AS $$
+BEGIN
+  UPDATE patient_packages
+  SET remaining_sessions = remaining_sessions - 1
+  WHERE id = p_package_id AND remaining_sessions > 0;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 REVOKE EXECUTE ON FUNCTION redeem_package_session(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION redeem_package_session(uuid) TO authenticated;
@@ -330,7 +338,7 @@ BEGIN
   SET status = 'won'
   WHERE person_id = p_person_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 REVOKE EXECUTE ON FUNCTION convert_lead_to_customer(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION convert_lead_to_customer(uuid) TO authenticated;
@@ -354,9 +362,8 @@ DECLARE
   v_patient_id uuid;
   v_lead_id uuid;
   v_appointment_id uuid;
-  v_existing_person record;
-  v_existing_patient record;
-  v_existing_lead record;
+  v_phone_person record;
+  v_email_person record;
   v_service record;
   v_end_date timestamp with time zone;
   v_conflict_count integer;
@@ -391,13 +398,20 @@ BEGIN
     RAISE EXCEPTION 'מועד זה אינו פנוי יותר. אנא בחר מועד אחר.';
   END IF;
 
-  -- 4. Identity Lifecycle: Canonical Person Lookup / Creation
-  SELECT * FROM people 
-  WHERE normalized_phone = v_clean_phone
-  LIMIT 1 INTO v_existing_person;
+  -- 4. Identity Lifecycle: Canonical Person Lookup / Creation (Phone AND Email Deduplication)
+  SELECT * FROM people WHERE normalized_phone = v_clean_phone LIMIT 1 INTO v_phone_person;
+  IF v_clean_email IS NOT NULL THEN
+    SELECT * FROM people WHERE normalized_email = v_clean_email LIMIT 1 INTO v_email_person;
+  END IF;
 
-  IF v_existing_person IS NOT NULL THEN
-    v_person_id := v_existing_person.id;
+  IF v_phone_person IS NOT NULL AND v_email_person IS NOT NULL AND v_phone_person.id != v_email_person.id THEN
+    RAISE EXCEPTION 'Identity Conflict: Phone and Email belong to two different existing profiles.';
+  END IF;
+
+  IF v_phone_person IS NOT NULL THEN
+    v_person_id := v_phone_person.id;
+  ELSIF v_email_person IS NOT NULL THEN
+    v_person_id := v_email_person.id;
   ELSE
     -- Create canonical Person record (Default status: 'lead')
     INSERT INTO people (
@@ -456,6 +470,6 @@ BEGIN
     'appointment_date', p_appointment_date
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 GRANT EXECUTE ON FUNCTION public_create_booking(uuid, timestamp with time zone, text, text, text, text) TO anon, authenticated;
