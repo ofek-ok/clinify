@@ -46,7 +46,7 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
-  // Supabase Auth Initialization (Environment-authenticated owner session)
+  // Supabase Auth Initialization (Server-bootstrapped owner session)
   useEffect(() => {
     let isMounted = true;
 
@@ -61,19 +61,20 @@ export const ClinicProvider = ({ children }) => {
           return;
         }
 
-        // Deployment environment owner credentials if provided via environment
-        const ownerEmail = import.meta.env.VITE_OWNER_EMAIL;
-        const ownerPassword = import.meta.env.VITE_OWNER_PASSWORD;
+        // Server-side owner session bootstrap via /api/owner-session
+        const res = await fetch('/api/owner-session');
+        if (res.ok) {
+          const body = await res.json();
+          if (body.session?.access_token && body.session?.refresh_token) {
+            const { data } = await supabase.auth.setSession({
+              access_token: body.session.access_token,
+              refresh_token: body.session.refresh_token
+            });
 
-        if (ownerEmail && ownerPassword) {
-          const { data } = await supabase.auth.signInWithPassword({
-            email: ownerEmail,
-            password: ownerPassword
-          });
-
-          if (data?.session && isMounted) {
-            setSession(data.session);
-            setUser(data.session.user ?? null);
+            if (data?.session && isMounted) {
+              setSession(data.session);
+              setUser(data.session.user ?? null);
+            }
           }
         }
       } catch (err) {
