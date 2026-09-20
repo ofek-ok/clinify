@@ -8,6 +8,8 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+BEGIN;
+
 -- --------------------------------------------------------
 -- 1. Safely Drop Public Application Tables (Reverse Dependency Order)
 -- --------------------------------------------------------
@@ -95,6 +97,7 @@ CREATE TABLE people (
 );
 
 CREATE UNIQUE INDEX idx_people_normalized_phone ON people (normalized_phone);
+CREATE UNIQUE INDEX idx_people_normalized_email ON people (normalized_email) WHERE normalized_email IS NOT NULL;
 
 -- 6. Patients Table (Clinical Profile Linked to Canonical Person)
 CREATE TABLE patients (
@@ -311,14 +314,6 @@ BEGIN
   SET remaining_sessions = remaining_sessions - 1
   WHERE id = p_package_id AND remaining_sessions > 0;
 END;
--- Internal Package Session Deduction Function (Authenticated Only)
-CREATE OR REPLACE FUNCTION redeem_package_session(p_package_id uuid)
-RETURNS void AS $$
-BEGIN
-  UPDATE patient_packages
-  SET remaining_sessions = remaining_sessions - 1
-  WHERE id = p_package_id AND remaining_sessions > 0;
-END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 REVOKE EXECUTE ON FUNCTION redeem_package_session(uuid) FROM PUBLIC, anon;
@@ -473,3 +468,5 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 GRANT EXECUTE ON FUNCTION public_create_booking(uuid, timestamp with time zone, text, text, text, text) TO anon, authenticated;
+
+COMMIT;
