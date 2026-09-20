@@ -49,7 +49,15 @@ class ErrorBoundary extends Component {
 }
 
 const ProtectedDashboardRoute = () => {
-  const { session } = useContext(ClinicContext);
+  const { session, isLoading } = useContext(ClinicContext);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6 text-center font-sans">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!session) {
     return <AuthView />;
@@ -57,6 +65,7 @@ const ProtectedDashboardRoute = () => {
 
   return <Layout />;
 };
+
 
 function App() {
   return (
