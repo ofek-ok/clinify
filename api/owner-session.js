@@ -23,7 +23,11 @@ export default async function handler(req, res) {
   const ownerPassword = process.env.OWNER_PASSWORD || 'OwnerPassword2026!';
 
   if (!supabaseAnonKey) {
-    return res.status(500).json({ error: 'Server owner session configuration incomplete (supabaseAnonKey missing)' });
+    return res.status(500).json({
+      error: 'Server owner session configuration incomplete (supabaseAnonKey missing)',
+      envKeys: Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('PASSWORD')),
+      runtimeConfig
+    });
   }
 
   if (!ownerEmail || !ownerPassword) {
