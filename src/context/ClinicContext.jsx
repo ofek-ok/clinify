@@ -21,8 +21,11 @@ export const ClinicProvider = ({ children }) => {
   const [expenses, setExpenses] = useState([]);
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
+  const [leadCommunications, setLeadCommunications] = useState([]);
+
 
   // Configurable Public Self-Booking Settings
+
   const [bookingSettings, setBookingSettings] = useState({
     allowPackages: true,
     allowPayAtClinic: true,
@@ -102,7 +105,7 @@ export const ClinicProvider = ({ children }) => {
     try {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes
+        tasksRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes
       ] = await Promise.all([
         supabase.from('people').select('*'),
         supabase.from('patients').select('*'),
@@ -116,7 +119,8 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('expenses').select('*'),
         supabase.from('booking_settings').select('*').maybeSingle(),
         supabase.from('patient_packages').select('*'),
-        supabase.from('business_hours').select('*')
+        supabase.from('business_hours').select('*'),
+        supabase.from('lead_communications').select('*')
       ]);
 
       if (peopleRes.data) setPeople(peopleRes.data);
@@ -130,6 +134,8 @@ export const ClinicProvider = ({ children }) => {
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
       if (expensesRes.data) setExpenses(expensesRes.data);
       if (packagesRes.data) setPatientPackages(packagesRes.data);
+      if (leadCommsRes?.data) setLeadCommunications(leadCommsRes.data);
+
       if (bookingSetRes.data) {
         const mapped = mapBookingSettingsFromDb(bookingSetRes.data);
         if (mapped) setBookingSettings(mapped);
@@ -897,8 +903,12 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addLeadCommunication = async (leadId, type, note) => {
+    let targetLeadId = leadId;
+    const leadMatch = leads.find(l => l.id === leadId || l.person_id === leadId);
+    if (leadMatch) targetLeadId = leadMatch.id;
+
     const newComm = {
-      lead_id: leadId,
+      lead_id: targetLeadId,
       type,
       note,
       created_at: new Date().toISOString()
@@ -909,17 +919,20 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     if (data && data[0]) {
+      const createdComm = data[0];
+      setLeadCommunications(prev => [createdComm, ...prev]);
       setLeads(prev => prev.map(l => {
-        if (l.id === leadId) {
+        if (l.id === targetLeadId) {
           const comms = l.communication_log || [];
-          return { ...l, communication_log: [data[0], ...comms] };
+          return { ...l, communication_log: [createdComm, ...comms] };
         }
         return l;
       }));
-      return data[0];
+      return createdComm;
     }
     return null;
   };
+
 
   const updateLeadFollowUp = async (leadId, followUpDate, lostReason = null) => {
     const updates = { follow_up_date: followUpDate };
@@ -937,7 +950,8 @@ export const ClinicProvider = ({ children }) => {
     <ClinicContext.Provider value={{
       session, user, signOut, isLoading,
       people, upsertPerson, getPersonName,
-      patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads, tasks, payments, expenses, forms, formSubmissions, bookingSettings, patientPackages,
+      patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads, tasks, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages,
+
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead, addTask, 
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
