@@ -5,19 +5,19 @@ import AnalyticsView from './AnalyticsView';
 
 const DashboardOverview = ({ navigate }) => {
   const { 
-    people,
-    patients, 
-    leads, 
-    appointments, 
-    services,
-    tasks,
-    payments,
-    todayStr,
-    getPatientName,
-    getServiceName,
+    people = [],
+    patients = [], 
+    leads = [], 
+    appointments = [], 
+    services = [],
+    tasks = [],
+    payments = [],
+    todayStr = new Date().toISOString().split('T')[0],
+    getPatientName = () => 'מטופל',
+    getServiceName = () => 'שירות',
     updateTaskStatus,
     updateLeadStatus
-  } = useContext(ClinicContext);
+  } = useContext(ClinicContext) || {};
   
   const { t } = useContext(LanguageContext);
   const [viewMode, setViewMode] = useState('overview');
@@ -29,48 +29,60 @@ const DashboardOverview = ({ navigate }) => {
 
   // Top Metrics
   const todayAppointments = useMemo(() => {
-    return appointments.filter(appt => appt.appointment_date.startsWith(todayStr))
+    if (!Array.isArray(appointments)) return [];
+    return appointments.filter(appt => appt && appt.appointment_date && String(appt.appointment_date).startsWith(todayStr))
       .sort((a,b) => new Date(a.appointment_date) - new Date(b.appointment_date));
   }, [appointments, todayStr]);
 
   const openLeadsCount = useMemo(() => {
-    return leads.filter(l => l.status === 'new' || l.status === 'contacted').length;
+    if (!Array.isArray(leads)) return 0;
+    return leads.filter(l => l && (l.status === 'new' || l.status === 'contacted')).length;
   }, [leads]);
 
   const tasksDueToday = useMemo(() => {
-    return tasks.filter(t => t.due_date === todayStr && t.status !== 'done');
+    if (!Array.isArray(tasks)) return [];
+    return tasks.filter(t => t && t.due_date === todayStr && t.status !== 'done');
   }, [tasks, todayStr]);
 
   const unpaidCompletedAppointments = useMemo(() => {
+    if (!Array.isArray(appointments) || !Array.isArray(payments)) return [];
     return appointments.filter(appt => {
-      if (appt.status !== 'completed') return false;
-      const payment = payments.find(p => p.appointment_id === appt.id && p.status === 'paid');
+      if (!appt || appt.status !== 'completed') return false;
+      const payment = payments.find(p => p && p.appointment_id === appt.id && p.status === 'paid');
       return !payment;
     });
   }, [appointments, payments]);
 
   const pendingPaymentsTotal = useMemo(() => {
+    if (!Array.isArray(unpaidCompletedAppointments) || !Array.isArray(services)) return 0;
     return unpaidCompletedAppointments.reduce((sum, appt) => {
-      const service = services.find(s => String(s.id) === String(appt.service_id));
+      const service = services.find(s => s && String(s.id) === String(appt.service_id));
       return sum + (service ? Number(service.default_price || 0) : 0);
     }, 0);
   }, [unpaidCompletedAppointments, services]);
 
   // Action Items (דורש טיפול)
   const overdueTasks = useMemo(() => {
-    return tasks.filter(t => t.due_date < todayStr && t.status !== 'done');
+    if (!Array.isArray(tasks)) return [];
+    return tasks.filter(t => t && t.due_date < todayStr && t.status !== 'done');
   }, [tasks, todayStr]);
 
   const leadsAwaitingResponse = useMemo(() => {
-    return leads.filter(l => l.status === 'new');
+    if (!Array.isArray(leads)) return [];
+    return leads.filter(l => l && l.status === 'new');
   }, [leads]);
 
   // Derived Business Metrics
-  const totalCustomersCount = people.filter(p => p.client_status === 'customer').length;
+  const totalCustomersCount = useMemo(() => {
+    if (!Array.isArray(people)) return 0;
+    return people.filter(p => p && p.client_status === 'customer').length;
+  }, [people]);
+
   const totalRevenueThisMonth = useMemo(() => {
+    if (!Array.isArray(payments)) return 0;
     const currentMonth = new Date().toISOString().slice(0, 7);
     return payments
-      .filter(p => p.status === 'paid' && p.payment_date?.startsWith(currentMonth))
+      .filter(p => p && p.status === 'paid' && p.payment_date && String(p.payment_date).startsWith(currentMonth))
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
   }, [payments]);
 
@@ -149,7 +161,7 @@ const DashboardOverview = ({ navigate }) => {
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
               <p className="text-xs font-medium text-slate-500">{t('Pending Payments', 'תשלומים פתוחים')}</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1" dir="ltr">₪{pendingPaymentsTotal.toFixed(2)}</h3>
-              <p className="text-xs text-slate-400 mt-1">{unpaidAppointments.length} {t('unpaid sessions', 'טיפולים שלא נגבו')}</p>
+              <p className="text-xs text-slate-400 mt-1">{unpaidCompletedAppointments.length} {t('unpaid sessions', 'טיפולים שלא נגבו')}</p>
             </div>
           </div>
 
@@ -198,64 +210,60 @@ const DashboardOverview = ({ navigate }) => {
             
             {/* Today & Upcoming Appointments */}
             <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 text-sm">{t("Upcoming Appointments", "תורים קרובים")}</h3>
-                <button onClick={() => navigate('calendar')} className="text-xs text-slate-600 hover:text-slate-900 font-medium">
-                  {t('View Calendar', 'לכל התורים ➔')}
+              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-slate-800">{t("Today's Schedule & Sessions", 'לוח מפגשים להיום')}</h3>
+                <button 
+                  onClick={() => navigate('calendar')}
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+                >
+                  {t('Open Calendar View', 'פתח תצוגת יומן מלאה →')}
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-start border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-xs font-medium border-b border-slate-100">
-                      <th className="py-2.5 px-4 text-start">{t('Time', 'שעה')}</th>
-                      <th className="py-2.5 px-4 text-start">{t('Client', 'לקוח/מטופל')}</th>
-                      <th className="py-2.5 px-4 text-start">{t('Service', 'שירות')}</th>
-                      <th className="py-2.5 px-4 text-end">{t('Status', 'סטטוס')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {todayAppointments.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="py-8 text-center text-slate-400 font-medium">
-                          {t('No appointments scheduled for today.', 'אין תורים מתוכננים להיום.')}
-                        </td>
-                      </tr>
-                    ) : (
-                      todayAppointments.map(appt => {
-                        const time = new Date(appt.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        return (
-                          <tr key={appt.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-4 font-bold text-slate-700">{time}</td>
-                            <td className="py-3 px-4 font-bold text-slate-800">{getPatientName(appt.patient_id)}</td>
-                            <td className="py-3 px-4 text-slate-600">{getServiceName(appt.service_id)}</td>
-                            <td className="py-3 px-4 text-end">
-                              <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
-                                {translateStatus(appt.status)}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-slate-100">
+                {todayAppointments.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 font-medium">
+                    {t('No appointments scheduled for today.', 'אין תורים מתוכננים להיום.')}
+                  </div>
+                ) : (
+                  todayAppointments.map((appt) => (
+                    <div key={appt.id} className="p-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shrink-0">
+                          {appt.appointment_date ? new Date(appt.appointment_date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">{getPatientName(appt.patient_id)}</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{getServiceName(appt.service_id)}</p>
+                        </div>
+                      </div>
+
+                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold border ${
+                        appt.status === 'completed' 
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        {translateStatus(appt.status)}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
-            {/* Quick Summary Sidebar */}
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                <p className="text-xs font-medium text-slate-500">{t('Total Customers', 'לקוחות')}</p>
-                <h4 className="text-2xl font-bold text-slate-800">{totalCustomersCount}</h4>
-                <p className="text-xs text-slate-400">{patients.length} {t('total registered profiles', 'פרופילים רשומים במערכת')}</p>
-              </div>
-
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                <p className="text-xs font-medium text-slate-500">{t('Monthly Revenue', 'הכנסות החודש')}</p>
-                <h4 className="text-2xl font-bold text-slate-800" dir="ltr">₪{totalRevenueThisMonth.toFixed(2)}</h4>
-                <p className="text-xs text-slate-400">{t('Paid transactions this month', 'תשלומים שנסגרו החודש')}</p>
+            {/* Quick Metrics Snapshot */}
+            <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-2xs p-5 space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3">{t('Business Performance Snapshot', 'תמונת מצב עסקית')}</h3>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500">{t('Total Active Clients', 'סך מטופלים פעילים')}</span>
+                  <span className="text-sm font-bold text-slate-800">{totalCustomersCount}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500">{t('Revenue This Month', 'הכנסות החודש')}</span>
+                  <span className="text-sm font-bold text-emerald-600" dir="ltr">₪{totalRevenueThisMonth.toFixed(2)}</span>
+                </div>
               </div>
             </div>
 
