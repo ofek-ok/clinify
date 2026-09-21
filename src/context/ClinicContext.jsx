@@ -233,23 +233,34 @@ export const ClinicProvider = ({ children }) => {
 
   const upsertPerson = async ({ full_name, fullName, phone, email, source = 'Website', clientStatus = 'lead' }) => {
     const nameVal = (full_name || fullName || '').trim();
-    const phoneVal = (phone || '').trim();
-    const emailVal = email ? email.trim() : null;
-    const cleanPhone = phoneVal.replace(/\D/g, '');
+    const phoneVal = phone ? String(phone).trim() : '';
+    const emailVal = email ? String(email).trim() : null;
+    const cleanPhone = phoneVal ? phoneVal.replace(/\D/g, '') : null;
     const cleanEmail = emailVal ? emailVal.toLowerCase() : null;
 
-    if (!cleanPhone || cleanPhone.length < 7) {
-      throw new Error('מספר טלפון תקין נדרש ליצירת זהות');
+    if (!nameVal) {
+      throw new Error('שם מלא נדרש ליצירת זהות');
     }
 
-    let phonePerson = people.find(p => p.normalized_phone === cleanPhone);
-    if (!phonePerson) {
-      const { data: dbPhonePerson } = await supabase
-        .from('people')
-        .select('*')
-        .eq('normalized_phone', cleanPhone)
-        .maybeSingle();
-      if (dbPhonePerson) phonePerson = dbPhonePerson;
+    if (phoneVal && (!cleanPhone || cleanPhone.length < 7)) {
+      throw new Error('מספר הטלפון שהוזן אינו תקין');
+    }
+
+    if (!cleanPhone && !cleanEmail) {
+      throw new Error('יש להזין לפחות טלפון או דוא״ל');
+    }
+
+    let phonePerson = null;
+    if (cleanPhone) {
+      phonePerson = people.find(p => p.normalized_phone === cleanPhone) || null;
+      if (!phonePerson) {
+        const { data: dbPhonePerson } = await supabase
+          .from('people')
+          .select('*')
+          .eq('normalized_phone', cleanPhone)
+          .maybeSingle();
+        if (dbPhonePerson) phonePerson = dbPhonePerson;
+      }
     }
 
     let emailPerson = null;
@@ -310,8 +321,8 @@ export const ClinicProvider = ({ children }) => {
 
     const newPersonPayload = {
       full_name: nameVal,
-      phone: phoneVal,
-      normalized_phone: cleanPhone,
+      phone: phoneVal || null,
+      normalized_phone: cleanPhone || null,
       email: emailVal,
       normalized_email: cleanEmail,
       client_status: clientStatus || 'lead',
@@ -509,15 +520,47 @@ export const ClinicProvider = ({ children }) => {
 
     if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
 
-    const existingLead = leads.find(l => l.person_id === person.id);
-    if (existingLead) return existingLead;
+    if (person.client_status === 'customer') {
+      throw new Error('האדם כבר קיים כלקוח במערכת');
+    }
+
+    let existingLead = leads.find(l => l.person_id === person.id) || null;
+    if (!existingLead) {
+      const { data: dbLead, error: lookupError } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('person_id', person.id)
+        .maybeSingle();
+
+      if (lookupError) {
+        console.error("Error checking existing lead:", lookupError);
+        throw lookupError;
+      }
+
+      existingLead = dbLead || null;
+    }
+
+    if (existingLead) {
+      return {
+        ...existingLead,
+        full_name: person.full_name || '',
+        phone: person.phone || '',
+        email: person.email || '',
+        _existing: true
+      };
+    }
 
     const leadPayload = {
       person_id: person.id,
       source: input.source || 'Website',
       status: input.status || 'new',
       follow_up_date: input.follow_up_date || null,
-      lost_reason: input.lost_reason || null
+      lost_reason: input.lost_reason || null,
+      campaign: input.campaign || 'General Inquiries',
+      utm_source: input.utm_source || null,
+      utm_medium: input.utm_medium || null,
+      utm_campaign: input.utm_campaign || null,
+      tags: Array.isArray(input.tags) ? input.tags : null
     };
 
     const { data, error } = await supabase.from('leads').insert([leadPayload]).select();
@@ -527,7 +570,13 @@ export const ClinicProvider = ({ children }) => {
     }
     if (data && data[0]) {
       setLeads(prev => [...prev, data[0]]);
-      return data[0];
+      return {
+        ...data[0],
+        full_name: person.full_name || '',
+        phone: person.phone || '',
+        email: person.email || '',
+        _existing: false
+      };
     }
     return null;
   };
@@ -913,7 +962,7 @@ export const ClinicProvider = ({ children }) => {
         normalized_phone: person.normalized_phone || '',
         email: person.email || '',
         normalized_email: person.normalized_email || '',
-        client_status: person.client_status || 'customer',
+        client_status: person.client_status || 'lead',
         customer_since: person.customer_since
       };
     });
