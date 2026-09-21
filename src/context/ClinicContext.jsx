@@ -187,7 +187,7 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('business_hours').select('*'),
         supabase.from('lead_communications').select('*'),
         supabase.from('patient_clinical_notes').select('*').order('created_at', { ascending: false }),
-        supabase.from('patient_documents').select('*').order('created_at', { ascending: false })
+        supabase.from('patient_documents').select('*').order('uploaded_at', { ascending: false })
       ]);
 
       if (peopleRes.data) setPeople(peopleRes.data);
