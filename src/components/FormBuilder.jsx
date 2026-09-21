@@ -65,13 +65,13 @@ const FormBuilder = ({ navigate }) => {
               placeholder={t('Form Title', 'כותרת הטופס')} 
               value={title} 
               onChange={e => setTitle(e.target.value)}
-              className="w-full text-2xl font-bold text-slate-800 border-none outline-none placeholder:text-slate-300 mb-2 bg-transparent"
+              className="w-full text-2xl font-bold text-slate-800 border-none outline-none placeholder:text-slate-700 mb-2 bg-transparent"
             />
             <textarea 
               placeholder={t('Form description (optional)', 'תיאור הטופס (אופציונלי)')}
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full text-sm text-slate-500 border-none outline-none placeholder:text-slate-300 resize-none bg-transparent"
+              className="w-full text-sm text-slate-500 border-none outline-none placeholder:text-slate-700 resize-none bg-transparent"
               rows="2"
             />
           </div>
@@ -79,13 +79,13 @@ const FormBuilder = ({ navigate }) => {
           <div className="space-y-4">
             {fields.map((field, index) => (
               <div key={field.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative group animate-in slide-in-from-bottom-2 duration-300">
-                <button onClick={() => removeField(field.id)} className="absolute top-4 end-4 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                <button onClick={() => removeField(field.id)} className="absolute top-4 end-4 text-slate-700 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{t('Field Label', 'תווית השדה')}</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">{t('Field Label', 'תווית השדה')}</label>
                     <input 
                       type="text" 
                       value={field.label} 
@@ -108,7 +108,7 @@ const FormBuilder = ({ navigate }) => {
 
                 {field.type === 'dropdown' && (
                   <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{t('Dropdown Options (Comma separated)', 'אפשרויות לבחירה (מופרד בפסיקים)')}</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">{t('Dropdown Options (Comma separated)', 'אפשרויות לבחירה (מופרד בפסיקים)')}</label>
                     <input 
                       type="text" 
                       value={field.options.join(', ')} 
@@ -131,7 +131,7 @@ const FormBuilder = ({ navigate }) => {
             
             {fields.length === 0 && (
               <div className="py-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
-                <p className="text-slate-400 font-medium">{t('Add fields from the menu to start building your form.', 'הוסף שדות מהתפריט כדי להתחיל לבנות את הטופס.')}</p>
+                <p className="text-slate-500 font-medium">{t('Add fields from the menu to start building your form.', 'הוסף שדות מהתפריט כדי להתחיל לבנות את הטופס.')}</p>
               </div>
             )}
           </div>
@@ -142,23 +142,23 @@ const FormBuilder = ({ navigate }) => {
             <h3 className="font-extrabold text-slate-800 mb-4 tracking-tight">{t('Add Fields', 'הוסף שדות')}</h3>
             <div className="space-y-2.5">
               <button onClick={() => addField('text')} className="w-full flex items-center gap-3 p-3 text-start bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl transition-colors text-sm font-bold text-slate-600 hover:text-emerald-700">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
                 {t('Short Text', 'טקסט קצר')}
               </button>
               <button onClick={() => addField('textarea')} className="w-full flex items-center gap-3 p-3 text-start bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl transition-colors text-sm font-bold text-slate-600 hover:text-emerald-700">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                 {t('Long Text (Paragraph)', 'טקסט ארוך (פסקה)')}
               </button>
               <button onClick={() => addField('tel')} className="w-full flex items-center gap-3 p-3 text-start bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl transition-colors text-sm font-bold text-slate-600 hover:text-emerald-700">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
                 {t('Phone Number', 'מספר טלפון')}
               </button>
               <button onClick={() => addField('dropdown')} className="w-full flex items-center gap-3 p-3 text-start bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl transition-colors text-sm font-bold text-slate-600 hover:text-emerald-700">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 {t('Dropdown', 'רשימה נפתחת')}
               </button>
               <button onClick={() => addField('checkbox')} className="w-full flex items-center gap-3 p-3 text-start bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-xl transition-colors text-sm font-bold text-slate-600 hover:text-emerald-700">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 {t('Checkbox', 'תיבת סימון')}
               </button>
             </div>
