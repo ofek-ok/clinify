@@ -5,6 +5,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
 import PublicFormView from './components/PublicFormView';
 import PublicBookingView from './components/PublicBookingView';
+import PublicPerformanceSignupView from './components/PublicPerformanceSignupView';
 import './index.css';
 
 class ErrorBoundary extends Component {
@@ -53,7 +54,7 @@ const ProtectedDashboardRoute = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6 text-center font-sans">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -71,6 +72,7 @@ function App() {
             <Routes>
               <Route path="/book" element={<PublicBookingView />} />
               <Route path="/form/:id" element={<PublicFormView />} />
+              <Route path="/performance" element={<PublicPerformanceSignupView />} />
               <Route path="/*" element={<ProtectedDashboardRoute />} />
             </Routes>
           </ClinicProvider>

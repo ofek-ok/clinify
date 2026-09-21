@@ -5,325 +5,250 @@ import AnalyticsView from './AnalyticsView';
 
 const DashboardOverview = ({ navigate }) => {
   const { 
+    people,
     patients, 
     leads, 
     appointments, 
     services,
-    tasksDueToday, 
-    revenueThisMonth, 
+    tasks,
+    projects,
+    contentItems,
+    performanceList,
+    payments,
     todayStr,
     getPatientName,
     getServiceName,
-    getPaymentForAppointment,
     updateTaskStatus,
     updateLeadStatus
   } = useContext(ClinicContext);
   
   const { t } = useContext(LanguageContext);
-  const [viewMode, setViewMode] = useState('overview');
+  const [viewMode, setViewMode] = useState('command_center');
 
-  // Derived metrics
-  const activePatientsCount = patients.filter(p => (p.status || 'active') === 'active').length;
-  const newLeads = leads.filter(l => l.status === 'new');
-  
-  const todayAppointments = useMemo(() => {
-    return appointments.filter(appt => appt.appointment_date.startsWith(todayStr))
-      .sort((a,b) => new Date(a.appointment_date) - new Date(b.appointment_date));
-  }, [appointments, todayStr]);
+  // Operational Attention Center Indicators
+  const overdueTasks = useMemo(() => {
+    return tasks.filter(t => t.due_date < todayStr && t.status !== 'done');
+  }, [tasks, todayStr]);
 
-  const unpaidAppointments = useMemo(() => {
+  const blockedTasks = useMemo(() => {
+    return tasks.filter(t => t.status === 'blocked');
+  }, [tasks]);
+
+  const unpaidCompletedAppointments = useMemo(() => {
     return appointments.filter(appt => {
-      return !getPaymentForAppointment(appt.id);
+      if (appt.status !== 'completed') return false;
+      const payment = payments.find(p => p.appointment_id === appt.id && p.status === 'paid');
+      return !payment;
     });
-  }, [appointments, getPaymentForAppointment]);
+  }, [appointments, payments]);
 
-  const pendingPaymentsTotal = unpaidAppointments.reduce((sum, appt) => {
-    const service = services.find(s => s.id === appt.service_id);
-    return sum + (service ? service.default_price : 0);
-  }, 0);
+  const leadsNeedingFollowup = useMemo(() => {
+    return leads.filter(l => l.status === 'new' || l.status === 'contacted');
+  }, [leads]);
 
-  const translateStatus = (status) => {
-    const statusMap = {
-      'scheduled': t('Scheduled', 'מתוכנן'),
-      'completed': t('Completed', 'בוצע'),
-      'cancelled': t('Cancelled', 'בוטל')
-    };
-    return statusMap[status] || status;
-  };
-
-  const translatePriority = (priority) => {
-    const map = { 'high': t('High', 'דחוף'), 'medium': t('Medium', 'בינוני'), 'low': t('Low', 'רגיל') };
-    return map[priority] || priority;
-  };
-
-  const translateSource = (source) => {
-    const map = { 'Facebook': t('Facebook', 'פייסבוק'), 'Website': t('Website', 'אתר הקליניקה'), 'WhatsApp': t('WhatsApp', 'ווטסאפ'), 'Direct': t('Direct', 'המלצה / ישיר') };
-    return map[source] || source;
-  };
+  // Derived Business Metrics
+  const totalCustomersCount = people.filter(p => p.client_status === 'customer').length;
+  const totalActivePatients = patients.filter(p => (p.status || 'active') === 'active').length;
+  const totalRevenue = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const totalPerformanceListSignups = performanceList.length;
 
   return (
     <div className="animate-in fade-in duration-500 space-y-6 pb-12 text-start">
       
-      {/* Executive Clean Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      {/* OP Command Center Executive Header */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">{t('Therapy Management Center', 'מרכז ניהול הקליניקה והטיפולים')}</h2>
-          <p className="text-slate-500 text-sm mt-1">{t('Overview of today\'s sessions, client follow-ups, and clinic tasks.', 'מבט כולל על מפגשי היום, מעקבי מטופלים ומשימות הקליניקה.')}</p>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{t('OP Command Center', 'OP Command Center — מרכז השליטה האופרטיבי')}</h2>
+          </div>
+          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+            {t('Okonski Performance Operational OS • High-level overview & Attention Center.', 'מערכת הפעלה מרכזית לניהול ביצועים, קהלים, משימות ואנליטיקה.')}
+          </p>
         </div>
 
         {/* View Mode Switcher */}
-        <div className="flex bg-slate-200/60 p-1 rounded-xl shrink-0 self-start sm:self-auto">
+        <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 border border-slate-200">
           <button 
-            onClick={() => setViewMode('overview')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'overview'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setViewMode('command_center')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'command_center' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {t('Daily Sessions', 'פעילות שוטפת')}
+            {t('Command Center', 'מרכז שליטה')}
           </button>
-
           <button 
             onClick={() => setViewMode('analytics')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'analytics'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'analytics' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {t('Clinic Analytics', 'נתוני אנליטיקה')}
+            {t('Financial & Operations Analytics', 'אנליטיקה ודוחות')}
           </button>
         </div>
       </div>
 
       {viewMode === 'analytics' ? (
-        <div className="mt-4">
-          <AnalyticsView />
-        </div>
+        <AnalyticsView />
       ) : (
-        <>
-          {/* 4 Clean Metric Cards */}
+        <div className="space-y-6">
+
+          {/* ATTENTION CENTER (Operational Alerts) */}
+          {(overdueTasks.length > 0 || blockedTasks.length > 0 || unpaidCompletedAppointments.length > 0 || leadsNeedingFollowup.length > 0) && (
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  ⚡ {t('Attention Center', 'Attention Center — פריטים הנדרשים לטיפול מידי')}
+                </h3>
+                <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                  {overdueTasks.length + blockedTasks.length + unpaidCompletedAppointments.length + leadsNeedingFollowup.length} {t('action items', 'פעולות ממתינות')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {/* Overdue Tasks Alert */}
+                {overdueTasks.length > 0 && (
+                  <div onClick={() => navigate('tasks')} className="bg-white p-3.5 rounded-xl border border-rose-200 shadow-xs cursor-pointer hover:border-rose-400 transition-all">
+                    <p className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">{t('Overdue Tasks', 'משימות באיחור')}</p>
+                    <p className="text-xl font-extrabold text-slate-800 mt-1">{overdueTasks.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{t('Click to review overdue tasks', 'לחץ לצפייה במשימות')}</p>
+                  </div>
+                )}
+
+                {/* Blocked Tasks Alert */}
+                {blockedTasks.length > 0 && (
+                  <div onClick={() => navigate('tasks')} className="bg-white p-3.5 rounded-xl border border-amber-200 shadow-xs cursor-pointer hover:border-amber-400 transition-all">
+                    <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">{t('Blocked Tasks', 'משימות חסומות')}</p>
+                    <p className="text-xl font-extrabold text-slate-800 mt-1">{blockedTasks.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{t('Unblock dependencies', 'לחץ להתרת חסמים')}</p>
+                  </div>
+                )}
+
+                {/* Unpaid Completed Sessions Alert */}
+                {unpaidCompletedAppointments.length > 0 && (
+                  <div onClick={() => navigate('appointments')} className="bg-white p-3.5 rounded-xl border border-purple-200 shadow-xs cursor-pointer hover:border-purple-400 transition-all">
+                    <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">{t('Unpaid Completed Sessions', 'מפגשים שלא נגבו')}</p>
+                    <p className="text-xl font-extrabold text-slate-800 mt-1">{unpaidCompletedAppointments.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{t('Complete billing to convert to Customer', 'לחץ לרישום תשלום')}</p>
+                  </div>
+                )}
+
+                {/* Leads Needing Followup */}
+                {leadsNeedingFollowup.length > 0 && (
+                  <div onClick={() => navigate('leads')} className="bg-white p-3.5 rounded-xl border border-blue-200 shadow-xs cursor-pointer hover:border-blue-400 transition-all">
+                    <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">{t('Open Leads', 'לידים בטיפול')}</p>
+                    <p className="text-xl font-extrabold text-slate-800 mt-1">{leadsNeedingFollowup.length}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{t('Open CRM Pipeline', 'לחץ לפתיחת ה-CRM')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Real Derived Core Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            
-            {/* Active Patients */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Active Patients', 'מטופלים ונועצים פעילים')}</p>
-              <h3 className="text-3xl font-extrabold text-slate-800">{activePatientsCount}</h3>
-              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Active in clinic', 'בתהליך טיפולי רציף')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Total Customers', 'לקוחות משלמים (Customers)')}</p>
+              <h3 className="text-3xl font-extrabold text-slate-800">{totalCustomersCount}</h3>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{totalActivePatients} {t('active clinical profiles', 'פרופילים קליניים פעילים')}</p>
             </div>
 
-            {/* New Leads */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('New Inquiries', 'פניות חדשות לקליניקה')}</p>
-              <h3 className="text-3xl font-extrabold text-slate-800">{newLeads.length}</h3>
-              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Awaiting response', 'ממתינים לשיחת היכרות')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Performance List Signups', 'רשימת ביצועים (Signups)')}</p>
+              <h3 className="text-3xl font-extrabold text-slate-800">{totalPerformanceListSignups}</h3>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{t('Pre-launch acquisition list', 'הרשמות מוקדמות ב-UTM')}</p>
             </div>
 
-            {/* Appointments Today */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Sessions Today', 'מפגשים להיום')}</p>
-              <h3 className="text-3xl font-extrabold text-slate-800">{todayAppointments.length}</h3>
-              <p className="text-xs text-slate-500 mt-2 font-medium">{todayAppointments.filter(a => a.status === 'completed').length} {t('completed', 'הושלמו')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Active Strategic Projects', 'פרויקטים אסטרטגיים')}</p>
+              <h3 className="text-3xl font-extrabold text-slate-800">{projects.length}</h3>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{tasks.filter(t => t.status !== 'done').length} {t('active tasks in queue', 'משימות פעילות בתור')}</p>
             </div>
 
-            {/* Monthly Revenue */}
             <div className="bg-slate-900 p-5 rounded-2xl text-white shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Monthly Income', 'הכנסות הקליניקה החודש')}</p>
-              <h3 className="text-3xl font-extrabold text-white" dir="ltr">₪{revenueThisMonth.toFixed(2)}</h3>
-              <p className="text-xs text-emerald-400 mt-2 font-semibold">+12.4% {t('vs last month', 'מהחודש שעבר')}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('Total Real Revenue', 'סה"כ הכנסות שנגבו (Paid)')}</p>
+              <h3 className="text-3xl font-extrabold text-white" dir="ltr">₪{totalRevenue.toFixed(2)}</h3>
+              <p className="text-xs text-emerald-400 mt-2 font-semibold">100% {t('real Supabase ledger', 'מאומת מול מסד הנתונים')}</p>
             </div>
-
           </div>
 
-          {/* Operations Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Module Snapshots Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Today's Appointments & Tasks */}
-            <div className="xl:col-span-2 space-y-6">
-              
-              {/* Today's Appointments */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800 text-sm">{t("Today's Sessions", "מפגשי הטיפול של היום")}</h3>
-                  <button 
-                    onClick={() => navigate('appointments')}
-                    className="text-xs font-bold text-slate-600 hover:text-slate-900 hover:underline"
-                  >
-                    {t('View All', 'לכל המפגשים ➔')}
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-start border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/30 text-slate-500 text-xs uppercase tracking-wider">
-                        <th className="py-3 px-6 text-start">{t('Time', 'שעה')}</th>
-                        <th className="py-3 px-6 text-start">{t('Patient', 'שם המטופל/ת')}</th>
-                        <th className="py-3 px-6 text-start">{t('Session Type', 'סוג המפגש')}</th>
-                        <th className="py-3 px-6 text-end">{t('Status', 'סטטוס')}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {todayAppointments.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="py-10 text-center text-slate-400 text-xs font-medium">
-                            {t('No sessions scheduled for today.', 'אין מפגשי טיפול מתוכננים להיום.')}
-                          </td>
-                        </tr>
-                      ) : (
-                        todayAppointments.map(appt => {
-                          const time = new Date(appt.appointment_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                          let statusBadge = appt.status === 'completed' 
-                            ? "bg-emerald-100 text-emerald-700" 
-                            : appt.status === 'cancelled' 
-                            ? "bg-slate-100 text-slate-500" 
-                            : "bg-blue-100 text-blue-700";
-
-                          return (
-                            <tr key={appt.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="py-3.5 px-6 text-xs font-bold text-slate-600 text-start">{time}</td>
-                              <td className="py-3.5 px-6 font-bold text-slate-800 text-start">
-                                {getPatientName(appt.patient_id)}
-                              </td>
-                              <td className="py-3.5 px-6 text-xs font-medium text-slate-600 text-start">{getServiceName(appt.service_id)}</td>
-                              <td className="py-3.5 px-6 text-end">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${statusBadge}`}>
-                                  {translateStatus(appt.status)}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+            {/* Active Projects Snapshot */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h3 className="font-bold text-slate-800 text-sm">📁 {t('Active Projects', 'פרויקטים פעילים')}</h3>
+                <button onClick={() => navigate('tasks')} className="text-xs font-bold text-blue-600 hover:underline">{t('View All', 'לכל הפרויקטים')}</button>
               </div>
-
-              {/* Today's Tasks */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800 text-sm">{t("Today's Tasks", "משימות ומעקבי טיפול להיום")}</h3>
-                  <span className="text-xs text-slate-500 font-bold">{tasksDueToday.length} {t('pending', 'ממתינות')}</span>
-                </div>
-
-                <div className="p-5 space-y-2.5">
-                  {tasksDueToday.length === 0 ? (
-                    <p className="text-center py-6 text-slate-400 text-xs font-medium">{t('All caught up for today! 🎉', 'אין משימות או מעקבים ממתינים להיום.')}</p>
-                  ) : (
-                    tasksDueToday.map(task => (
-                      <div key={task.id} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                        <input 
-                          type="checkbox" 
-                          checked={task.status === 'done'} 
-                          onChange={() => updateTaskStatus(task.id, 'done')} 
-                          className="w-4 h-4 text-slate-800 rounded border-slate-300 focus:ring-slate-500 cursor-pointer" 
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-800 truncate">{task.title}</p>
-                          {task.patient_id && <p className="text-[10px] text-slate-400">{t('Patient:', 'מטופל/ת:')} {getPatientName(task.patient_id)}</p>}
-                        </div>
-                        <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded ${
-                          task.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-600'
-                        }`}>
-                          {translatePriority(task.priority)}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
+              <div className="space-y-3">
+                {projects.slice(0, 3).map(p => (
+                  <div key={p.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <div className="flex justify-between text-xs font-bold text-slate-800">
+                      <span>{p.name}</span>
+                      <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded">{p.area}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                      <div className="h-full bg-slate-900 rounded-full" style={{ width: `${p.progress}%` }}></div>
+                    </div>
+                  </div>
+                ))}
+                {projects.length === 0 && <p className="text-xs text-slate-400 text-center py-4">{t('No active projects', 'אין פרויקטים פעילים')}</p>}
               </div>
-
             </div>
 
-            {/* Right Section: Recent Leads & Pending Payments */}
-            <div className="xl:col-span-1 space-y-6">
-              
-              {/* Recent Leads Widget */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-800 text-sm">{t('Recent Inquiries', 'פניות אחרונות לקליניקה')}</h3>
-                  <button 
-                    onClick={() => navigate('leads')} 
-                    className="text-xs font-bold text-slate-600 hover:text-slate-900 hover:underline"
-                  >
-                    {t('Pipeline', 'לפניות ➔')}
-                  </button>
-                </div>
+            {/* Content OS Snapshot */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h3 className="font-bold text-slate-800 text-sm">📱 {t('Content OS Pipeline', 'צינור הפקת התוכן')}</h3>
+                <button onClick={() => navigate('content_os')} className="text-xs font-bold text-blue-600 hover:underline">{t('View Content OS', 'למערכת התוכן')}</button>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { status: 'in_production', label: t('In Production', 'בהפקה') },
+                  { status: 'ready', label: t('Ready to Publish', 'מוכן לפרסום') },
+                  { status: 'published', label: t('Published', 'פורסם') }
+                ].map(st => {
+                  const count = contentItems.filter(c => c.status === st.status).length;
+                  return (
+                    <div key={st.status} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                      <span className="font-semibold text-slate-700">{st.label}</span>
+                      <span className="font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-                <div className="p-4 space-y-3">
-                  {newLeads.length === 0 ? (
-                    <p className="text-center text-xs font-medium text-slate-400 py-6">{t('No new inquiries awaiting response.', 'אין פניות חדשות כרגע.')}</p>
-                  ) : (
-                    newLeads.slice(0, 4).map(lead => (
-                      <div key={lead.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-bold text-slate-800 text-xs">{lead.full_name}</h4>
-                            <p className="text-[10px] text-slate-500" dir="ltr">{lead.phone}</p>
-                          </div>
-                          <span className="text-[9px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded">{translateSource(lead.source)}</span>
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <a 
-                            href={`tel:${lead.phone}`} 
-                            className="flex-1 text-center bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[10px] font-bold py-1.5 rounded-lg transition-colors"
-                          >
-                            {t('Call', 'חייג')}
-                          </a>
-                          <button 
-                            onClick={() => { updateLeadStatus(lead.id, 'contacted'); navigate('leads'); }} 
-                            className="flex-1 bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-bold py-1.5 rounded-lg transition-colors"
-                          >
-                            {t('Follow Up', 'צור קשר')}
-                          </button>
-                        </div>
+            {/* Performance List Snapshot */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h3 className="font-bold text-slate-800 text-sm">🔥 {t('Performance List Latest', 'נרשמים אחרונים')}</h3>
+                <button onClick={() => navigate('performance_list')} className="text-xs font-bold text-blue-600 hover:underline">{t('View List', 'לרשימה המלאה')}</button>
+              </div>
+              <div className="space-y-2">
+                {performanceList.slice(0, 3).map(item => {
+                  const person = people.find(p => p.id === item.person_id) || {};
+                  return (
+                    <div key={item.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs flex justify-between items-center">
+                      <div>
+                        <p className="font-bold text-slate-800">{person.full_name || 'נרשם'}</p>
+                        <p className="text-[10px] text-slate-400">{person.email || person.phone || '-'}</p>
                       </div>
-                    ))
-                  )}
-                </div>
+                      <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded">
+                        {item.utm_source || 'direct'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {performanceList.length === 0 && <p className="text-xs text-slate-400 text-center py-4">{t('No signups yet', 'אין נרשמים עדיין')}</p>}
               </div>
-
-              {/* Pending Payments Widget */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800 text-xs">{t('Pending Payments', 'תשלומים בהמתנה לגבייה')}</h3>
-                  <span className="text-sm font-bold text-slate-800" dir="ltr">₪{pendingPaymentsTotal.toFixed(2)}</span>
-                </div>
-                <div className="p-4 space-y-2.5">
-                  {unpaidAppointments.length === 0 ? (
-                    <p className="text-center text-xs font-medium text-slate-400 py-4">{t('No pending payments! 🎉', 'אין תשלומים ממתינים!')}</p>
-                  ) : (
-                    unpaidAppointments.map(appt => {
-                      const service = services.find(s => s.id === appt.service_id);
-                      const amount = service ? service.default_price : 0;
-                      return (
-                        <div key={appt.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                          <div>
-                            <p className="font-bold text-slate-800 text-xs">{getPatientName(appt.patient_id)}</p>
-                            <p className="text-[10px] text-slate-400">{new Date(appt.appointment_date).toLocaleDateString('he-IL')}</p>
-                          </div>
-                          <div className="text-end flex flex-col items-end gap-1">
-                            <span className="font-bold text-slate-800 text-xs" dir="ltr">₪{amount.toFixed(2)}</span>
-                            <button 
-                              onClick={() => navigate('appointments')} 
-                              className="text-[9px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded transition-colors"
-                            >
-                              {t('Collect', 'גבה תשלום')}
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-
             </div>
 
           </div>
-        </>
+
+        </div>
       )}
     </div>
   );

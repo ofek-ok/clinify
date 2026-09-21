@@ -11,11 +11,14 @@ import { LanguageContext } from '../context/LanguageContext';
 
 const AppointmentManager = () => {
   const { 
+    people,
     patients, 
     services, 
     appointments, 
     addAppointment, 
+    updateAppointmentStatus,
     addPayment, 
+    addTask,
     getPatientName, 
     getServiceName, 
     isTimeSlotAvailable, 
@@ -31,74 +34,112 @@ const AppointmentManager = () => {
     service_id: '',
     appointment_date: '',
     appointment_time: '',
-    status: 'scheduled'
+    status: 'scheduled',
+    notes: ''
   });
 
-  const [paymentForm, setPaymentForm] = useState({
-    appointment_id: null,
+  const [sessionCompletionModal, setSessionCompletionModal] = useState({
+    isOpen: false,
+    appointment: null,
+    recordPaymentNow: true,
     amount: '',
-    payment_method: 'Credit Card'
+    payment_method: 'Credit Card',
+    createFollowupTask: false,
+    followupTaskTitle: '',
+    followupDueDate: ''
   });
 
-  const handleAppointmentSubmit = (e) => {
+  const handleAppointmentSubmit = async (e) => {
     e.preventDefault();
     
     if (!appointmentForm.patient_id || !appointmentForm.service_id || !appointmentForm.appointment_date || !appointmentForm.appointment_time) {
-      alert(t("Please fill in all required fields.", "אנא מלא את כל השדות הנדרשים."));
+      alert(t("Please fill in all required fields.", "אנא מלא את כל השדות الנדרשים."));
       return;
     }
 
     const dateTimeStr = `${appointmentForm.appointment_date}T${appointmentForm.appointment_time}`;
     
-    if (!isWithinBusinessHours(dateTimeStr)) {
-      alert(t("Selected time is outside of business hours. Please select another time or update business hours in Settings.", "זמן התור שנבחר נמצא מחוץ לשעות הפעילות של הקליניקה. אנא בחר זמן אחר או עדכן את שעות הפעילות בהגדרות."));
+    if (isWithinBusinessHours && !isWithinBusinessHours(dateTimeStr)) {
+      alert(t("Selected time is outside of business hours. Please select another time.", "זמן התור שנבחר נמצא מחוץ לשעות הפעילות."));
       return;
     }
 
-    const service = services.find(s => s.id === appointmentForm.service_id);
+    const service = services.find(s => String(s.id) === String(appointmentForm.service_id));
     const duration = service ? service.duration_minutes : 30;
 
-    if (!isTimeSlotAvailable(dateTimeStr, duration)) {
-      alert(t("Time slot conflicts with an existing appointment.", "זמן התור מתנגש עם תור קיים. אנא בחר שעה אחרת."));
+    if (isTimeSlotAvailable && !isTimeSlotAvailable(dateTimeStr, duration)) {
+      alert(t("Time slot conflicts with an existing appointment.", "זמן התור מתנגש עם תור קיים."));
       return;
     }
 
-    addAppointment({
+    const selectedPatient = patients.find(p => String(p.id) === String(appointmentForm.patient_id));
+
+    await addAppointment({
       patient_id: appointmentForm.patient_id,
+      person_id: selectedPatient ? selectedPatient.person_id : null,
       service_id: appointmentForm.service_id,
       appointment_date: dateTimeStr,
-      status: appointmentForm.status
+      status: appointmentForm.status,
+      notes: appointmentForm.notes || null
     });
 
-    setAppointmentForm({ patient_id: '', service_id: '', appointment_date: '', appointment_time: '', status: 'scheduled' });
+    setAppointmentForm({ patient_id: '', service_id: '', appointment_date: '', appointment_time: '', status: 'scheduled', notes: '' });
   };
 
-  const handlePaymentSubmit = (e) => {
+  const openCompletionModal = (appt) => {
+    const service = services.find(s => String(s.id) === String(appt.service_id));
+    const patient = patients.find(p => String(p.id) === String(appt.patient_id));
+    const person = people.find(p => String(p.id) === String(appt.person_id)) || (patient ? people.find(p => String(p.id) === String(patient.person_id)) : null);
+
+    const defaultTitle = person ? `מעקב לאחר מפגש עם ${person.full_name}` : `מעקב טיפול`;
+    const defaultDate = new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0];
+
+    setSessionCompletionModal({
+      isOpen: true,
+      appointment: appt,
+      recordPaymentNow: true,
+      amount: service ? service.default_price : 0,
+      payment_method: 'Credit Card',
+      createFollowupTask: true,
+      followupTaskTitle: defaultTitle,
+      followupDueDate: defaultDate
+    });
+  };
+
+  const handleCompleteSessionSubmit = async (e) => {
     e.preventDefault();
-    if (paymentForm.appointment_id) {
-      addPayment({
-        appointment_id: paymentForm.appointment_id,
-        patient_id: paymentForm.patient_id || null,
-        person_id: paymentForm.person_id || null,
-        amount: parseFloat(paymentForm.amount),
-        payment_method: paymentForm.payment_method,
+    const { appointment, recordPaymentNow, amount, payment_method, createFollowupTask, followupTaskTitle, followupDueDate } = sessionCompletionModal;
+    if (!appointment) return;
+
+    // 1. Update status to completed
+    await updateAppointmentStatus(appointment.id, 'completed');
+
+    // 2. Add Payment if requested
+    if (recordPaymentNow && amount) {
+      await addPayment({
+        appointment_id: appointment.id,
+        patient_id: appointment.patient_id || null,
+        person_id: appointment.person_id || null,
+        amount: parseFloat(amount),
+        payment_method: payment_method,
         status: 'paid'
       });
-      setPaymentForm({ appointment_id: null, patient_id: null, person_id: null, amount: '', payment_method: 'Credit Card' });
-      alert(t("Payment recorded successfully!", "תשלום נרשם בהצלחה!"));
     }
-  };
 
-  const openPaymentModal = (appt) => {
-    const service = services.find(s => s.id === appt.service_id);
-    const patient = patients.find(p => p.id === appt.patient_id);
-    setPaymentForm({
-      appointment_id: appt.id,
-      patient_id: appt.patient_id || null,
-      person_id: appt.person_id || (patient ? patient.person_id : null),
-      amount: service ? service.default_price : 0,
-      payment_method: 'Credit Card'
-    });
+    // 3. Add Follow-up Task if requested
+    if (createFollowupTask && followupTaskTitle) {
+      await addTask({
+        title: followupTaskTitle,
+        due_date: followupDueDate || new Date().toISOString().split('T')[0],
+        status: 'todo',
+        priority: 'high',
+        area: 'clinical',
+        person_id: appointment.person_id || null,
+        patient_id: appointment.patient_id || null
+      });
+    }
+
+    setSessionCompletionModal({ isOpen: false, appointment: null, recordPaymentNow: true, amount: '', payment_method: 'Credit Card', createFollowupTask: false, followupTaskTitle: '', followupDueDate: '' });
   };
 
   const activePatients = patients.filter(p => (p.status || 'active') === 'active');
@@ -106,13 +147,15 @@ const AppointmentManager = () => {
   const translateStatus = (status) => {
     const statusMap = {
       'scheduled': t('Scheduled', 'נקבע'),
+      'confirmed': t('Confirmed', 'אושר'),
       'completed': t('Completed', 'הושלם'),
-      'cancelled': t('Cancelled', 'בוטל')
+      'cancelled': t('Cancelled', 'בוטל'),
+      'no_show': t('No Show', 'אי הופעה'),
+      'rescheduled': t('Rescheduled', 'הוזז')
     };
     return statusMap[status] || status;
   };
 
-  // TanStack Table Column Definitions
   const columns = useMemo(() => [
     {
       accessorKey: 'appointment_date',
@@ -140,36 +183,62 @@ const AppointmentManager = () => {
     {
       accessorKey: 'status',
       header: () => t('Status', 'סטטוס תור'),
-      cell: ({ getValue }) => {
+      cell: ({ row, getValue }) => {
         const status = getValue();
         let statusBadge = status === 'completed' 
           ? "bg-emerald-100 text-emerald-800" 
           : status === 'cancelled' 
-          ? "bg-rose-100 text-rose-800" 
+          ? "bg-rose-100 text-rose-800 font-bold" 
+          : status === 'confirmed'
+          ? "bg-blue-100 text-blue-800"
+          : status === 'no_show'
+          ? "bg-purple-100 text-purple-800"
+          : status === 'rescheduled'
+          ? "bg-orange-100 text-orange-800"
           : "bg-amber-100 text-amber-800";
 
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${statusBadge}`}>
-            {translateStatus(status)}
-          </span>
+          <select 
+            value={status} 
+            onChange={(e) => updateAppointmentStatus(row.original.id, e.target.value)}
+            className={`px-2 py-1 rounded text-[11px] font-bold outline-none cursor-pointer ${statusBadge}`}
+          >
+            <option value="scheduled">{t('Scheduled', 'נקבע')}</option>
+            <option value="confirmed">{t('Confirmed', 'אושר')}</option>
+            <option value="completed">{t('Completed', 'הושלם')}</option>
+            <option value="rescheduled">{t('Rescheduled', 'הוזז')}</option>
+            <option value="no_show">{t('No Show', 'אי הופעה')}</option>
+            <option value="cancelled">{t('Cancelled', 'בוטל')}</option>
+          </select>
         );
       },
     },
     {
       id: 'actions',
       header: () => <div className="text-center">{t('Actions', 'פעולות')}</div>,
-      cell: ({ row }) => (
-        <div className="text-center">
-          <button 
-            onClick={() => openPaymentModal(row.original)}
-            className="text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm transition-all"
-          >
-            {t('Record Payment', 'הזן תשלום')}
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const appt = row.original;
+        const isDone = appt.status === 'completed';
+        return (
+          <div className="text-center flex items-center justify-center gap-2">
+            {!isDone && (
+              <button 
+                onClick={() => openCompletionModal(appt)}
+                className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-all"
+              >
+                {t('Complete & Bill', 'סיים מפגש וגבה תשלום')}
+              </button>
+            )}
+            {isDone && (
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                ✓ {t('Completed', 'מפגש הושלם')}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
-  ], [getPatientName, getServiceName, t]);
+  ], [getPatientName, getServiceName, updateAppointmentStatus, t]);
 
   const table = useReactTable({
     data: appointments,
@@ -184,34 +253,114 @@ const AppointmentManager = () => {
 
   return (
     <div className="animate-in fade-in duration-500 space-y-6 relative text-start">
-      {/* Payment Modal */}
-      {paymentForm.appointment_id && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+      {/* Session Completion & Billing Modal */}
+      {sessionCompletionModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-slate-900 p-4 text-white flex justify-between items-center">
-              <h3 className="font-bold text-base">{t('Record Payment', 'רישום תשלום לתור')}</h3>
-              <button onClick={() => setPaymentForm({ appointment_id: null, amount: '', payment_method: 'Credit Card'})} className="text-slate-400 hover:text-white">
+              <div>
+                <h3 className="font-bold text-base">{t('Complete Session & Record Operation', 'סיום מפגש ורישום תשלום')}</h3>
+                <p className="text-xs text-slate-300">
+                  {getPatientName(sessionCompletionModal.appointment?.patient_id)} • {getServiceName(sessionCompletionModal.appointment?.service_id)}
+                </p>
+              </div>
+              <button onClick={() => setSessionCompletionModal({ isOpen: false, appointment: null })} className="text-slate-400 hover:text-white">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
-            <form onSubmit={handlePaymentSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 text-start">{t('Amount to Pay (₪)', 'סכום לתשלום (₪)')}</label>
-                <input type="number" step="0.01" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} required 
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none text-start text-sm" />
+            <form onSubmit={handleCompleteSessionSubmit} className="p-6 space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 font-medium">
+                💡 <b>{t('Automatic Customer Conversion', 'המרה אוטומטית ללקוח')}:</b> {t('Completing session and receiving payment will automatically update client status to Customer and mark Lead as Won.', 'סיום המפגש וגביית תשלום ימירו את סטטוס הלקוח ל-Customer ואת הליד ל-Won.')}
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 text-start">{t('Payment Method', 'אמצעי תשלום')}</label>
-                <select value={paymentForm.payment_method} onChange={e => setPaymentForm({...paymentForm, payment_method: e.target.value})} 
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none text-start text-sm">
-                  <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
-                  <option value="Cash">{t('Cash', 'מזומן')}</option>
-                  <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
-                  <option value="Bit">Bit / Paybox</option>
-                </select>
+
+              {/* Payment Section */}
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('Payment Record', 'גביית תשלום')}</span>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={sessionCompletionModal.recordPaymentNow} 
+                      onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, recordPaymentNow: e.target.checked })} 
+                      className="rounded text-slate-900 focus:ring-slate-500"
+                    />
+                    {t('Record payment now', 'רשום תשלום כעת')}
+                  </label>
+                </div>
+
+                {sessionCompletionModal.recordPaymentNow && (
+                  <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">{t('Amount (₪)', 'סכום (₪)')}</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={sessionCompletionModal.amount} 
+                        onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, amount: e.target.value })} 
+                        required 
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">{t('Method', 'אמצעי תשלום')}</label>
+                      <select 
+                        value={sessionCompletionModal.payment_method} 
+                        onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, payment_method: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      >
+                        <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
+                        <option value="Cash">{t('Cash', 'מזומן')}</option>
+                        <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
+                        <option value="Bit">Bit / Paybox</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-colors text-xs mt-2">
-                {t('Confirm Payment', 'אשר תשלום')}
+
+              {/* Follow-up Task Section */}
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('Follow-up Task', 'משימת מעקב לקוח')}</span>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={sessionCompletionModal.createFollowupTask} 
+                      onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, createFollowupTask: e.target.checked })} 
+                      className="rounded text-slate-900 focus:ring-slate-500"
+                    />
+                    {t('Create follow-up task', 'צור משימת מעקב')}
+                  </label>
+                </div>
+
+                {sessionCompletionModal.createFollowupTask && (
+                  <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div className="col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">{t('Task Title', 'כותרת המשימה')}</label>
+                      <input 
+                        type="text" 
+                        value={sessionCompletionModal.followupTaskTitle} 
+                        onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, followupTaskTitle: e.target.value })} 
+                        required 
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">{t('Due Date', 'יעד לביצוע')}</label>
+                      <input 
+                        type="date" 
+                        value={sessionCompletionModal.followupDueDate} 
+                        onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, followupDueDate: e.target.value })} 
+                        required 
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" 
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-colors text-xs mt-3">
+                {t('Confirm Session Completion', 'אישור סיום מפגש וביצוע פעולות')}
               </button>
             </form>
           </div>
@@ -221,8 +370,8 @@ const AppointmentManager = () => {
       {/* Header Bar */}
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{t('Appointment Manager', 'ניהול תורים')}</h2>
-          <p className="text-slate-500 text-sm mt-1">{t('Schedule new appointments and manage the clinic calendar.', 'קבע תורים חדשים ונהל את לוח הזמנים של הקליניקה.')}</p>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{t('Appointment Manager', 'ניהול תורים ומפגשים')}</h2>
+          <p className="text-slate-500 text-sm mt-1">{t('Schedule new appointments and manage client sessions.', 'קבע תורים חדשים, נהל מפגשים וסדרות טיפול.')}</p>
         </div>
       </div>
       
@@ -242,7 +391,7 @@ const AppointmentManager = () => {
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none text-start text-xs">
                   <option value="">{t('Select patient...', 'בחר מטופל...')}</option>
                   {activePatients.map(p => (
-                    <option key={p.id} value={p.id}>{p.full_name}</option>
+                    <option key={p.id} value={p.id}>{p.full_name || getPatientName(p.id)}</option>
                   ))}
                 </select>
               </div>
@@ -255,6 +404,15 @@ const AppointmentManager = () => {
                   {services.map(s => (
                     <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes} {t('min', 'דק')}')</option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 text-start">{t('Initial Status', 'סטטוס ראשוני')}</label>
+                <select value={appointmentForm.status} onChange={e => setAppointmentForm({...appointmentForm, status: e.target.value})} 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none text-start text-xs">
+                  <option value="scheduled">{t('Scheduled', 'נקבע')}</option>
+                  <option value="confirmed">{t('Confirmed', 'אושר')}</option>
                 </select>
               </div>
               

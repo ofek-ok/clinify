@@ -17,15 +17,16 @@ export const ClinicProvider = ({ children }) => {
   const [appointments, setAppointments] = useState([]);
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [contentItems, setContentItems] = useState([]);
+  const [performanceList, setPerformanceList] = useState([]);
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
   const [leadCommunications, setLeadCommunications] = useState([]);
 
-
   // Configurable Public Self-Booking Settings
-
   const [bookingSettings, setBookingSettings] = useState({
     allowPackages: true,
     allowPayAtClinic: true,
@@ -102,7 +103,7 @@ export const ClinicProvider = ({ children }) => {
     };
   }, []);
 
-  // Fetch complete internal CRM dataset on component mount
+  // Fetch complete OP OS dataset on component mount
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -140,7 +141,7 @@ export const ClinicProvider = ({ children }) => {
     try {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes
+        tasksRes, projectsRes, contentItemsRes, perfListRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes
       ] = await Promise.all([
         supabase.from('people').select('*'),
         supabase.from('patients').select('*'),
@@ -148,6 +149,9 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('appointments').select('*'),
         supabase.from('leads').select('*'),
         supabase.from('tasks').select('*'),
+        supabase.from('projects').select('*'),
+        supabase.from('content_items').select('*'),
+        supabase.from('performance_list').select('*'),
         supabase.from('payments').select('*'),
         supabase.from('forms').select('*'),
         supabase.from('form_submissions').select('*'),
@@ -164,6 +168,9 @@ export const ClinicProvider = ({ children }) => {
       if (appointmentsRes.data) setAppointments(appointmentsRes.data);
       if (leadsRes.data) setLeads(leadsRes.data);
       if (tasksRes.data) setTasks(tasksRes.data);
+      if (projectsRes.data) setProjects(projectsRes.data);
+      if (contentItemsRes.data) setContentItems(contentItemsRes.data);
+      if (perfListRes.data) setPerformanceList(perfListRes.data);
       if (paymentsRes.data) setPayments(paymentsRes.data);
       if (formsRes.data) setForms(formsRes.data);
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
@@ -185,7 +192,7 @@ export const ClinicProvider = ({ children }) => {
         })));
       }
     } catch (error) {
-      console.error("Error fetching internal CRM data:", error);
+      console.error("Error fetching internal OP OS data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -200,8 +207,36 @@ export const ClinicProvider = ({ children }) => {
     setAppointments([]);
     setLeads([]);
     setTasks([]);
+    setProjects([]);
+    setContentItems([]);
+    setPerformanceList([]);
     setPayments([]);
     setExpenses([]);
+  };
+
+  // Customer Conversion Trigger (First Completed + Paid Session)
+  const triggerCustomerConversionIfEligible = async (personId) => {
+    if (!personId) return;
+    const person = people.find(p => p.id === personId);
+    if (!person || person.client_status === 'customer') return;
+
+    try {
+      const { error } = await supabase.rpc('convert_lead_to_customer', { p_person_id: personId });
+      if (error) {
+        console.warn("RPC convert_lead_to_customer fallback to manual update:", error.message);
+        await supabase.from('people').update({
+          client_status: 'customer',
+          customer_since: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('id', personId);
+        await supabase.from('leads').update({ status: 'won' }).eq('person_id', personId);
+      }
+      const nowIso = new Date().toISOString();
+      setPeople(prev => prev.map(p => p.id === personId ? { ...p, client_status: 'customer', customer_since: nowIso } : p));
+      setLeads(prev => prev.map(l => l.person_id === personId ? { ...l, status: 'won' } : l));
+    } catch (err) {
+      console.error("Customer conversion error:", err);
+    }
   };
 
   const updateBookingSettings = async (updates) => {
@@ -248,7 +283,6 @@ export const ClinicProvider = ({ children }) => {
       throw new Error('מספר טלפון תקין נדרש ליצירת זהות');
     }
 
-    // 1. Phone Lookup
     let phonePerson = people.find(p => p.normalized_phone === cleanPhone);
     if (!phonePerson) {
       const { data: dbPhonePerson } = await supabase
@@ -259,7 +293,6 @@ export const ClinicProvider = ({ children }) => {
       if (dbPhonePerson) phonePerson = dbPhonePerson;
     }
 
-    // 2. Email Lookup
     let emailPerson = null;
     if (cleanEmail) {
       emailPerson = people.find(p => p.normalized_email === cleanEmail);
@@ -273,7 +306,6 @@ export const ClinicProvider = ({ children }) => {
       }
     }
 
-    // 3. Identity Conflict Check
     if (phonePerson && emailPerson && phonePerson.id !== emailPerson.id) {
       throw new Error(`Identity Conflict: Phone (${phoneVal}) belongs to ${phonePerson.full_name} and Email (${emailVal}) belongs to ${emailPerson.full_name}. Merging different profiles is not allowed.`);
     }
@@ -347,7 +379,7 @@ export const ClinicProvider = ({ children }) => {
       phone: input.phone,
       email: input.email,
       source: input.source || 'Internal',
-      clientStatus: 'lead' // Creating a clinical profile is NOT customer conversion!
+      clientStatus: 'lead'
     });
 
     if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
@@ -417,7 +449,6 @@ export const ClinicProvider = ({ children }) => {
     setServices(prev => prev.filter(s => s.id !== serviceId));
   };
 
-  // Issue Package to Patient
   const issuePackageToPatient = async (patientId, catalogItem) => {
     const patient = patients.find(p => p.id === patientId);
     const personId = patient ? patient.person_id : null;
@@ -442,7 +473,6 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
-  // Redeem / Deduct Session from Patient Package
   const redeemPackageSession = async (packageId) => {
     const targetPkg = patientPackages.find(p => p.id === packageId);
     if (!targetPkg || targetPkg.remaining_sessions <= 0) return;
@@ -485,7 +515,6 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
-  // Update Appointment Status with Automatic Package Deduction on Completion
   const updateAppointmentStatus = async (apptId, newStatus) => {
     const appt = appointments.find(a => a.id === apptId);
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
@@ -495,11 +524,17 @@ export const ClinicProvider = ({ children }) => {
     }
     setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status: newStatus } : a));
 
-    // Auto-deduct 1 session if marked completed and patient has an active package!
-    if (newStatus === 'completed' && appt?.patient_id) {
-      const activePkg = patientPackages.find(p => p.patient_id === appt.patient_id && p.remaining_sessions > 0);
-      if (activePkg) {
-        await redeemPackageSession(activePkg.id);
+    if (newStatus === 'completed' && appt) {
+      const payment = payments.find(p => p.appointment_id === apptId && p.status === 'paid');
+      if (payment && appt.person_id) {
+        await triggerCustomerConversionIfEligible(appt.person_id);
+      }
+
+      if (appt.patient_id) {
+        const activePkg = patientPackages.find(p => p.patient_id === appt.patient_id && p.remaining_sessions > 0);
+        if (activePkg) {
+          await redeemPackageSession(activePkg.id);
+        }
       }
     }
   };
@@ -538,6 +573,51 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
+  // Central Execution Engine: Tasks & Projects (Block 2)
+  const addProject = async (proj) => {
+    const payload = {
+      name: proj.name,
+      objective: proj.objective || null,
+      status: proj.status || 'active',
+      start_date: proj.start_date || todayStr,
+      due_date: proj.due_date || null,
+      progress: proj.progress ? parseInt(proj.progress) : 0,
+      area: proj.area || 'business'
+    };
+    const { data, error } = await supabase.from('projects').insert([payload]).select();
+    if (error) {
+      console.error("Error creating project:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setProjects(prev => [...prev, data[0]]);
+      return data[0];
+    }
+    return null;
+  };
+
+  const updateProject = async (projectId, updates) => {
+    const { data, error } = await supabase.from('projects').update(updates).eq('id', projectId).select();
+    if (error) {
+      console.error("Error updating project:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setProjects(prev => prev.map(p => p.id === projectId ? data[0] : p));
+      return data[0];
+    }
+    return null;
+  };
+
+  const deleteProject = async (projectId) => {
+    const { error } = await supabase.from('projects').delete().eq('id', projectId);
+    if (error) {
+      console.error("Error deleting project:", error);
+      throw error;
+    }
+    setProjects(prev => prev.filter(p => p.id !== projectId));
+  };
+
   const addTask = async (task) => {
     let personId = task.person_id;
     if (!personId && task.patient_id) {
@@ -545,8 +625,18 @@ export const ClinicProvider = ({ children }) => {
       if (patient) personId = patient.person_id;
     }
 
-    const payload = { ...task, person_id: personId };
-    if (!payload.patient_id) delete payload.patient_id;
+    const payload = {
+      title: task.title,
+      due_date: task.due_date || todayStr,
+      status: task.status || 'todo',
+      priority: task.priority || 'medium',
+      area: task.area || 'operations',
+      person_id: personId || null,
+      patient_id: task.patient_id || null,
+      project_id: task.project_id || null,
+      content_item_id: task.content_item_id || null,
+      dependency_task_id: task.dependency_task_id || null
+    };
 
     const { data, error } = await supabase.from('tasks').insert([payload]).select();
     if (error) {
@@ -558,6 +648,98 @@ export const ClinicProvider = ({ children }) => {
       return data[0];
     }
     return null;
+  };
+
+  const updateTask = async (taskId, updates) => {
+    const { data, error } = await supabase.from('tasks').update(updates).eq('id', taskId).select();
+    if (error) {
+      console.error("Error updating task:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setTasks(prev => prev.map(t => t.id === taskId ? data[0] : t));
+    }
+  };
+
+  const deleteTask = async (taskId) => {
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    if (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+  };
+
+  const updateTaskStatus = async (taskId, newStatus) => {
+    await updateTask(taskId, { status: newStatus });
+  };
+
+  // Pre-launch Acquisition: Performance List (Block 3)
+  const subscribePerformanceList = async (input) => {
+    const { data, error } = await supabase.rpc('public_subscribe_performance_list', {
+      p_full_name: input.full_name || input.fullName,
+      p_email: input.email,
+      p_phone: input.phone || null,
+      p_utm_source: input.utm_source || null,
+      p_utm_medium: input.utm_medium || null,
+      p_utm_campaign: input.utm_campaign || null
+    });
+
+    if (error) {
+      console.error("Error subscribing to performance list:", error);
+      throw error;
+    }
+
+    fetchInitialData();
+    return data;
+  };
+
+  // Content OS (Block 4)
+  const addContentItem = async (item) => {
+    const payload = {
+      title: item.title,
+      platform: item.platform || 'instagram',
+      format: item.format || 'post',
+      audience: item.audience || 'both',
+      objective: item.objective || 'awareness',
+      status: item.status || 'idea',
+      stage: item.stage || 'research',
+      publish_date: item.publish_date || null,
+      campaign: item.campaign || null,
+      cta: item.cta || null,
+      project_id: item.project_id || null
+    };
+
+    const { data, error } = await supabase.from('content_items').insert([payload]).select();
+    if (error) {
+      console.error("Error adding content item:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setContentItems(prev => [...prev, data[0]]);
+      return data[0];
+    }
+    return null;
+  };
+
+  const updateContentItem = async (itemId, updates) => {
+    const { data, error } = await supabase.from('content_items').update(updates).eq('id', itemId).select();
+    if (error) {
+      console.error("Error updating content item:", error);
+      throw error;
+    }
+    if (data && data[0]) {
+      setContentItems(prev => prev.map(c => c.id === itemId ? data[0] : c));
+    }
+  };
+
+  const deleteContentItem = async (itemId) => {
+    const { error } = await supabase.from('content_items').delete().eq('id', itemId);
+    if (error) {
+      console.error("Error deleting content item:", error);
+      throw error;
+    }
+    setContentItems(prev => prev.filter(c => c.id !== itemId));
   };
 
   const addPayment = async (payment) => {
@@ -593,14 +775,21 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     if (data && data[0]) {
-      setPayments(prev => [...prev, data[0]]);
-      
-      // If a package item was bought for a patient, auto-issue it!
+      const createdPayment = data[0];
+      setPayments(prev => [...prev, createdPayment]);
+
+      if (createdPayment.status === 'paid' && createdPayment.appointment_id) {
+        const appt = appointments.find(a => a.id === createdPayment.appointment_id);
+        if (appt && appt.status === 'completed' && appt.person_id) {
+          await triggerCustomerConversionIfEligible(appt.person_id);
+        }
+      }
+
       if (payment.item_type === 'package' && payment.patient_id) {
         const catalogItem = services.find(s => s.id === payment.catalog_item_id) || { name: 'כרטיסיית טיפולים', session_count: 10 };
         await issuePackageToPatient(payment.patient_id, catalogItem);
       }
-      return data[0];
+      return createdPayment;
     }
     return null;
   };
@@ -634,7 +823,6 @@ export const ClinicProvider = ({ children }) => {
     setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
   };
 
-  // Expenses API
   const addExpense = async (expense) => {
     const payload = {
       title: expense.title,
@@ -675,7 +863,6 @@ export const ClinicProvider = ({ children }) => {
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
   };
 
-  // Forms API
   const addForm = async (form) => {
     const { data, error } = await supabase.from('forms').insert([form]).select();
     if (error) {
@@ -713,7 +900,6 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
-  // Updates
   const updateLeadStatus = async (leadId, newStatus) => {
     const { error } = await supabase.from('leads').update({ status: newStatus }).eq('id', leadId);
     if (error) {
@@ -721,15 +907,6 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
-  };
-
-  const updateTaskStatus = async (taskId, newStatus) => {
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-    if (error) {
-      console.error("Error updating task status:", error);
-      throw error;
-    }
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
   };
 
   const updateBusinessHour = async (dayOfWeek, updates) => {
@@ -824,9 +1001,7 @@ export const ClinicProvider = ({ children }) => {
     const dt = new Date(dateTimeStr);
     const dayName = dt.toLocaleDateString('en-US', { weekday: 'long' });
     const hours = businessHours.find(h => h.dayOfWeek === dayName);
-    
     if (!hours || !hours.isOpen) return false;
-    
     const timeStr = dt.toTimeString().substring(0, 5);
     return timeStr >= hours.startTime && timeStr < hours.endTime;
   };
@@ -878,7 +1053,6 @@ export const ClinicProvider = ({ children }) => {
       .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
   }, [payments]);
 
-  // Patient CRM functions
   const updatePatient = async (patientId, updates) => {
     const { data, error } = await supabase.from('patients').update(updates).eq('id', patientId).select();
     if (error) {
@@ -985,7 +1159,6 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
-
   const updateLeadFollowUp = async (leadId, followUpDate, lostReason = null) => {
     const updates = { follow_up_date: followUpDate };
     if (lostReason) updates.lost_reason = lostReason;
@@ -1002,15 +1175,20 @@ export const ClinicProvider = ({ children }) => {
     <ClinicContext.Provider value={{
       session, user, signOut, isLoading,
       people, upsertPerson, getPersonName,
-      patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads, tasks, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages,
+      patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
+      tasks, projects, contentItems, performanceList, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages,
 
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead, addTask, 
+      addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead,
+      addProject, updateProject, deleteProject,
+      addTask, updateTask, updateTaskStatus, deleteTask,
+      subscribePerformanceList,
+      addContentItem, updateContentItem, deleteContentItem,
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
       addExpense, updateExpense, deleteExpense, 
       addForm, updateForm, addFormSubmission, updateBookingSettings,
-      issuePackageToPatient, redeemPackageSession,
-      updateLeadStatus, updateTaskStatus, updateBusinessHour, getAvailableSlotsForDate,
+      issuePackageToPatient, redeemPackageSession, triggerCustomerConversionIfEligible,
+      updateLeadStatus, updateBusinessHour, getAvailableSlotsForDate,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,
       tasksDueToday, revenueThisMonth, todayStr, setPatients, setLeads
