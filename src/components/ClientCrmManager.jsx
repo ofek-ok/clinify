@@ -8,17 +8,17 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
   return (
     <div className="space-y-6 dir-rtl text-start">
       {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <h1 className="text-xl font-bold text-white tracking-tight">CRM</h1>
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">CRM</h1>
         
         {/* Tabs: Leads | Clients */}
-        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <div className="flex bg-white p-1 rounded-xl border border-slate-200">
           <button
             onClick={() => setActiveTab('leads')}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'leads'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             לידים
@@ -28,7 +28,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'clients'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             לקוחות
