@@ -65,6 +65,23 @@ const getIsraelOffsetString = (dateStr) => {
 const buildIsraelIsoTimestamp = (dateStr, timeStr) =>
   `${dateStr}T${timeStr}:00${getIsraelOffsetString(dateStr)}`;
 
+
+const normalizeContactPhone = (value) => {
+  if (!value) return null;
+  let digits = String(value).replace(/\D/g, '');
+  if (!digits) return null;
+
+  if (digits.startsWith('00972')) {
+    digits = `972${digits.slice(5)}`;
+  } else if (digits.startsWith('9720')) {
+    digits = `972${digits.slice(4)}`;
+  } else if (digits.startsWith('0') && digits.length >= 9 && digits.length <= 10) {
+    digits = `972${digits.slice(1)}`;
+  }
+
+  return digits;
+};
+
 export const ClinicProvider = ({ children }) => {
   const todayStr = getIsraelDateKey();
 
@@ -336,7 +353,7 @@ export const ClinicProvider = ({ children }) => {
     const nameVal = (full_name || fullName || '').trim();
     const phoneVal = phone ? String(phone).trim() : '';
     const emailVal = email ? String(email).trim() : null;
-    const cleanPhone = phoneVal ? phoneVal.replace(/\D/g, '') : null;
+    const cleanPhone = normalizeContactPhone(phoneVal);
     const cleanEmail = emailVal ? emailVal.toLowerCase() : null;
 
     if (!nameVal) {
