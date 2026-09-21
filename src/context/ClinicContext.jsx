@@ -585,6 +585,9 @@ export const ClinicProvider = ({ children }) => {
 
   const updateAppointmentStatus = async (apptId, newStatus) => {
     const appt = appointments.find(a => a.id === apptId);
+    if (!appt) throw new Error('התור לא נמצא');
+    if (appt.status === newStatus) return appt;
+
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
     if (error) {
       console.error("Error updating appointment status:", error);
