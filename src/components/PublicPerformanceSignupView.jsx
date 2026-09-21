@@ -58,7 +58,7 @@ const PublicPerformanceSignupView = () => {
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl relative overflow-hidden">
         <div className="text-center mb-8">
           <span className="inline-block px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 rounded-full text-xs font-semibold mb-3">
-            Clinify • Okonski Performance
+            Okonski Performance
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
             הצטרפות לעדכונים

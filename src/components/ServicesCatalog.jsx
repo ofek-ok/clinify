@@ -2,9 +2,12 @@ import React, { useState, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
+import { useToast } from './ui/Toast';
+
 const ServicesCatalog = () => {
   const { services = [], addService, updateService, deleteService } = useContext(ClinicContext);
   const { t } = useContext(LanguageContext);
+  const { showToast } = useToast();
 
   const [activeTypeFilter, setActiveTypeFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,15 +52,18 @@ const ServicesCatalog = () => {
   };
 
   const handleDeleteItem = async (id) => {
-    if (window.confirm(t('Are you sure you want to delete this catalog item?', 'האם אתה בטוח שברצונך למחוק פריט זה מהקטלוג?'))) {
+    try {
       await deleteService(id);
+      showToast(t('Item deleted successfully', 'הפריט נמחק בהצלחה'));
+    } catch (err) {
+      showToast(err.message || 'שגיאה במחיקת פריט', 'error');
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.default_price) {
-      alert(t('Please enter item name and price.', 'אנא מלא שם פריט ומחיר.'));
+      showToast(t('Please enter item name and price.', 'אנא מלא שם פריט ומחיר.'), 'error');
       return;
     }
 

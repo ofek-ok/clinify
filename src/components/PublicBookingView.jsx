@@ -154,8 +154,8 @@ const PublicBookingView = () => {
     const dtEnd = new Date(new Date(`${selectedDate}T${selectedSlot}:00`).getTime() + (selectedService.duration_minutes || 30) * 60000);
     const endStr = `${dtEnd.toISOString().split('T')[0].replace(/-/g, '')}T${dtEnd.toTimeString().substring(0, 5).replace(':', '')}00`;
     
-    const title = encodeURIComponent(`${selectedService.name} - Clinify`);
-    const details = encodeURIComponent(bookingSettings.clinic_address || 'Clinify Clinic');
+    const title = encodeURIComponent(`${selectedService.name} - Okonski Performance`);
+    const details = encodeURIComponent(bookingSettings.clinic_address || 'Okonski Performance');
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${details}`;
   }, [selectedService, selectedDate, selectedSlot, bookingSettings]);
 
@@ -179,7 +179,7 @@ const PublicBookingView = () => {
               <img src={bookingSettings.logo_url} alt="Clinic Logo" className="w-full h-full object-cover" />
             </div>
           )}
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Clinify</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Okonski Performance</h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1.5 font-medium max-w-md mx-auto">
             {bookingSettings.welcome_message || t('Online Appointment Booking Portal', 'פורטל זימון תורים עצמאי לקליניקה')}
           </p>

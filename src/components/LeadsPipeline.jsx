@@ -1,360 +1,454 @@
 import React, { useState, useContext } from 'react';
-import { useForm } from 'react-hook-form';
 import { ClinicContext } from '../context/ClinicContext';
-import { LanguageContext } from '../context/LanguageContext';
+import Drawer from './ui/Drawer';
+import ConfirmModal from './ui/ConfirmModal';
+import { useToast } from './ui/Toast';
+import { Search, Plus, Phone, MessageSquare, Calendar, CheckSquare } from 'lucide-react';
 
-const LeadsPipeline = ({ navigate, onSelectLead }) => {
-  const { leads, people, addLead, addPatient, updateLeadStatus, updateLeadFollowUp, addLeadCommunication } = useContext(ClinicContext);
-  const { t } = useContext(LanguageContext);
+export default function LeadsPipeline({ onSelectLead }) {
+  const { leads, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication } = useContext(ClinicContext);
+  const { showToast } = useToast();
 
-  const [formError, setFormError] = useState('');
-  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
-  const [commModalLead, setCommModalLead] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [campaignFilter, setCampaignFilter] = useState('all');
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
+  
+  // Lost Reason modal state
+  const [lostModalLead, setLostModalLead] = useState(null);
+
+  // New Lead form state
+  const [newLeadName, setNewLeadName] = useState('');
+  const [newLeadPhone, setNewLeadPhone] = useState('');
+  const [newLeadEmail, setNewLeadEmail] = useState('');
+  const [newLeadSource, setNewLeadSource] = useState('Instagram');
+  const [newLeadCampaign, setNewLeadCampaign] = useState('General Inquiries');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Communication note state inside drawer
   const [commType, setCommType] = useState('call');
   const [commNote, setCommNote] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors }
-  } = useForm({
-    defaultValues: {
-      full_name: '',
-      phone: '',
-      email: '',
-      source: 'Website',
-      campaign: 'General Inquiries',
-      status: 'new'
-    }
+  const statusColumns = [
+    { id: 'new', title: 'חדש' },
+    { id: 'contacted', title: 'יצרנו קשר' },
+    { id: 'qualified', title: 'מתאים' },
+    { id: 'scheduled', title: 'נקבע תור' },
+    { id: 'lost', title: 'אבוד' }
+  ];
+
+  // Sources & Campaigns lists for filter
+  const sourcesList = Array.from(new Set(leads.map(l => l.source).filter(Boolean)));
+  const campaignsList = Array.from(new Set(leads.map(l => l.campaign).filter(Boolean)));
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = !searchTerm || 
+      (lead.full_name && lead.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.phone && lead.phone.includes(searchTerm)) ||
+      (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSource = sourceFilter === 'all' || lead.source === sourceFilter;
+    const matchesCampaign = campaignFilter === 'all' || lead.campaign === campaignFilter;
+    return matchesSearch && matchesSource && matchesCampaign;
   });
 
-  const handleLeadSubmit = async (data) => {
-    setFormError('');
-    setIsSubmittingForm(true);
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    if (!newLeadName || !newLeadPhone) {
+      showToast('אנא הזן שם מלא ומספר טלפון', 'error');
+      return;
+    }
+    setIsSubmitting(true);
     try {
-      await addLead(data);
-      reset();
+      await addLead({
+        full_name: newLeadName.trim(),
+        phone: newLeadPhone.trim(),
+        email: newLeadEmail.trim() || null,
+        source: newLeadSource,
+        campaign: newLeadCampaign,
+        status: 'new'
+      });
+      showToast('הליד נוצר בהצלחה');
+      setIsAddDrawerOpen(false);
+      setNewLeadName('');
+      setNewLeadPhone('');
+      setNewLeadEmail('');
     } catch (err) {
-      console.error("Error creating lead:", err);
-      setFormError(err.message || t('Could not create lead. Please try again.', 'לא הצלחנו ליצור את הליד. נסה שוב.'));
+      showToast(err.message || 'שגיאה ביצירת הליד', 'error');
     } finally {
-      setIsSubmittingForm(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleStatusChange = async (lead, newStatus) => {
     if (newStatus === 'lost') {
-      let lostReason = lead.lost_reason;
-      if (!lostReason || !lostReason.trim()) {
-        const reason = window.prompt(t('Please enter reason for lost lead:', 'אנא ציין סיבה לאובדן הליד:'));
-        if (!reason || !reason.trim()) {
-          return;
-        }
-        lostReason = reason.trim();
-      }
-      await updateLeadStatus(lead.id, 'lost');
-      await updateLeadFollowUp(lead.id, lead.follow_up_date, lostReason);
+      setLostModalLead(lead);
       return;
     }
-    await updateLeadStatus(lead.id, newStatus);
-  };
-
-  const handleFollowUpDateChange = async (lead, newDate) => {
-    await updateLeadFollowUp(lead.id, newDate || null, lead.lost_reason);
-  };
-
-  const handleLogCommSubmit = async (e) => {
-    e.preventDefault();
-    if (!commModalLead || !commNote.trim()) return;
     try {
-      await addLeadCommunication(commModalLead.id, commType, commNote.trim());
-      setCommModalLead(null);
-      setCommNote('');
+      await updateLeadStatus(lead.id, newStatus);
+      showToast('סטטוס הליד עודכן');
+      if (selectedLead?.id === lead.id) {
+        setSelectedLead(prev => ({ ...prev, status: newStatus }));
+      }
     } catch (err) {
-      console.error("Communication log error:", err);
+      showToast('שגיאה בעדכון הסטטוס', 'error');
     }
   };
 
-  // V1 Approved Lead Stages (Won is NOT manually selectable)
-  const statusColumns = [
-    { id: 'new', title: t('New', 'חדש') },
-    { id: 'contacted', title: t('Contacted', 'יצרנו קשר') },
-    { id: 'qualified', title: t('Qualified', 'מתאים') },
-    { id: 'scheduled', title: t('Scheduled', 'נקבע תור') },
-    { id: 'lost', title: t('Lost', 'אבוד') }
-  ];
+  const handleConfirmLost = async (reason) => {
+    if (!lostModalLead) return;
+    try {
+      await updateLeadStatus(lostModalLead.id, 'lost');
+      await updateLeadFollowUp(lostModalLead.id, lostModalLead.follow_up_date, reason || 'לא מצוין');
+      showToast('הליד עודכן כאבוד');
+      if (selectedLead?.id === lostModalLead.id) {
+        setSelectedLead(prev => ({ ...prev, status: 'lost', lost_reason: reason }));
+      }
+    } catch (err) {
+      showToast('שגיאה בעדכון סיבת אובדן', 'error');
+    } finally {
+      setLostModalLead(null);
+    }
+  };
 
-  const translateSource = (source) => {
-    const map = {
-      'Website': t('Website', 'אתר'),
-      'Facebook': t('Facebook', 'פייסבוק'),
-      'Instagram': t('Instagram', 'אינסטגרם'),
-      'LinkedIn': t('LinkedIn', 'לינקדאין'),
-      'TikTok': t('TikTok', 'טיקטוק'),
-      'WhatsApp': t('WhatsApp', 'ווטסאפ'),
-      'Referral': t('Referral', 'המלצה'),
-      'Direct': t('Direct', 'ישיר')
-    };
-    return map[source] || source;
+  const handleLogComm = async (e) => {
+    e.preventDefault();
+    if (!selectedLead || !commNote.trim()) return;
+    try {
+      await addLeadCommunication(selectedLead.id, commType, commNote.trim());
+      showToast('תיעוד תקשורת נשמר');
+      setCommNote('');
+    } catch (err) {
+      showToast('שגיאה בשמירת תיעוד', 'error');
+    }
   };
 
   return (
-    <div className="space-y-6 text-start font-sans">
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">{t('Leads', 'לידים')}</h2>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">{t('Manage inquiries, lead status, follow-up dates and communication logs.', 'ניהול פניות, סטטוסים ותאריכי מעקב.')}</p>
+    <div className="space-y-4 dir-rtl text-start font-sans">
+      {/* Top Controls Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+        <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-[280px]">
+          {/* Search */}
+          <div className="relative flex-1 max-w-xs">
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="חיפוש ליד לפי שם/טלפון..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg pr-9 pl-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          {/* Source Filter */}
+          <select
+            value={sourceFilter}
+            onChange={e => setSourceFilter(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+          >
+            <option value="all">כל המקורות</option>
+            {sourcesList.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {/* Campaign Filter */}
+          <select
+            value={campaignFilter}
+            onChange={e => setCampaignFilter(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+          >
+            <option value="all">כל הקמפיינים</option>
+            {campaignsList.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
+
+        {/* Primary CTA */}
+        <button
+          onClick={() => setIsAddDrawerOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>ליד חדש</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* New Lead Form */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs sticky top-6">
-            <h3 className="text-sm font-bold mb-4 text-slate-800">
-              {t('Add New Lead', 'הוספת ליד חדש')}
-            </h3>
+      {/* Kanban Board Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-start">
+        {statusColumns.map(col => {
+          const colLeads = filteredLeads.filter(l => l.status === col.id);
 
-            {formError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium rounded-lg">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit(handleLeadSubmit)} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Full Name', 'שם מלא')} *</label>
-                <input 
-                  type="text" 
-                  {...register('full_name', { required: t('Full Name is required', 'שם מלא הוא שדה חובה') })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-slate-400" 
-                />
-                {errors.full_name && <p className="text-[11px] text-rose-600 mt-0.5">{errors.full_name.message}</p>}
+          return (
+            <div key={col.id} className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 space-y-3 min-h-[400px]">
+              {/* Column Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span className="text-xs font-bold text-white">{col.title}</span>
+                <span className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                  {colLeads.length}
+                </span>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Phone', 'טלפון')} *</label>
-                <input 
-                  type="tel" 
-                  {...register('phone', { required: t('Phone is required', 'מספר טלפון הוא שדה חובה') })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-slate-400 text-end" 
-                  dir="ltr" 
-                />
-                {errors.phone && <p className="text-[11px] text-rose-600 mt-0.5">{errors.phone.message}</p>}
-              </div>
+              {/* Cards List */}
+              <div className="space-y-2">
+                {colLeads.map(lead => (
+                  <div
+                    key={lead.id}
+                    onClick={() => {
+                      if (onSelectLead) onSelectLead(lead);
+                      setSelectedLead(lead);
+                    }}
+                    className="bg-slate-900 border border-slate-800/90 hover:border-slate-700 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
+                        {lead.full_name}
+                      </h4>
+                    </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Email', 'דוא"ל')}</label>
-                <input 
-                  type="email" 
-                  {...register('email')}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-slate-400" 
-                  dir="ltr" 
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Source', 'מקור הגעה')}</label>
-                <select 
-                  {...register('source')}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
-                >
-                  <option value="Website">{t('Website', 'אתר')}</option>
-                  <option value="Instagram">Instagram</option>
-                  <option value="Facebook">Facebook</option>
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="TikTok">TikTok</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Referral">{t('Referral', 'המלצה')}</option>
-                  <option value="Direct">{t('Direct', 'ישיר')}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Campaign', 'קמפיין')}</label>
-                <input 
-                  type="text" 
-                  {...register('campaign')}
-                  placeholder="קמפיין ינואר / Pre-Launch"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-slate-400" 
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={isSubmittingForm}
-                className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-xs text-xs mt-2"
-              >
-                {isSubmittingForm ? t('Saving...', 'שומר...') : t('Save Lead', 'שמור ליד')}
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Pipeline Columns */}
-        <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 h-full">
-            {statusColumns.map(column => {
-              const colLeads = leads.filter(l => (l.status || 'new') === column.id);
-              return (
-                <div key={column.id} className="bg-slate-50 rounded-xl border border-slate-200 p-3 h-full flex flex-col min-h-[450px]">
-                  <div className="flex justify-between items-center mb-3 px-1">
-                    <h4 className="font-bold text-xs text-slate-700">{column.title}</h4>
-                    <span className="text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                      {colLeads.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2.5 flex-1 overflow-y-auto">
-                    {colLeads.map(lead => {
-                      const person = people.find(p => p.id === lead.person_id) || {};
-                      const leadName = lead.full_name || person.full_name || 'ליד';
-                      const leadPhone = lead.phone || person.phone || '';
-                      const leadEmail = lead.email || person.email || '';
-                      const isOverdue = lead.follow_up_date && new Date(lead.follow_up_date) < new Date(new Date().setHours(0,0,0,0));
-
-                      return (
-                        <div 
-                          key={lead.id} 
-                          onClick={() => onSelectLead && onSelectLead(lead)}
-                          className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs hover:border-slate-300 transition-all cursor-pointer space-y-2"
-                        >
-                          <div className="flex justify-between items-start gap-1">
-                            <h5 className="font-bold text-xs text-slate-800">{leadName}</h5>
-                            <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
-                              {translateSource(lead.source)}
-                            </span>
-                          </div>
-                          
-                          <p className="text-[11px] text-slate-500" dir="ltr">{leadPhone}</p>
-                          {leadEmail && <p className="text-[10px] text-slate-400 truncate" dir="ltr">{leadEmail}</p>}
-                          
-                          {lead.campaign && (
-                            <p className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                              קמפיין: {lead.campaign}
-                            </p>
-                          )}
-
-                          {lead.follow_up_date && (
-                            <div className={`text-[10px] font-medium p-1 rounded border flex items-center justify-between ${
-                              isOverdue ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-700 border-slate-200'
-                            }`}>
-                              <span>מעקב: {lead.follow_up_date}</span>
-                              {isOverdue && <span className="text-rose-600 font-bold">באיחור</span>}
-                            </div>
-                          )}
-
-                          {lead.lost_reason && column.id === 'lost' && (
-                            <p className="text-[10px] text-rose-600 font-medium bg-rose-50 p-1 rounded border border-rose-100">
-                              סיבה: {lead.lost_reason}
-                            </p>
-                          )}
-
-                          {/* Footer Actions */}
-                          <div className="pt-2 border-t border-slate-100 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                            <select 
-                              value={lead.status || 'new'} 
-                              onChange={(e) => handleStatusChange(lead, e.target.value)}
-                              className="w-full text-[11px] font-medium border border-slate-200 rounded px-1.5 py-1 bg-white text-slate-700 outline-none cursor-pointer"
-                            >
-                              <option value="new">{t('New', 'חדש')}</option>
-                              <option value="contacted">{t('Contacted', 'יצרנו קשר')}</option>
-                              <option value="qualified">{t('Qualified', 'מתאים')}</option>
-                              <option value="scheduled">{t('Scheduled', 'נקבע תור')}</option>
-                              <option value="lost">{t('Lost', 'אבוד')}</option>
-                            </select>
-
-                            <div className="flex items-center justify-between gap-1 text-[10px]">
-                              <button
-                                onClick={() => setCommModalLead(lead)}
-                                className="text-slate-600 hover:text-slate-900 font-medium"
-                              >
-                                {t('Log Communication', 'תעד תקשורת')}
-                              </button>
-
-                              <input 
-                                type="date"
-                                value={lead.follow_up_date || ''}
-                                onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
-                                className="text-[10px] border border-slate-200 rounded px-1 py-0.5 bg-white text-slate-600 outline-none"
-                              />
-                            </div>
-                          </div>
+                    <div className="text-[11px] text-slate-400 space-y-0.5">
+                      {lead.source && (
+                        <div>
+                          <span>{lead.source}</span>
+                          {lead.campaign && <span> · {lead.campaign}</span>}
                         </div>
-                      );
-                    })}
-                    {colLeads.length === 0 && (
-                      <div className="text-center py-8 opacity-40">
-                        <p className="text-xs text-slate-500">{t('No leads', 'אין לידים')}</p>
-                      </div>
-                    )}
+                      )}
+                      {lead.phone && <div className="font-mono text-slate-300 dir-ltr text-right">{lead.phone}</div>}
+                      {lead.follow_up_date && (
+                        <div className="text-amber-400 font-medium">
+                          חזרה: {lead.follow_up_date}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                ))}
+
+                {colLeads.length === 0 && (
+                  <div className="text-center py-8 text-[11px] text-slate-600">
+                    אין לידים בסטטוס זה
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Log Communication Modal */}
-      {commModalLead && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-5 max-w-md w-full shadow-lg border border-slate-200 space-y-3">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-xs text-slate-800">
-                {t('Log Communication with', 'תקשורת עם')} {commModalLead.full_name}
-              </h3>
-              <button onClick={() => setCommModalLead(null)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+      {/* Add Lead Drawer */}
+      <Drawer
+        isOpen={isAddDrawerOpen}
+        onClose={() => setIsAddDrawerOpen(false)}
+        title="הוספת ליד חדש"
+        footer={
+          <>
+            <button
+              onClick={() => setIsAddDrawerOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={handleCreateLead}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {isSubmitting ? 'שומר...' : 'שמור ליד'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateLead} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">שם מלא *</label>
+            <input
+              type="text"
+              required
+              value={newLeadName}
+              onChange={e => setNewLeadName(e.target.value)}
+              placeholder="ישראל ישראלי"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">טלפון *</label>
+            <input
+              type="tel"
+              required
+              value={newLeadPhone}
+              onChange={e => setNewLeadPhone(e.target.value)}
+              placeholder="050-0000000"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white dir-ltr text-left focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">דוא״ל</label>
+            <input
+              type="email"
+              value={newLeadEmail}
+              onChange={e => setNewLeadEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white dir-ltr text-left focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">מקור פנייה</label>
+            <select
+              value={newLeadSource}
+              onChange={e => setNewLeadSource(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            >
+              <option value="Instagram">Instagram</option>
+              <option value="Facebook">Facebook</option>
+              <option value="Website">Website</option>
+              <option value="Referral">המלצה</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Direct">ישיר</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">קמפיין</label>
+            <input
+              type="text"
+              value={newLeadCampaign}
+              onChange={e => setNewLeadCampaign(e.target.value)}
+              placeholder="שם קמפיין / Pre-Launch"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+        </form>
+      </Drawer>
+
+      {/* Selected Lead Detail Drawer */}
+      {selectedLead && (
+        <Drawer
+          isOpen={Boolean(selectedLead)}
+          onClose={() => setSelectedLead(null)}
+          title={`כרטיס ליד: ${selectedLead.full_name}`}
+          width="max-w-xl"
+        >
+          <div className="space-y-6">
+            {/* Quick Action Bar */}
+            <div className="flex items-center space-x-2 space-x-reverse bg-slate-950 p-2 rounded-xl border border-slate-800">
+              {selectedLead.phone && (
+                <>
+                  <a
+                    href={`tel:${selectedLead.phone}`}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>התקשר</span>
+                  </a>
+                  <a
+                    href={`https://wa.me/${selectedLead.phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                </>
+              )}
             </div>
 
-            <form onSubmit={handleLogCommSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Type', 'סוג תקשורת')}</label>
-                <select 
-                  value={commType} 
-                  onChange={(e) => setCommType(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none"
-                >
-                  <option value="call">{t('Phone Call', 'שיחת טלפון')}</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="email">{t('Email', 'דוא"ל')}</option>
-                </select>
-              </div>
+            {/* Editable Status */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">סטטוס פנייה</label>
+              <select
+                value={selectedLead.status || 'new'}
+                onChange={e => handleStatusChange(selectedLead, e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              >
+                {statusColumns.map(s => (
+                  <option key={s.id} value={s.id}>{s.title}</option>
+                ))}
+              </select>
+            </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Summary', 'תקציר / הערה')}</label>
-                <textarea 
-                  rows={3}
-                  required
-                  placeholder={t('Enter details of the conversation...', 'הזן תיאור קצר...')}
-                  value={commNote}
-                  onChange={(e) => setCommNote(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none"
-                />
+            {/* Lead Metadata */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold text-slate-300">פרטי פנייה</h4>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500">שם: </span>
+                  <span className="text-white font-medium">{selectedLead.full_name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">טלפון: </span>
+                  <span className="text-white font-mono dir-ltr inline-block">{selectedLead.phone || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">מקור: </span>
+                  <span className="text-white font-medium">{selectedLead.source || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">קמפיין: </span>
+                  <span className="text-white font-medium">{selectedLead.campaign || '-'}</span>
+                </div>
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-1">
-                <button 
-                  type="button" 
-                  onClick={() => setCommModalLead(null)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium"
-                >
-                  {t('Cancel', 'ביטול')}
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium"
-                >
-                  {t('Save Entry', 'שמור תיעוד')}
-                </button>
-              </div>
-            </form>
+            {/* Follow-up Date */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">תאריך חזרה למעקב</label>
+              <input
+                type="date"
+                value={selectedLead.follow_up_date || ''}
+                onChange={e => updateLeadFollowUp(selectedLead.id, e.target.value || null, selectedLead.lost_reason)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              />
+            </div>
+
+            {/* Log Communication */}
+            <div className="space-y-3 pt-2">
+              <h4 className="text-xs font-bold text-slate-300">תיעוד תקשורת</h4>
+              <form onSubmit={handleLogComm} className="space-y-2">
+                <div className="flex space-x-2 space-x-reverse">
+                  <select
+                    value={commType}
+                    onChange={e => setCommType(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+                  >
+                    <option value="call">שיחה</option>
+                    <option value="whatsapp">ווטסאפ</option>
+                    <option value="email">מייל</option>
+                    <option value="note">הערה</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="תיעוד סיכום שיחה..."
+                    value={commNote}
+                    onChange={e => setCommNote(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold"
+                  >
+                    שמור
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Drawer>
       )}
+
+      {/* Lost Reason Confirm Modal */}
+      <ConfirmModal
+        isOpen={Boolean(lostModalLead)}
+        onClose={() => setLostModalLead(null)}
+        onConfirm={handleConfirmLost}
+        title="סיבת אובדן ליד"
+        confirmText="עדכן כאבוד"
+        inputField={{
+          label: "אנא ציין סיבה לאובדן הליד (למשל: מחיר, לא ענה, עבר מקום):",
+          placeholder: "סיבת אובדן...",
+          required: true
+        }}
+      />
     </div>
   );
-};
-
-export default LeadsPipeline;
+}

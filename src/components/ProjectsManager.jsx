@@ -1,8 +1,11 @@
 import React, { useContext, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
-import { LanguageContext } from '../context/LanguageContext';
+import Drawer from './ui/Drawer';
+import ConfirmModal from './ui/ConfirmModal';
+import { useToast } from './ui/Toast';
+import { Plus, Trash2 } from 'lucide-react';
 
-const ProjectsManager = () => {
+export default function ProjectsManager() {
   const { 
     projects, 
     tasks, 
@@ -12,232 +15,340 @@ const ProjectsManager = () => {
     todayStr 
   } = useContext(ClinicContext);
 
-  const { t } = useContext(LanguageContext);
+  const { showToast } = useToast();
+
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [deleteModalProj, setDeleteModalProj] = useState(null);
+
+  // New Project Form State
+  const [name, setName] = useState('');
+  const [objective, setObjective] = useState('');
+  const [area, setArea] = useState('business');
+  const [status, setStatus] = useState('active');
+  const [startDate, setStartDate] = useState(todayStr);
+  const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(null);
 
-  const [projectForm, setProjectForm] = useState({
-    name: '',
-    objective: '',
-    status: 'active',
-    start_date: todayStr,
-    due_date: '',
-    progress: 0,
-    area: 'business'
-  });
-
-  const handleProjectSubmit = async (e) => {
+  const handleCreateProject = async (e) => {
     e.preventDefault();
-    if (!projectForm.name) return;
-
+    if (!name.trim()) {
+      showToast('אנא הזן שם פרויקט', 'error');
+      return;
+    }
     setIsSubmitting(true);
-    setErrorMessage(null);
-
     try {
-      await addProject(projectForm);
-      setProjectForm({
-        name: '',
-        objective: '',
-        status: 'active',
-        start_date: todayStr,
-        due_date: '',
-        progress: 0,
-        area: 'business'
+      await addProject({
+        name: name.trim(),
+        objective: objective.trim() || null,
+        area,
+        status,
+        start_date: startDate || todayStr,
+        due_date: dueDate || null,
+        progress: 0
       });
+      showToast('הפרויקט נוצר בהצלחה');
+      setIsAddDrawerOpen(false);
+      setName('');
+      setObjective('');
     } catch (err) {
-      console.error("Project add error:", err);
-      setErrorMessage(t("Could not save project. Please try again.", "לא הצלחנו לשמור את הפרויקט. נסה שוב."));
+      showToast(err.message || 'שגיאה ביצירת פרויקט', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const translateProjectStatus = (status) => {
-    const map = {
-      'planned': t('Planned', 'מתוכנן'),
-      'active': t('Active', 'פעיל'),
-      'blocked': t('Blocked', 'חסום'),
-      'on_hold': t('On Hold', 'בהמתנה'),
-      'completed': t('Completed', 'הושלם')
-    };
-    return map[status] || status;
-  };
-
-  const translateArea = (area) => {
-    const map = {
-      'business': t('Business', 'עסקי'),
-      'clinical': t('Clinical', 'קליני'),
-      'content': t('Content', 'תוכן'),
-      'operations': t('Operations', 'תפעול')
-    };
-    return map[area] || area;
+  const handleConfirmDelete = async () => {
+    if (!deleteModalProj) return;
+    try {
+      await deleteProject(deleteModalProj.id);
+      showToast('הפרויקט נמחק');
+      if (selectedProject?.id === deleteModalProj.id) {
+        setSelectedProject(null);
+      }
+    } catch (err) {
+      showToast('שגיאה במחיקת פרויקט', 'error');
+    } finally {
+      setDeleteModalProj(null);
+    }
   };
 
   return (
-    <div className="space-y-6 text-start">
-      {/* Header */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">{t('Projects', 'פרויקטים')}</h2>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">{t('Manage strategic outcomes and project milestones.', 'ניהול פרויקטים אסטרטגיים ויעדים מרכזיים.')}</p>
+    <div className="space-y-4 dir-rtl text-start font-sans">
+      {/* Top Toolbar */}
+      <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+        <div className="text-xs text-slate-400">
+          סה״כ פרויקטים פתוחים: <span className="text-white font-bold">{projects.filter(p => p.status !== 'completed').length}</span>
+        </div>
+
+        <button
+          onClick={() => setIsAddDrawerOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>פרויקט חדש</span>
+        </button>
+      </div>
+
+      {/* Projects Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-start border-collapse">
+            <thead>
+              <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                <th className="py-3 px-4 text-start">שם הפרויקט</th>
+                <th className="py-3 px-4 text-start">סטטוס</th>
+                <th className="py-3 px-4 text-start">תחום</th>
+                <th className="py-3 px-4 text-start">תאריך יעד</th>
+                <th className="py-3 px-4 text-start">התקדמות משימות</th>
+                <th className="py-3 px-4 text-start">משימות פתוחות</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-xs">
+              {projects.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500">
+                    אין פרויקטים להצגה.
+                  </td>
+                </tr>
+              ) : (
+                projects.map(proj => {
+                  const projTasks = tasks.filter(t => t.project_id === proj.id);
+                  const completedTasksCount = projTasks.filter(t => t.status === 'done').length;
+                  const openTasksCount = projTasks.length - completedTasksCount;
+                  const progressPct = projTasks.length > 0 ? Math.round((completedTasksCount / projTasks.length) * 100) : proj.progress || 0;
+
+                  return (
+                    <tr
+                      key={proj.id}
+                      onClick={() => setSelectedProject(proj)}
+                      className="hover:bg-slate-800/50 transition-colors cursor-pointer"
+                    >
+                      {/* Name */}
+                      <td className="py-3.5 px-4 font-bold text-white">
+                        {proj.name}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
+                          {proj.status === 'active' ? 'פעיל' : proj.status === 'planned' ? 'מתוכנן' : proj.status === 'completed' ? 'הושלם' : 'חסום'}
+                        </span>
+                      </td>
+
+                      {/* Area */}
+                      <td className="py-3.5 px-4 text-slate-400">
+                        {proj.area === 'clinical' ? 'קליני' : proj.area === 'business' ? 'עסקי' : 'תפעול'}
+                      </td>
+
+                      {/* Due Date */}
+                      <td className="py-3.5 px-4 font-mono text-slate-300">
+                        {proj.due_date || '-'}
+                      </td>
+
+                      {/* Progress */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center space-x-2 space-x-reverse min-w-[140px]">
+                          <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                          </div>
+                          <span className="text-[11px] font-medium text-slate-300">
+                            {completedTasksCount} / {projTasks.length} ({progressPct}%)
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Open Tasks Count */}
+                      <td className="py-3.5 px-4 font-bold text-slate-300">
+                        {openTasksCount}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-lg text-xs">
-          {errorMessage}
-        </div>
+      {/* Add Project Drawer */}
+      <Drawer
+        isOpen={isAddDrawerOpen}
+        onClose={() => setIsAddDrawerOpen(false)}
+        title="יצירת פרויקט חדש"
+        footer={
+          <>
+            <button
+              onClick={() => setIsAddDrawerOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={handleCreateProject}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {isSubmitting ? 'שומר...' : 'שמור פרויקט'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateProject} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">שם הפרויקט *</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="שם הפרויקט..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">יעד / מטרה</label>
+            <textarea
+              rows={2}
+              value={objective}
+              onChange={e => setObjective(e.target.value)}
+              placeholder="תיאור מטרת הפרויקט..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">תחום</label>
+              <select
+                value={area}
+                onChange={e => setArea(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              >
+                <option value="business">עסקי</option>
+                <option value="clinical">קליני</option>
+                <option value="operations">תפעול</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס</label>
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              >
+                <option value="planned">מתוכנן</option>
+                <option value="active">פעיל</option>
+                <option value="blocked">חסום</option>
+                <option value="completed">הושלם</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך התחלה</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך יעד</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              />
+            </div>
+          </div>
+        </form>
+      </Drawer>
+
+      {/* Selected Project Detail Drawer */}
+      {selectedProject && (
+        <Drawer
+          isOpen={Boolean(selectedProject)}
+          onClose={() => setSelectedProject(null)}
+          title={`פרויקט: ${selectedProject.name}`}
+          width="max-w-xl"
+          footer={
+            <div className="flex justify-between items-center w-full">
+              <button
+                onClick={() => setDeleteModalProj(selectedProject)}
+                className="text-rose-400 hover:text-rose-300 text-xs font-bold flex items-center space-x-1 space-x-reverse"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>מחק פרויקט</span>
+              </button>
+              <button
+                onClick={() => setSelectedProject(null)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
+              >
+                סגור
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">שם הפרויקט</label>
+              <input
+                type="text"
+                value={selectedProject.name}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSelectedProject(prev => ({ ...prev, name: val }));
+                  updateProject(selectedProject.id, { name: val });
+                }}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-bold"
+              />
+            </div>
+
+            {selectedProject.objective && (
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <span className="text-[11px] text-slate-400 block mb-0.5">יעד:</span>
+                <p className="text-xs text-white">{selectedProject.objective}</p>
+              </div>
+            )}
+
+            {/* Linked Tasks List */}
+            <div className="space-y-2 pt-2">
+              <h4 className="text-xs font-bold text-slate-300">משימות בפרויקט זה</h4>
+              <div className="space-y-1.5">
+                {tasks.filter(t => t.project_id === selectedProject.id).map(t => (
+                  <div key={t.id} className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                    <span className={t.status === 'done' ? 'line-through text-slate-500' : 'text-white'}>
+                      {t.title}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{t.due_date || '-'}</span>
+                  </div>
+                ))}
+                {tasks.filter(t => t.project_id === selectedProject.id).length === 0 && (
+                  <p className="text-xs text-slate-500 py-2">אין משימות שמשויכות לפרויקט זה.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Drawer>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Create Project Form */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-5 rounded-xl shadow-xs border border-slate-200 sticky top-6">
-            <h3 className="text-sm font-bold mb-4 text-slate-800">{t('Create Project', 'פרויקט חדש')}</h3>
-            <form onSubmit={handleProjectSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Project Name', 'שם הפרויקט')}</label>
-                <input 
-                  type="text" 
-                  value={projectForm.name} 
-                  onChange={e => setProjectForm({...projectForm, name: e.target.value})} 
-                  required 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-slate-400" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t('Objective', 'מטרה / יעד')}</label>
-                <textarea 
-                  value={projectForm.objective} 
-                  onChange={e => setProjectForm({...projectForm, objective: e.target.value})} 
-                  rows="2" 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-slate-400" 
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">{t('Area', 'תחום')}</label>
-                  <select 
-                    value={projectForm.area} 
-                    onChange={e => setProjectForm({...projectForm, area: e.target.value})} 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none"
-                  >
-                    <option value="business">{t('Business', 'עסקי')}</option>
-                    <option value="clinical">{t('Clinical', 'קליני')}</option>
-                    <option value="content">{t('Content', 'תוכן')}</option>
-                    <option value="operations">{t('Operations', 'תפעול')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">{t('Initial Status', 'סטטוס')}</label>
-                  <select 
-                    value={projectForm.status} 
-                    onChange={e => setProjectForm({...projectForm, status: e.target.value})} 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none"
-                  >
-                    <option value="planned">{t('Planned', 'מתוכנן')}</option>
-                    <option value="active">{t('Active', 'פעיל')}</option>
-                    <option value="blocked">{t('Blocked', 'חסום')}</option>
-                    <option value="on_hold">{t('On Hold', 'בהמתנה')}</option>
-                    <option value="completed">{t('Completed', 'הושלם')}</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">{t('Start Date', 'תאריך התחלה')}</label>
-                  <input 
-                    type="date" 
-                    value={projectForm.start_date} 
-                    onChange={e => setProjectForm({...projectForm, start_date: e.target.value})} 
-                    className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">{t('Due Date', 'תאריך יעד')}</label>
-                  <input 
-                    type="date" 
-                    value={projectForm.due_date} 
-                    onChange={e => setProjectForm({...projectForm, due_date: e.target.value})} 
-                    className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none" 
-                  />
-                </div>
-              </div>
-              <button 
-                type="submit" 
-                disabled={isSubmitting} 
-                className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-xs transition-colors shadow-xs mt-2"
-              >
-                {isSubmitting ? t('Saving...', 'שומר...') : t('Save Project', 'שמור פרויקט')}
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Projects List */}
-        <div className="lg:col-span-2 space-y-3">
-          {projects.map(proj => {
-            const projectTasks = tasks.filter(t => t.project_id === proj.id);
-            const completedCount = projectTasks.filter(t => t.status === 'done').length;
-            const progressPercent = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : proj.progress;
-
-            return (
-              <div key={proj.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-sm text-slate-800">{proj.name}</h4>
-                      <span className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
-                        {translateArea(proj.area)}
-                      </span>
-                    </div>
-                    {proj.objective && <p className="text-xs text-slate-500 mt-1">{proj.objective}</p>}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <select 
-                      value={proj.status} 
-                      onChange={e => updateProject(proj.id, { status: e.target.value })}
-                      className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 outline-none"
-                    >
-                      <option value="planned">{t('Planned', 'מתוכנן')}</option>
-                      <option value="active">{t('Active', 'פעיל')}</option>
-                      <option value="blocked">{t('Blocked', 'חסום')}</option>
-                      <option value="on_hold">{t('On Hold', 'בהמתנה')}</option>
-                      <option value="completed">{t('Completed', 'הושלם')}</option>
-                    </select>
-
-                    <button 
-                      onClick={() => deleteProject(proj.id)} 
-                      className="text-slate-400 hover:text-rose-600 text-xs px-1.5 py-1"
-                    >
-                      {t('Delete', 'מחק')}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs font-medium text-slate-600 mb-1">
-                    <span>{t('Tasks Progress', 'התקדמות משימות')}</span>
-                    <span>{progressPercent}% ({completedCount}/{projectTasks.length})</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-slate-800 rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {projects.length === 0 && (
-            <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-500 text-xs font-medium">
-              {t('No projects found.', 'אין פרויקטים להצגה.')}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteModalProj)}
+        onClose={() => setDeleteModalProj(null)}
+        onConfirm={handleConfirmDelete}
+        title="מחיקת פרויקט"
+        message={`האם אתה בטוח שברצונך למחוק את הפרויקט "${deleteModalProj?.name}"?`}
+        confirmText="מחק"
+        isDanger={true}
+      />
     </div>
   );
-};
-
-export default ProjectsManager;
+}

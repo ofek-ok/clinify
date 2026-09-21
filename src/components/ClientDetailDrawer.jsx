@@ -1,8 +1,10 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
+import { useToast } from './ui/Toast';
 
 const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
+  const { showToast } = useToast();
   const { 
     people, patients, leads, appointments, payments, tasks, 
     forms, formSubmissions, leadCommunications, services, patientPackages,
@@ -149,9 +151,9 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     try {
       await addPatient({ full_name: name, phone, email, source, status: 'active' });
       setActiveTab('clinical');
-      alert(t('Clinical profile created successfully!', 'תיק רפואי נפתח בהצלחה!'));
+      showToast('תיק רפואי נפתח בהצלחה!');
     } catch (err) {
-      alert(err.message || t('Failed to create clinical profile', 'שגיאה ביצירת תיק רפואי'));
+      showToast(err.message || 'שגיאה ביצירת תיק רפואי', 'error');
     }
   };
 
@@ -162,7 +164,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
     if (noteMode === 'soap') {
       if (!soapForm.subjective && !soapForm.objective && !soapForm.assessment && !soapForm.plan) {
-        alert(t('Please fill in at least one SOAP section.', 'אנא מלא לפחות סעיף אחד בטופס ה-SOAP.'));
+        showToast('אנא מלא לפחות סעיף אחד בטופס ה-SOAP.', 'error');
         return;
       }
       noteContent = JSON.stringify({
@@ -178,6 +180,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     }
 
     await addClinicalNote(patient.id, noteContent);
+    showToast('הערה נשמרה בהצלחה!');
     setSimpleNoteText('');
     setSoapForm({ subjective: '', objective: '', assessment: '', plan: '' });
   };
@@ -186,6 +189,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     e.preventDefault();
     if (!patient || !newDocName.trim()) return;
     await addPatientDocument(patient.id, newDocName.trim());
+    showToast('מסמך נוסף בהצלחה!');
     setNewDocName('');
   };
 
@@ -194,6 +198,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     if (!commNote.trim()) return;
     const targetLeadId = lead?.id || personId;
     await addLeadCommunication(targetLeadId, commType, commNote.trim());
+    showToast('תיעוד תקשורת נשמר!');
     setCommNote('');
   };
 
@@ -208,6 +213,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
       status: 'todo',
       priority: 'medium'
     });
+    showToast('משימה נוצרה בהצלחה!');
     setNewTaskTitle('');
     setNewTaskDueDate('');
   };
@@ -215,7 +221,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const handleSaveFollowUp = async () => {
     if (lead) {
       await updateLeadFollowUp(lead.id, followUpDateInput || null, lostReasonInput || null);
-      alert(t('Follow-up details saved!', 'פרטי מעקב עודכנו בהצלחה!'));
+      showToast('פרטי מעקב עודכנו בהצלחה!');
     }
   };
 
@@ -223,11 +229,11 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     if (!patient) return;
     const packageItems = services.filter(s => s.type === 'package');
     if (packageItems.length === 0) {
-      alert(t('No package items in catalog.', 'אין כרטיסיות מוגדרות בקטלוג.'));
+      showToast('אין כרטיסיות מוגדרות בקטלוג.', 'error');
       return;
     }
     issuePackageToPatient(patient.id, packageItems[0]);
-    alert(t('Package issued successfully!', 'הכרטיסייה הונפקה בהצלחה!'));
+    showToast('הכרטיסייה הונפקה בהצלחה!');
   };
 
   const renderNoteContent = (noteContent) => {
