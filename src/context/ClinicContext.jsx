@@ -19,7 +19,6 @@ export const ClinicProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [contentItems, setContentItems] = useState([]);
-  const [performanceList, setPerformanceList] = useState([]);
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [forms, setForms] = useState([]);

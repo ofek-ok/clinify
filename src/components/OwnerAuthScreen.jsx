@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function OwnerAuthScreen() {
-  const [email, setEmail] = useState('ofek@clinify.co');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -35,22 +35,20 @@ export default function OwnerAuthScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4 dir-rtl font-sans">
-      <div className="bg-slate-800 border border-slate-700/80 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto text-2xl font-black">
-            C
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Clinify OS</h1>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 dir-rtl font-sans">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full space-y-6">
+        <div className="text-center space-y-3">
+          <img src="/clinify-logo.png" alt="Clinify" className="w-10 h-10 object-contain mx-auto" />
+          <h1 className="text-xl font-bold text-white tracking-tight">Clinify</h1>
           <p className="text-slate-400 text-xs">כניסה למערכת הניהול הפנימית</p>
         </div>
 
         {sent ? (
-          <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-2xl p-6 text-center space-y-3">
-            <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 text-center space-y-3">
+            <div className="w-8 h-8 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-sm font-bold">
               ✓
             </div>
-            <h2 className="text-base font-bold text-emerald-300">קישור התחברות נשלח!</h2>
+            <h2 className="text-sm font-bold text-emerald-400">קישור התחברות נשלח</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
               נשלח הודעת דוא״ל לכתובת <span className="font-mono text-emerald-400 font-bold">{email}</span>. לחץ על הקישור במייל כדי להיכנס למערכת.
             </p>
@@ -72,8 +70,8 @@ export default function OwnerAuthScreen() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ofek@clinify.co"
-                className="w-full bg-slate-900/90 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 dir-ltr text-left transition-all outline-none"
+                placeholder="name@domain.com"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 dir-ltr text-left outline-none transition-colors"
               />
             </div>
 
@@ -86,12 +84,12 @@ export default function OwnerAuthScreen() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center space-x-2 space-x-reverse"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-xs flex items-center justify-center"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <span>שלח לי קישור התחברות ✉️</span>
+                <span>שלח קישור התחברות</span>
               )}
             </button>
           </form>
