@@ -14,7 +14,7 @@ const client = createClient(supabaseUrl, supabaseAnonKey);
 
 async function runMigrationAndQA() {
   console.log("==================================================================");
-  console.log("🚀 LIVE SUPABASE MIGRATION & REAL CRUD VERIFICATION (calify)");
+  console.log("🚀 LIVE SUPABASE MIGRATION & REAL CANONICAL CRUD VERIFICATION (calify)");
   console.log("==================================================================\n");
 
   // Step 1: Owner Auth
@@ -58,33 +58,15 @@ async function runMigrationAndQA() {
     }
   });
 
-  // Step 2: Apply Migration via RPC / DDL Function
-  console.log("\n2. Applying Database Migration: migration_clinify_reset_v1.sql on calify...");
+  // Step 2: Verify Live Schema Tables & Columns
+  console.log("\n2. Verifying Live Database Schema additions on calify...");
 
-  // Execute RPC to trigger DDL migration block
-  const { data: rpcRes, error: rpcErr } = await client.rpc('public_subscribe_performance_list', {
-    p_full_name: 'QA_MIGRATION_INITIALIZER',
-    p_email: 'qa_migration_initializer@clinify-qa.com',
-    p_phone: null,
-    p_utm_source: 'qa_migration',
-    p_utm_medium: 'script',
-    p_utm_campaign: 'clinify_reset_v1'
-  });
-
-  if (rpcErr) {
-    console.warn("   RPC Initializer returned notice/error:", rpcErr.message);
-  } else {
-    console.log("   ✅ RPC Initializer executed cleanly. Result:", rpcRes);
-  }
-
-  // Step 3: Verify Live Schema Tables & Columns
-  console.log("\n3. Verifying Live Database Schema additions on calify...");
-
-  const [projTest, contentTest, leadsTest, tasksTest] = await Promise.all([
+  const [projTest, contentTest, leadsTest, tasksTest, peopleTest] = await Promise.all([
     authClient.from('projects').select('*').limit(1),
     authClient.from('content_items').select('*').limit(1),
     authClient.from('leads').select('id, campaign, utm_source, utm_medium, utm_campaign, tags').limit(1),
-    authClient.from('tasks').select('id, project_id, content_item_id, dependency_task_id, area, priority').limit(1)
+    authClient.from('tasks').select('id, project_id, content_item_id, dependency_task_id, area, priority').limit(1),
+    authClient.from('people').select('id, phone, normalized_phone, email, normalized_email, client_status').limit(1)
   ]);
 
   console.log("   📊 Live Schema Verification Results:");
@@ -92,16 +74,42 @@ async function runMigrationAndQA() {
   console.log("      - content_items table:", contentTest.error ? `❌ ${contentTest.error.message}` : "✅ Verified");
   console.log("      - leads.campaign, utm_*, tags columns:", leadsTest.error ? `❌ ${leadsTest.error.message}` : "✅ Verified");
   console.log("      - tasks.project_id, area, priority columns:", tasksTest.error ? `❌ ${tasksTest.error.message}` : "✅ Verified");
+  console.log("      - people table nullable identity columns:", peopleTest.error ? `❌ ${peopleTest.error.message}` : "✅ Verified");
 
-  // Step 4: Perform Real CRUD Operations (QA_CLINIFY_* Records)
-  console.log("\n4. Performing REAL CRUD Persistence Operations with QA_CLINIFY_* records...");
+  // Step 3: Perform Canonical Identity CRUD Operations (Person -> Lead -> Patient -> Appointment -> Payment)
+  console.log("\n3. Performing REAL Canonical Identity Hierarchy Operations...");
 
   const timestamp = Date.now();
   const qaTag = `QA_CLINIFY_${timestamp}`;
+  const qaEmail = `${qaTag.toLowerCase()}@clinify-qa.com`;
 
-  // 4.1 CRUD Lead
-  console.log("\n   --> [Lead CRUD]");
+  // 3.1 CREATE Person
+  console.log("\n   --> [1. Person CRUD]");
+  const { data: personCreate, error: personErr } = await authClient.from('people').insert([{
+    full_name: `${qaTag}_Person`,
+    email: qaEmail,
+    normalized_email: qaEmail,
+    phone: null,
+    normalized_phone: null,
+    client_status: 'lead',
+    source: 'QA Script'
+  }]).select().single();
+
+  if (personErr) throw new Error("Person CREATE failed: " + personErr.message);
+  console.log("       CREATE Person ID:", personCreate.id, "| Email-Only Signup (Phone=NULL)");
+
+  // EDIT Person
+  const { data: personEdit, error: personEditErr } = await authClient.from('people').update({
+    full_name: `${qaTag}_Person_Updated`
+  }).eq('id', personCreate.id).select().single();
+
+  if (personEditErr) throw new Error("Person EDIT failed: " + personEditErr.message);
+  console.log("       EDIT Person verified. New Name:", personEdit.full_name);
+
+  // 3.2 CREATE Lead (Linked to Person)
+  console.log("\n   --> [2. Lead CRUD]");
   const { data: leadCreate, error: leadCreateErr } = await authClient.from('leads').insert([{
+    person_id: personCreate.id,
     source: 'QA Automation',
     campaign: `${qaTag}_Campaign`,
     utm_source: 'qa_source',
@@ -112,9 +120,9 @@ async function runMigrationAndQA() {
   }]).select().single();
 
   if (leadCreateErr) throw new Error("Lead CREATE failed: " + leadCreateErr.message);
-  console.log("       CREATE Lead ID:", leadCreate.id);
+  console.log("       CREATE Lead ID:", leadCreate.id, "| Person ID:", leadCreate.person_id);
 
-  // Edit Lead
+  // EDIT Lead
   const { data: leadEdit, error: leadEditErr } = await authClient.from('leads').update({
     status: 'contacted',
     campaign: `${qaTag}_Updated_Campaign`
@@ -123,92 +131,26 @@ async function runMigrationAndQA() {
   if (leadEditErr) throw new Error("Lead EDIT failed: " + leadEditErr.message);
   console.log("       EDIT Lead verified. New Campaign:", leadEdit.campaign, "Status:", leadEdit.status);
 
-  // 4.2 CRUD Project
-  console.log("\n   --> [Project CRUD]");
-  const { data: projCreate, error: projCreateErr } = await authClient.from('projects').insert([{
-    name: `${qaTag}_Project`,
-    objective: 'CTO Schema Verification Outcome',
-    status: 'planned',
-    area: 'business',
-    progress: 10
-  }]).select().single();
-
-  if (projCreateErr) throw new Error("Project CREATE failed: " + projCreateErr.message);
-  console.log("       CREATE Project ID:", projCreate.id);
-
-  // Edit Project
-  const { data: projEdit, error: projEditErr } = await authClient.from('projects').update({
-    status: 'active',
-    progress: 50
-  }).eq('id', projCreate.id).select().single();
-
-  if (projEditErr) throw new Error("Project EDIT failed: " + projEditErr.message);
-  console.log("       EDIT Project verified. New Progress:", projEdit.progress, "Status:", projEdit.status);
-
-  // 4.3 CRUD Content Item
-  console.log("\n   --> [Content Item CRUD]");
-  const { data: contentCreate, error: contentCreateErr } = await authClient.from('content_items').insert([{
-    title: `${qaTag}_ContentItem`,
-    platform: 'instagram',
-    format: 'reel',
-    status: 'idea',
-    stage: 'research',
-    project_id: projCreate.id
-  }]).select().single();
-
-  if (contentCreateErr) throw new Error("Content Item CREATE failed: " + contentCreateErr.message);
-  console.log("       CREATE Content Item ID:", contentCreate.id);
-
-  // Edit Content Item
-  const { data: contentEdit, error: contentEditErr } = await authClient.from('content_items').update({
-    status: 'published',
-    stage: 'ready'
-  }).eq('id', contentCreate.id).select().single();
-
-  if (contentEditErr) throw new Error("Content Item EDIT failed: " + contentEditErr.message);
-  console.log("       EDIT Content Item verified. New Status:", contentEdit.status);
-
-  // 4.4 CRUD Task
-  console.log("\n   --> [Task CRUD]");
-  const { data: taskCreate, error: taskCreateErr } = await authClient.from('tasks').insert([{
-    title: `${qaTag}_Task`,
-    due_date: new Date().toISOString().split('T')[0],
-    status: 'todo',
-    priority: 'high',
-    area: 'operations',
-    project_id: projCreate.id,
-    content_item_id: contentCreate.id
-  }]).select().single();
-
-  if (taskCreateErr) throw new Error("Task CREATE failed: " + taskCreateErr.message);
-  console.log("       CREATE Task ID:", taskCreate.id);
-
-  // Edit Task
-  const { data: taskEdit, error: taskEditErr } = await authClient.from('tasks').update({
-    status: 'done',
-    priority: 'low'
-  }).eq('id', taskCreate.id).select().single();
-
-  if (taskEditErr) throw new Error("Task EDIT failed: " + taskEditErr.message);
-  console.log("       EDIT Task verified. New Status:", taskEdit.status);
-
-  // 4.5 CRUD Patient / Person (Identity prerequisite for appointment & payment)
-  console.log("\n   --> [Patient & Appointment CRUD]");
+  // 3.3 CREATE Patient (Clinical Profile linked to Person)
+  console.log("\n   --> [3. Patient CRUD]");
   const { data: patientCreate, error: patientCreateErr } = await authClient.from('patients').insert([{
-    full_name: `${qaTag}_Patient`,
-    phone: `050${Math.floor(1000000 + Math.random() * 9000000)}`,
-    email: `${qaTag.toLowerCase()}@test.com`,
+    person_id: personCreate.id,
+    full_name: personEdit.full_name,
+    email: qaEmail,
     status: 'active'
   }]).select().single();
 
   if (patientCreateErr) throw new Error("Patient CREATE failed: " + patientCreateErr.message);
+  console.log("       CREATE Patient ID:", patientCreate.id);
 
-  // Services lookup
-  const { data: services } = await authClient.from('services').select('id').limit(1);
+  // Lookup services
+  const { data: services, error: servErr } = await authClient.from('services').select('id').limit(1);
   const serviceId = services && services.length > 0 ? services[0].id : null;
 
-  // CREATE Appointment
+  // 3.4 CREATE Appointment (Linked to Patient & Person)
+  console.log("\n   --> [4. Appointment CRUD]");
   const { data: apptCreate, error: apptCreateErr } = await authClient.from('appointments').insert([{
+    person_id: personCreate.id,
     patient_id: patientCreate.id,
     service_id: serviceId,
     appointment_date: new Date(Date.now() + 86400000).toISOString(),
@@ -227,9 +169,10 @@ async function runMigrationAndQA() {
   if (apptEditErr) throw new Error("Appointment EDIT failed: " + apptEditErr.message);
   console.log("       EDIT Appointment verified. New Status:", apptEdit.status);
 
-  // 4.6 CRUD Payment
-  console.log("\n   --> [Payment CRUD]");
+  // 3.5 CREATE Payment (Linked to Appointment, Patient & Person)
+  console.log("\n   --> [5. Payment CRUD]");
   const { data: payCreate, error: payCreateErr } = await authClient.from('payments').insert([{
+    person_id: personCreate.id,
     patient_id: patientCreate.id,
     appointment_id: apptCreate.id,
     amount: 450.00,
@@ -249,15 +192,89 @@ async function runMigrationAndQA() {
   if (payEditErr) throw new Error("Payment EDIT failed: " + payEditErr.message);
   console.log("       EDIT Payment verified. New Status:", payEdit.status);
 
+  // Step 4: Internal Execution Hierarchy (Project -> Content -> Task)
+  console.log("\n4. Performing REAL Internal Execution Hierarchy Operations...");
+
+  // 4.1 CREATE Project
+  console.log("\n   --> [1. Project CRUD]");
+  const { data: projCreate, error: projCreateErr } = await authClient.from('projects').insert([{
+    name: `${qaTag}_Project`,
+    objective: 'CTO Schema Verification Outcome',
+    status: 'planned',
+    area: 'business',
+    progress: 10
+  }]).select().single();
+
+  if (projCreateErr) throw new Error("Project CREATE failed: " + projCreateErr.message);
+  console.log("       CREATE Project ID:", projCreate.id);
+
+  // EDIT Project
+  const { data: projEdit, error: projEditErr } = await authClient.from('projects').update({
+    status: 'active',
+    progress: 50
+  }).eq('id', projCreate.id).select().single();
+
+  if (projEditErr) throw new Error("Project EDIT failed: " + projEditErr.message);
+  console.log("       EDIT Project verified. New Progress:", projEdit.progress, "Status:", projEdit.status);
+
+  // 4.2 CREATE Content Item (Linked to Project)
+  console.log("\n   --> [2. Content Item CRUD]");
+  const { data: contentCreate, error: contentCreateErr } = await authClient.from('content_items').insert([{
+    title: `${qaTag}_ContentItem`,
+    platform: 'instagram',
+    format: 'reel',
+    status: 'idea',
+    stage: 'research',
+    project_id: projCreate.id
+  }]).select().single();
+
+  if (contentCreateErr) throw new Error("Content Item CREATE failed: " + contentCreateErr.message);
+  console.log("       CREATE Content Item ID:", contentCreate.id);
+
+  // EDIT Content Item
+  const { data: contentEdit, error: contentEditErr } = await authClient.from('content_items').update({
+    status: 'published',
+    stage: 'ready'
+  }).eq('id', contentCreate.id).select().single();
+
+  if (contentEditErr) throw new Error("Content Item EDIT failed: " + contentEditErr.message);
+  console.log("       EDIT Content Item verified. New Status:", contentEdit.status);
+
+  // 4.3 CREATE Task (Linked to Project & Content Item)
+  console.log("\n   --> [3. Task CRUD]");
+  const { data: taskCreate, error: taskCreateErr } = await authClient.from('tasks').insert([{
+    title: `${qaTag}_Task`,
+    due_date: new Date().toISOString().split('T')[0],
+    status: 'todo',
+    priority: 'high',
+    area: 'operations',
+    project_id: projCreate.id,
+    content_item_id: contentCreate.id
+  }]).select().single();
+
+  if (taskCreateErr) throw new Error("Task CREATE failed: " + taskCreateErr.message);
+  console.log("       CREATE Task ID:", taskCreate.id);
+
+  // EDIT Task
+  const { data: taskEdit, error: taskEditErr } = await authClient.from('tasks').update({
+    status: 'done',
+    priority: 'low'
+  }).eq('id', taskCreate.id).select().single();
+
+  if (taskEditErr) throw new Error("Task EDIT failed: " + taskEditErr.message);
+  console.log("       EDIT Task verified. New Status:", taskEdit.status);
+
   console.log("\n==================================================================");
-  console.log("🎉 REAL SUPABASE CRUD VERIFICATION SUCCESSFUL!");
+  console.log("🎉 REAL SUPABASE CANONICAL CRUD VERIFICATION SUCCESSFUL!");
   console.log("Records preserved in live calify database for CTO audit:");
+  console.log("   - Person ID:", personCreate.id);
   console.log("   - Lead ID:", leadCreate.id);
+  console.log("   - Patient ID:", patientCreate.id);
+  console.log("   - Appointment ID:", apptCreate.id);
+  console.log("   - Payment ID:", payCreate.id);
   console.log("   - Project ID:", projCreate.id);
   console.log("   - Content Item ID:", contentCreate.id);
   console.log("   - Task ID:", taskCreate.id);
-  console.log("   - Appointment ID:", apptCreate.id);
-  console.log("   - Payment ID:", payCreate.id);
   console.log("==================================================================");
 }
 

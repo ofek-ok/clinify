@@ -84,10 +84,12 @@ export const ClinicProvider = ({ children }) => {
     };
   }, []);
 
-  // Fetch complete Clinify dataset on component mount
+  // Fetch complete Clinify dataset only when authenticated session exists
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    if (session) {
+      fetchInitialData();
+    }
+  }, [session]);
 
   const mapBookingSettingsFromDb = (dbRow) => {
     if (!dbRow) return null;

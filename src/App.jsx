@@ -48,8 +48,10 @@ class ErrorBoundary extends Component {
   }
 }
 
+import OwnerAuthScreen from './components/OwnerAuthScreen';
+
 const ProtectedDashboardRoute = () => {
-  const { isLoading } = useContext(ClinicContext);
+  const { session, isLoading } = useContext(ClinicContext);
 
   if (isLoading) {
     return (
@@ -57,6 +59,10 @@ const ProtectedDashboardRoute = () => {
         <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  if (!session) {
+    return <OwnerAuthScreen />;
   }
 
   return <Layout />;
