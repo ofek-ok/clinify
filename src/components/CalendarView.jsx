@@ -105,16 +105,16 @@ export default function CalendarView({ initialTab = 'grid' }) {
   return (
     <div className="space-y-4 dir-rtl text-start font-sans">
       {/* Top Header & Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
         <div className="flex items-center space-x-3 space-x-reverse">
           {/* Tabs */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setActiveTab('grid')}
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'grid'
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               יומן
@@ -124,7 +124,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'list'
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               רשימת תורים
@@ -133,17 +133,17 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
           {/* Week Navigation */}
           {activeTab === 'grid' && (
-            <div className="flex items-center space-x-2 space-x-reverse bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs text-white font-medium">
+            <div className="flex items-center space-x-2 space-x-reverse bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-900 font-medium">
               <button
                 onClick={() => setCurrentWeekOffset(prev => prev - 1)}
-                className="p-1 text-slate-400 hover:text-white"
+                className="p-1 text-slate-500 hover:text-slate-900"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
               <span className="px-2 font-bold">{weekRangeLabel}</span>
               <button
                 onClick={() => setCurrentWeekOffset(prev => prev + 1)}
-                className="p-1 text-slate-400 hover:text-white"
+                className="p-1 text-slate-500 hover:text-slate-900"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -171,24 +171,24 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
       {/* Grid or List View */}
       {activeTab === 'grid' ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[750px] border-collapse text-start">
               <thead>
-                <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
-                  <th className="py-2.5 px-3 border-l border-slate-800 w-20 text-center">שעה</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
+                  <th className="py-2.5 px-3 border-l border-slate-200 w-20 text-center">שעה</th>
                   {weekDays.map(day => (
-                    <th key={day.isoStr} className="py-2.5 px-3 border-l border-slate-800 text-center w-[13.5%]">
+                    <th key={day.isoStr} className="py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%]">
                       <div>{day.dayName}</div>
                       <div className="text-[10px] font-normal text-slate-500">{day.dayStr}</div>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs">
+              <tbody className="divide-y divide-slate-200 text-xs">
                 {operatingHours.map(hour => (
                   <tr key={hour} className="h-16">
-                    <td className="py-2 px-2 border-l border-slate-800 text-center text-slate-400 font-mono text-[11px] bg-slate-950/40">
+                    <td className="py-2 px-2 border-l border-slate-200 text-center text-slate-500 font-mono text-[11px] bg-slate-50">
                       {hour < 10 ? `0${hour}:00` : `${hour}:00`}
                     </td>
                     {weekDays.map(day => {
@@ -198,7 +198,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
                       });
 
                       return (
-                        <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-800 p-1 relative hover:bg-slate-800/30 transition-colors">
+                        <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-200 p-1 relative hover:bg-slate-100/30 transition-colors">
                           {dayAppts.map(appt => {
                             const isCompleted = appt.status === 'completed';
                             return (
@@ -206,12 +206,12 @@ export default function CalendarView({ initialTab = 'grid' }) {
                                 key={appt.id}
                                 className={`p-1.5 rounded-lg border text-[11px] space-y-0.5 ${
                                   isCompleted
-                                    ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200'
-                                    : 'bg-slate-800 border-slate-700 text-slate-100'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-200'
+                                    : 'bg-slate-100 border-slate-300 text-slate-900'
                                 }`}
                               >
                                 <div className="font-bold truncate">{getPatientName(appt.patient_id)}</div>
-                                <div className="text-[10px] text-slate-400 truncate">{getServiceName(appt.service_id)}</div>
+                                <div className="text-[10px] text-slate-500 truncate">{getServiceName(appt.service_id)}</div>
                               </div>
                             );
                           })}
@@ -237,7 +237,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
           <>
             <button
               onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
               ביטול
             </button>
@@ -253,12 +253,12 @@ export default function CalendarView({ initialTab = 'grid' }) {
       >
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">לקוח *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח *</label>
             <select
               required
               value={patientId}
               onChange={e => setPatientId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="">בחר לקוח...</option>
               {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
@@ -266,12 +266,12 @@ export default function CalendarView({ initialTab = 'grid' }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">שירות *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">שירות *</label>
             <select
               required
               value={serviceId}
               onChange={e => setServiceId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="">בחר שירות...</option>
               {services.map(s => <option key={s.id} value={s.id}>{s.name} (₪{s.price})</option>)}
@@ -280,32 +280,32 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
               <input
                 type="date"
                 value={apptDate}
                 onChange={e => setApptDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">שעה</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">שעה</label>
               <input
                 type="time"
                 value={apptTime}
                 onChange={e => setApptTime(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס תור</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס תור</label>
             <select
               value={status}
               onChange={e => setStatus(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="scheduled">מתוכנן</option>
               <option value="confirmed">מאושר</option>
@@ -315,13 +315,13 @@ export default function CalendarView({ initialTab = 'grid' }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">הערות</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">הערות</label>
             <textarea
               rows={2}
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="הערות לתור..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             />
           </div>
         </form>
