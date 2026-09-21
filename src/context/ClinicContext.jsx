@@ -479,8 +479,29 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     if (data && data[0]) {
-      setAppointments(prev => [...prev, data[0]]);
-      return data[0];
+      const createdAppointment = data[0];
+      setAppointments(prev => [...prev, createdAppointment]);
+
+      if (personId) {
+        const person = people.find(p => p.id === personId);
+        if (person?.client_status !== 'customer') {
+          const linkedLead = leads.find(l => l.person_id === personId);
+          if (linkedLead && ['new', 'contacted', 'qualified'].includes(linkedLead.status)) {
+            const { error: leadStatusError } = await supabase
+              .from('leads')
+              .update({ status: 'scheduled' })
+              .eq('id', linkedLead.id);
+
+            if (leadStatusError) {
+              console.error("Error syncing lead status after appointment creation:", leadStatusError);
+            } else {
+              setLeads(prev => prev.map(l => l.id === linkedLead.id ? { ...l, status: 'scheduled' } : l));
+            }
+          }
+        }
+      }
+
+      return createdAppointment;
     }
     return null;
   };
