@@ -168,7 +168,7 @@ const ServicesCatalog = () => {
       {/* Offerings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredItems.length === 0 ? (
-          <div className="col-span-full bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm font-medium">
+          <div className="col-span-full bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200 text-slate-500 text-sm font-medium">
             {t('No catalog items found matching this filter.', 'לא נמצאו פריטים בקטלוג תחת קטגוריה זו.')}
           </div>
         ) : (
@@ -181,11 +181,11 @@ const ServicesCatalog = () => {
               <div key={item.id || Math.random()} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group relative">
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${getTypeBadge(itemType)}`}>
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getTypeBadge(itemType)}`}>
                       {translateType(itemType)}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xl font-black text-slate-800" dir="ltr">₪{parseFloat(priceVal).toFixed(0)}</span>
+                      <span className="text-xl font-bold text-slate-800" dir="ltr">₪{parseFloat(priceVal).toFixed(0)}</span>
                     </div>
                   </div>
 
@@ -195,17 +195,17 @@ const ServicesCatalog = () => {
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-semibold">
+                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-semibold">
                   {itemType === 'package' ? (
                     <span className="text-amber-600 font-bold flex items-center gap-1">
-                      🎟️ {item.session_count || 10} {t('sessions included', 'טיפולים כלולים')}
+                       {item.session_count || 10} {t('sessions included', 'טיפולים כלולים')}
                     </span>
                   ) : itemType === 'product' ? (
-                    <span>📦 {t('Physical product', 'מוצר למכירה')}</span>
+                    <span> {t('Physical product', 'מוצר למכירה')}</span>
                   ) : itemType === 'subscription' ? (
-                    <span className="text-purple-600 font-bold">♾️ {t('Monthly retainer', 'מנוי מתמשך')}</span>
+                    <span className="text-purple-600 font-bold"> {t('Monthly retainer', 'מנוי מתמשך')}</span>
                   ) : (
-                    <span>⏱️ {item.duration_minutes || 30} {t('minutes', 'דקות')}</span>
+                    <span> {item.duration_minutes || 30} {t('minutes', 'דקות')}</span>
                   )}
 
                   {/* Edit Action Button */}
@@ -227,14 +227,14 @@ const ServicesCatalog = () => {
 
       {/* Create / Edit Item Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+            <div className="bg-white p-6 text-slate-900 flex justify-between items-center">
               <div>
                 <h3 className="font-extrabold text-lg tracking-tight">{editingItemId ? t('Edit Offering', 'עריכת פריט בקטלוג') : t('Add Offering to Catalog', 'הוספת פריט/שירות לקטלוג')}</h3>
-                <p className="text-slate-400 text-xs mt-0.5">{t('Define a service, package, product or subscription.', 'צור טיפול בודד, כרטיסייה, מוצר פיזי או תוכנית ליווי.')}</p>
+                <p className="text-slate-500 text-xs mt-0.5">{t('Define a service, package, product or subscription.', 'צור טיפול בודד, כרטיסייה, מוצר פיזי או תוכנית ליווי.')}</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-900 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
@@ -248,10 +248,10 @@ const ServicesCatalog = () => {
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                 >
-                  <option value="service">🩺 {t('Single Treatment', 'טיפול / שירות בודד')}</option>
-                  <option value="package">🎟️ {t('Punch Card / Package', 'כרטיסייה / חבילת טיפולים')}</option>
-                  <option value="product">📦 {t('Physical Product', 'מוצר פיזי (משחות/ציוד)')}</option>
-                  <option value="subscription">⭐ {t('Mentorship / Subscription', 'תוכנית ליווי / מנוי חודשי')}</option>
+                  <option value="service"> {t('Single Treatment', 'טיפול / שירות בודד')}</option>
+                  <option value="package"> {t('Punch Card / Package', 'כרטיסייה / חבילת טיפולים')}</option>
+                  <option value="product"> {t('Physical Product', 'מוצר פיזי (משחות/ציוד)')}</option>
+                  <option value="subscription"> {t('Mentorship / Subscription', 'תוכנית ליווי / מנוי חודשי')}</option>
                 </select>
               </div>
 
