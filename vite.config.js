@@ -13,12 +13,14 @@ export default defineConfig(({ mode }) => {
     const apiDir = path.resolve(process.cwd(), 'api');
     if (!fs.existsSync(apiDir)) fs.mkdirSync(apiDir, { recursive: true });
 
-    fs.writeFileSync(
-      path.resolve(apiDir, 'runtime-config.json'),
-      JSON.stringify({ url, anonKey })
-    );
+    if (anonKey && anonKey !== '[SENSITIVE]') {
+      fs.writeFileSync(
+        path.resolve(apiDir, '_env.js'),
+        `export const SUPABASE_URL = ${JSON.stringify(url)};\nexport const SUPABASE_ANON_KEY = ${JSON.stringify(anonKey)};\n`
+      );
+    }
   } catch (e) {
-    console.warn('Could not write runtime-config.json:', e);
+    console.warn('Could not write api/_env.js:', e);
   }
 
   return {

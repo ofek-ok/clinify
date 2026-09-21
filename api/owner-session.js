@@ -1,77 +1,50 @@
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
-
-let runtimeConfig = { url: 'https://stwgtsmdtjfwfkibzdlh.supabase.co', anonKey: '' };
-try {
-  const configPath = path.resolve(process.cwd(), 'api/runtime-config.json');
-  if (fs.existsSync(configPath)) {
-    runtimeConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  }
-} catch (e) {
-  console.warn("Could not read runtime-config.json:", e);
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || runtimeConfig.url || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || runtimeConfig.anonKey;
-  const ownerEmail = process.env.OWNER_EMAIL || 'owner@op-os.com';
-  const ownerPassword = process.env.OWNER_PASSWORD || 'OwnerPassword2026!';
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://stwgtsmdtjfwfkibzdlh.supabase.co';
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseAnonKey) {
     return res.status(500).json({ error: 'Server owner session configuration incomplete (supabaseAnonKey missing)' });
   }
 
+  // 1. Require explicit credentials in environment or headers
+  const ownerEmail = process.env.OWNER_EMAIL;
+  const ownerPassword = process.env.OWNER_PASSWORD;
+
   if (!ownerEmail || !ownerPassword) {
-    return res.status(500).json({ error: 'Server owner credentials not configured in environment' });
+    return res.status(500).json({ 
+      error: 'Server owner credentials not configured in environment (OWNER_EMAIL, OWNER_PASSWORD missing)'
+    });
   }
+
+  // 2. Reject anonymous callers trying to harvest tokens without valid authentication header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      error: 'Unauthorized: Anonymous calls to /api/owner-session are not permitted. Pass a valid authorization token or authenticate.'
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
 
   try {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
 
-    let { data, error } = await supabase.auth.signInWithPassword({
-      email: ownerEmail,
-      password: ownerPassword
-    });
-
-    if (error && (error.message?.includes('Invalid login credentials') || error.status === 400 || error.message?.includes('User not found'))) {
-      const signUpRes = await supabase.auth.signUp({
-        email: ownerEmail,
-        password: ownerPassword
-      });
-
-      if (signUpRes.data?.session) {
-        data = signUpRes;
-        error = null;
-      } else {
-        const retry = await supabase.auth.signInWithPassword({
-          email: ownerEmail,
-          password: ownerPassword
-        });
-        if (retry.data?.session) {
-          data = retry;
-          error = null;
-        }
-      }
-    }
-
-    if (error || !data?.session) {
-      return res.status(401).json({ error: error?.message || 'Failed to authenticate owner session' });
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired session token' });
     }
 
     return res.status(200).json({
-      session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_at: data.session.expires_at,
-        user: {
-          id: data.session.user.id,
-          email: data.session.user.email
-        }
+      authenticated: true,
+      user: {
+        id: user.id,
+        email: user.email
       }
     });
   } catch (err) {

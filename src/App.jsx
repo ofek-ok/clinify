@@ -54,7 +54,7 @@ const ProtectedDashboardRoute = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6 text-center font-sans">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -62,20 +62,27 @@ const ProtectedDashboardRoute = () => {
   return <Layout />;
 };
 
-
 function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
         <LanguageProvider>
-          <ClinicProvider>
-            <Routes>
-              <Route path="/book" element={<PublicBookingView />} />
-              <Route path="/form/:id" element={<PublicFormView />} />
-              <Route path="/performance" element={<PublicPerformanceSignupView />} />
-              <Route path="/*" element={<ProtectedDashboardRoute />} />
-            </Routes>
-          </ClinicProvider>
+          <Routes>
+            {/* Public routes - lightweight, no owner auth bootstrap, no private CRM data fetches */}
+            <Route path="/book" element={<PublicBookingView />} />
+            <Route path="/form/:id" element={<PublicFormView />} />
+            <Route path="/performance" element={<PublicPerformanceSignupView />} />
+            
+            {/* Private Clinify OS routes - wrapped in ClinicProvider */}
+            <Route 
+              path="/*" 
+              element={
+                <ClinicProvider>
+                  <ProtectedDashboardRoute />
+                </ClinicProvider>
+              } 
+            />
+          </Routes>
         </LanguageProvider>
       </BrowserRouter>
     </ErrorBoundary>
