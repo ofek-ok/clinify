@@ -809,7 +809,22 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     if (data && data[0]) {
-      setPayments(prev => prev.map(p => p.id === paymentId ? data[0] : p));
+      const updatedPayment = data[0];
+      setPayments(prev => prev.map(p => p.id === paymentId ? updatedPayment : p));
+
+      if (updatedPayment.status === 'paid' && updatedPayment.appointment_id) {
+        const appt = appointments.find(a => a.id === updatedPayment.appointment_id);
+        if (appt && appt.status === 'completed') {
+          let personId = updatedPayment.person_id || appt.person_id || null;
+          if (!personId && appt.patient_id) {
+            const patient = patients.find(p => p.id === appt.patient_id);
+            personId = patient?.person_id || null;
+          }
+          if (personId) {
+            await triggerCustomerConversionIfEligible(personId);
+          }
+        }
+      }
     }
   };
 
@@ -823,12 +838,34 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const updatePaymentStatus = async (paymentId, newStatus) => {
-    const { error } = await supabase.from('payments').update({ status: newStatus }).eq('id', paymentId);
+    const existingPayment = payments.find(p => p.id === paymentId);
+    const { data, error } = await supabase
+      .from('payments')
+      .update({ status: newStatus })
+      .eq('id', paymentId)
+      .select();
+
     if (error) {
       console.error("Error updating payment status:", error);
       throw error;
     }
-    setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: newStatus } : p));
+
+    const updatedPayment = data?.[0] || (existingPayment ? { ...existingPayment, status: newStatus } : null);
+    setPayments(prev => prev.map(p => p.id === paymentId ? (updatedPayment || { ...p, status: newStatus }) : p));
+
+    if (newStatus === 'paid' && updatedPayment?.appointment_id) {
+      const appt = appointments.find(a => a.id === updatedPayment.appointment_id);
+      if (appt && appt.status === 'completed') {
+        let personId = updatedPayment.person_id || appt.person_id || null;
+        if (!personId && appt.patient_id) {
+          const patient = patients.find(p => p.id === appt.patient_id);
+          personId = patient?.person_id || null;
+        }
+        if (personId) {
+          await triggerCustomerConversionIfEligible(personId);
+        }
+      }
+    }
   };
 
   const addExpense = async (expense) => {
