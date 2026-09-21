@@ -1,20 +1,51 @@
-import React, { useState, useContext, useMemo } from 'react';
+import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import AppointmentManager from './AppointmentManager';
 import Drawer from './ui/Drawer';
 import { useToast } from './ui/Toast';
 import { ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 
+const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
+
+const getIsraelDateKey = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(value instanceof Date ? value : new Date(value));
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return map.year + '-' + map.month + '-' + map.day;
+};
+
+const getIsraelOffsetString = (dateStr) => {
+  const probe = new Date(dateStr + 'T12:00:00Z');
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+  }).formatToParts(probe);
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const asUtc = Date.UTC(Number(map.year), Number(map.month)-1, Number(map.day), Number(map.hour), Number(map.minute), Number(map.second));
+  const offsetMinutes = Math.round((asUtc - probe.getTime()) / 60000);
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const absolute = Math.abs(offsetMinutes);
+  return sign + String(Math.floor(absolute / 60)).padStart(2,'0') + ':' + String(absolute % 60).padStart(2,'0');
+};
+
+const buildIsraelIsoTimestamp = (dateStr, timeStr) => dateStr + 'T' + timeStr + ':00' + getIsraelOffsetString(dateStr);
+
 export default function CalendarView({ initialTab = 'grid' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const { 
     appointments, 
     services, 
-    patients, 
+    patients,
+    people,
+    leads, 
     businessHours, 
     addAppointment,
     getPatientName, 
-    getServiceName 
+    getServiceName,
+    getAvailableSlotsForDate 
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
@@ -23,13 +54,38 @@ export default function CalendarView({ initialTab = 'grid' }) {
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
 
   // New Appointment Form State
-  const [patientId, setPatientId] = useState('');
+  const [personId, setPersonId] = useState('');
   const [serviceId, setServiceId] = useState('');
-  const [apptDate, setApptDate] = useState(new Date().toISOString().split('T')[0]);
+  const [apptDate, setApptDate] = useState(getIsraelDateKey());
   const [apptTime, setApptTime] = useState('10:00');
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState('scheduled');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const selectedService = services.find(s => String(s.id) === String(serviceId));
+  const bookablePeople = useMemo(() => {
+    return people
+      .filter(person => {
+        if (person.client_status === 'customer') return true;
+        const lead = leads.find(item => item.person_id === person.id);
+        return lead && lead.status !== 'lost' && lead.status !== 'won';
+      })
+      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'he'));
+  }, [people, leads]);
+  const availableSlots = useMemo(() => {
+    if (!apptDate || !selectedService) return [];
+    return getAvailableSlotsForDate(apptDate, Number(selectedService.duration_minutes || 30));
+  }, [apptDate, selectedService, getAvailableSlotsForDate]);
+
+  useEffect(() => {
+    if (availableSlots.length === 0) {
+      if (apptTime) setApptTime('');
+      return;
+    }
+    if (!apptTime || !availableSlots.includes(apptTime)) {
+      setApptTime(availableSlots[0]);
+    }
+  }, [availableSlots, apptTime]);
 
   // Calculate Week Days starting from Sunday
   const weekDays = useMemo(() => {
@@ -42,8 +98,8 @@ export default function CalendarView({ initialTab = 'grid' }) {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(sunday);
       d.setDate(sunday.getDate() + i);
-      const dayStr = `${d.getDate()}/${d.getMonth() + 1}`;
-      const isoStr = d.toISOString().split('T')[0];
+      const dayStr = new Intl.DateTimeFormat('he-IL', { timeZone: BUSINESS_TIME_ZONE, day: 'numeric', month: 'numeric' }).format(d);
+      const isoStr = getIsraelDateKey(d);
       return {
         dayName: dayNames[i],
         dayStr,
@@ -78,17 +134,23 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
-    if (!patientId || !serviceId) {
-      showToast('אנא בחר לקוח ושירות', 'error');
+    if (!personId || !serviceId) {
+      showToast('אנא בחר לקוח או ליד ושירות', 'error');
       return;
     }
     setIsSubmitting(true);
     try {
-      const fullDateTime = `${apptDate}T${apptTime}:00`;
+      if (!apptTime) {
+        showToast('אין שעה פנויה בתאריך שנבחר', 'error');
+        return;
+      }
+      const fullDateTime = buildIsraelIsoTimestamp(apptDate, apptTime);
+      const linkedPatient = patients.find(patient => patient.person_id === personId);
       await addAppointment({
-        patient_id: patientId,
+        person_id: personId,
+        patient_id: linkedPatient?.id || null,
         service_id: serviceId,
-        appointment_date: new Date(fullDateTime).toISOString(),
+        appointment_date: fullDateTime,
         status,
         notes
       });
@@ -194,7 +256,8 @@ export default function CalendarView({ initialTab = 'grid' }) {
                     {weekDays.map(day => {
                       const dayAppts = appointments.filter(a => {
                         const d = new Date(a.appointment_date);
-                        return d.getHours() === hour && d.toISOString().split('T')[0] === day.isoStr;
+                        const hourInIsrael = Number(new Intl.DateTimeFormat('en-GB', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' }).format(d));
+                        return hourInIsrael === hour && getIsraelDateKey(d) === day.isoStr;
                       });
 
                       return (
@@ -206,7 +269,9 @@ export default function CalendarView({ initialTab = 'grid' }) {
                                 key={appt.id}
                                 className={`p-1.5 rounded-lg border text-[11px] space-y-0.5 ${
                                   isCompleted
-                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-200'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                    : appt.status === 'cancelled'
+                                    ? 'bg-rose-50 border-rose-200 text-rose-700'
                                     : 'bg-slate-100 border-slate-300 text-slate-900'
                                 }`}
                               >
@@ -253,15 +318,19 @@ export default function CalendarView({ initialTab = 'grid' }) {
       >
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח / ליד *</label>
             <select
               required
-              value={patientId}
-              onChange={e => setPatientId(e.target.value)}
+              value={personId}
+              onChange={e => setPersonId(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
-              <option value="">בחר לקוח...</option>
-              {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              <option value="">בחר לקוח או ליד...</option>
+              {bookablePeople.map(person => {
+                const lead = leads.find(item => item.person_id === person.id);
+                const suffix = person.client_status === 'customer' ? 'לקוח' : (lead?.status === 'scheduled' ? 'ליד · נקבע תור' : 'ליד');
+                return <option key={person.id} value={person.id}>{person.full_name} · {suffix}</option>;
+              })}
             </select>
           </div>
 
@@ -274,7 +343,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="">בחר שירות...</option>
-              {services.map(s => <option key={s.id} value={s.id}>{s.name} (₪{s.price})</option>)}
+              {services.map(s => <option key={s.id} value={s.id}>{s.name} (₪{s.default_price || 0})</option>)}
             </select>
           </div>
 
@@ -290,13 +359,19 @@ export default function CalendarView({ initialTab = 'grid' }) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">שעה</label>
-              <input
-                type="time"
+              <label className="block text-xs font-medium text-slate-700 mb-1">שעה פנויה</label>
+              <select
                 value={apptTime}
                 onChange={e => setApptTime(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              />
+                disabled={!serviceId || !apptDate || availableSlots.length === 0}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none disabled:opacity-60"
+              >
+                {availableSlots.length === 0 ? (
+                  <option value="">אין שעות פנויות</option>
+                ) : (
+                  availableSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)
+                )}
+              </select>
             </div>
           </div>
 
@@ -309,7 +384,6 @@ export default function CalendarView({ initialTab = 'grid' }) {
             >
               <option value="scheduled">מתוכנן</option>
               <option value="confirmed">מאושר</option>
-              <option value="completed">הושלם</option>
               <option value="cancelled">מבוטל</option>
             </select>
           </div>

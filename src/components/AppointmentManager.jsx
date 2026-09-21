@@ -8,11 +8,39 @@ import {
 } from '@tanstack/react-table';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
+import { useToast } from './ui/Toast';
+
+const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
+
+const getIsraelDateKey = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(value instanceof Date ? value : new Date(value));
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return map.year + '-' + map.month + '-' + map.day;
+};
+
+const getIsraelOffsetString = (dateStr) => {
+  const probe = new Date(dateStr + 'T12:00:00Z');
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+  }).formatToParts(probe);
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const asUtc = Date.UTC(Number(map.year), Number(map.month)-1, Number(map.day), Number(map.hour), Number(map.minute), Number(map.second));
+  const offsetMinutes = Math.round((asUtc - probe.getTime()) / 60000);
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const absolute = Math.abs(offsetMinutes);
+  return sign + String(Math.floor(absolute / 60)).padStart(2,'0') + ':' + String(absolute % 60).padStart(2,'0');
+};
+
+const buildIsraelIsoTimestamp = (dateStr, timeStr) => dateStr + 'T' + timeStr + ':00' + getIsraelOffsetString(dateStr);
 
 const AppointmentManager = () => {
   const { 
     people,
-    patients, 
+    patients,
+    leads, 
     services, 
     appointments, 
     addAppointment, 
@@ -26,11 +54,12 @@ const AppointmentManager = () => {
   } = useContext(ClinicContext);
 
   const { t } = useContext(LanguageContext);
+  const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState([]);
 
   const [appointmentForm, setAppointmentForm] = useState({
-    patient_id: '',
+    person_id: '',
     service_id: '',
     appointment_date: '',
     appointment_time: '',
@@ -43,7 +72,7 @@ const AppointmentManager = () => {
     appointment: null,
     recordPaymentNow: true,
     amount: '',
-    payment_method: 'Credit Card',
+    payment_method: 'PayBox',
     createFollowupTask: false,
     followupTaskTitle: '',
     followupDueDate: ''
@@ -52,38 +81,42 @@ const AppointmentManager = () => {
   const handleAppointmentSubmit = async (e) => {
     e.preventDefault();
     
-    if (!appointmentForm.patient_id || !appointmentForm.service_id || !appointmentForm.appointment_date || !appointmentForm.appointment_time) {
-      alert(t("Please fill in all required fields.", "אנא מלא את כל השדות الנדרשים."));
-      return;
-    }
-
-    const dateTimeStr = `${appointmentForm.appointment_date}T${appointmentForm.appointment_time}`;
-    
-    if (isWithinBusinessHours && !isWithinBusinessHours(dateTimeStr)) {
-      alert(t("Selected time is outside of business hours. Please select another time.", "זמן התור שנבחר נמצא מחוץ לשעות הפעילות."));
+    if (!appointmentForm.person_id || !appointmentForm.service_id || !appointmentForm.appointment_date || !appointmentForm.appointment_time) {
+      showToast(t('Please fill in all required fields.', 'אנא מלא את כל השדות הנדרשים.'), 'error');
       return;
     }
 
     const service = services.find(s => String(s.id) === String(appointmentForm.service_id));
-    const duration = service ? service.duration_minutes : 30;
+    const duration = Number(service?.duration_minutes || 30);
+    const dateTimeStr = buildIsraelIsoTimestamp(appointmentForm.appointment_date, appointmentForm.appointment_time);
 
-    if (isTimeSlotAvailable && !isTimeSlotAvailable(dateTimeStr, duration)) {
-      alert(t("Time slot conflicts with an existing appointment.", "זמן התור מתנגש עם תור קיים."));
+    if (isWithinBusinessHours && !isWithinBusinessHours(dateTimeStr, duration)) {
+      showToast(t('Selected time is outside of business hours. Please select another time.', 'זמן התור שנבחר נמצא מחוץ לשעות הפעילות.'), 'error');
       return;
     }
 
-    const selectedPatient = patients.find(p => String(p.id) === String(appointmentForm.patient_id));
+    if (isTimeSlotAvailable && !isTimeSlotAvailable(dateTimeStr, duration)) {
+      showToast(t('Time slot conflicts with an existing appointment.', 'זמן התור מתנגש עם תור קיים.'), 'error');
+      return;
+    }
 
-    await addAppointment({
-      patient_id: appointmentForm.patient_id,
-      person_id: selectedPatient ? selectedPatient.person_id : null,
-      service_id: appointmentForm.service_id,
-      appointment_date: dateTimeStr,
-      status: appointmentForm.status,
-      notes: appointmentForm.notes || null
-    });
+    const selectedPatient = patients.find(p => String(p.person_id) === String(appointmentForm.person_id));
 
-    setAppointmentForm({ patient_id: '', service_id: '', appointment_date: '', appointment_time: '', status: 'scheduled', notes: '' });
+    try {
+      await addAppointment({
+        patient_id: selectedPatient?.id || null,
+        person_id: appointmentForm.person_id,
+        service_id: appointmentForm.service_id,
+        appointment_date: dateTimeStr,
+        status: appointmentForm.status,
+        notes: appointmentForm.notes || null
+      });
+
+      showToast(t('Appointment saved.', 'התור נשמר בהצלחה'));
+      setAppointmentForm({ person_id: '', service_id: '', appointment_date: '', appointment_time: '', status: 'scheduled', notes: '' });
+    } catch (err) {
+      showToast(err.message || t('Could not save appointment.', 'לא ניתן היה לשמור את התור.'), 'error');
+    }
   };
 
   const openCompletionModal = (appt) => {
@@ -92,14 +125,14 @@ const AppointmentManager = () => {
     const person = people.find(p => String(p.id) === String(appt.person_id)) || (patient ? people.find(p => String(p.id) === String(patient.person_id)) : null);
 
     const defaultTitle = person ? `מעקב לאחר מפגש עם ${person.full_name}` : `מעקב טיפול`;
-    const defaultDate = new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0];
+    const defaultDate = getIsraelDateKey(new Date(Date.now() + 86400000 * 3));
 
     setSessionCompletionModal({
       isOpen: true,
       appointment: appt,
       recordPaymentNow: true,
       amount: service ? service.default_price : 0,
-      payment_method: 'Credit Card',
+      payment_method: 'PayBox',
       createFollowupTask: true,
       followupTaskTitle: defaultTitle,
       followupDueDate: defaultDate
@@ -111,38 +144,44 @@ const AppointmentManager = () => {
     const { appointment, recordPaymentNow, amount, payment_method, createFollowupTask, followupTaskTitle, followupDueDate } = sessionCompletionModal;
     if (!appointment) return;
 
-    // 1. Update status to completed
-    await updateAppointmentStatus(appointment.id, 'completed');
+    try {
+      await updateAppointmentStatus(appointment.id, 'completed');
 
-    // 2. Add Payment if requested
-    if (recordPaymentNow && amount) {
-      await addPayment({
-        appointment_id: appointment.id,
-        patient_id: appointment.patient_id || null,
-        person_id: appointment.person_id || null,
-        amount: parseFloat(amount),
-        payment_method: payment_method,
-        status: 'paid'
-      });
+      if (recordPaymentNow && amount) {
+        await addPayment({
+          appointment_id: appointment.id,
+          patient_id: appointment.patient_id || null,
+          person_id: appointment.person_id || null,
+          amount: parseFloat(amount),
+          payment_method,
+          status: 'paid'
+        });
+      }
+
+      if (createFollowupTask && followupTaskTitle) {
+        await addTask({
+          title: followupTaskTitle,
+          due_date: followupDueDate || getIsraelDateKey(),
+          status: 'todo',
+          priority: 'high',
+          area: 'clinical',
+          person_id: appointment.person_id || null,
+          patient_id: appointment.patient_id || null
+        });
+      }
+
+      showToast(t('Session completed.', 'המפגש הושלם בהצלחה'));
+      setSessionCompletionModal({ isOpen: false, appointment: null, recordPaymentNow: true, amount: '', payment_method: 'PayBox', createFollowupTask: false, followupTaskTitle: '', followupDueDate: '' });
+    } catch (err) {
+      showToast(err.message || t('Could not complete session.', 'לא ניתן היה להשלים את המפגש.'), 'error');
     }
-
-    // 3. Add Follow-up Task if requested
-    if (createFollowupTask && followupTaskTitle) {
-      await addTask({
-        title: followupTaskTitle,
-        due_date: followupDueDate || new Date().toISOString().split('T')[0],
-        status: 'todo',
-        priority: 'high',
-        area: 'clinical',
-        person_id: appointment.person_id || null,
-        patient_id: appointment.patient_id || null
-      });
-    }
-
-    setSessionCompletionModal({ isOpen: false, appointment: null, recordPaymentNow: true, amount: '', payment_method: 'Credit Card', createFollowupTask: false, followupTaskTitle: '', followupDueDate: '' });
   };
 
-  const activePatients = patients.filter(p => (p.status || 'active') === 'active');
+  const bookablePeople = people.filter(person => {
+    if (person.client_status === 'customer') return true;
+    const lead = leads?.find?.(item => item.person_id === person.id);
+    return lead && lead.status !== 'lost' && lead.status !== 'won';
+  });
 
   const translateStatus = (status) => {
     const statusMap = {
@@ -164,8 +203,8 @@ const AppointmentManager = () => {
         const dateObj = new Date(getValue());
         return (
           <div>
-            <p className="font-bold text-slate-800 text-xs">{dateObj.toLocaleDateString('he-IL')}</p>
-            <p className="text-[11px] text-slate-400 font-medium">{dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+            <p className="font-bold text-slate-800 text-xs">{dateObj.toLocaleDateString('he-IL', { timeZone: BUSINESS_TIME_ZONE })}</p>
+            <p className="text-[11px] text-slate-400 font-medium">{dateObj.toLocaleTimeString('he-IL', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', minute:'2-digit' })}</p>
           </div>
         );
       },
@@ -205,7 +244,6 @@ const AppointmentManager = () => {
           >
             <option value="scheduled">{t('Scheduled', 'נקבע')}</option>
             <option value="confirmed">{t('Confirmed', 'אושר')}</option>
-            <option value="completed">{t('Completed', 'הושלם')}</option>
             <option value="rescheduled">{t('Rescheduled', 'הוזז')}</option>
             <option value="no_show">{t('No Show', 'אי הופעה')}</option>
             <option value="cancelled">{t('Cancelled', 'בוטל')}</option>
@@ -270,7 +308,7 @@ const AppointmentManager = () => {
             </div>
             <form onSubmit={handleCompleteSessionSubmit} className="p-6 space-y-4">
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 font-medium">
-                💡 <b>{t('Automatic Customer Conversion', 'המרה אוטומטית ללקוח')}:</b> {t('Completing session and receiving payment will automatically update client status to Customer and mark Lead as Won.', 'סיום המפגש וגביית תשלום ימירו את סטטוס הלקוח ל-Customer ואת הליד ל-Won.')}
+                <b>{t('Automatic Customer Conversion', 'המרה אוטומטית ללקוח')}:</b> {t('Completing the session and recording payment will update the CRM relationship when eligible.', 'סיום המפגש ורישום תשלום יעדכנו את סטטוס ה-CRM כאשר תנאי ההמרה מתקיימים.')}
               </div>
 
               {/* Payment Section */}
@@ -308,10 +346,8 @@ const AppointmentManager = () => {
                         onChange={e => setSessionCompletionModal({ ...sessionCompletionModal, payment_method: e.target.value })}
                         className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
                       >
-                        <option value="Credit Card">{t('Credit Card', 'כרטיס אשראי')}</option>
-                        <option value="Cash">{t('Cash', 'מזומן')}</option>
-                        <option value="Bank Transfer">{t('Bank Transfer', 'העברה בנקאית')}</option>
-                        <option value="Bit">Bit / Paybox</option>
+                        <option value="PayBox">PayBox</option>
+                        <option value="תשלום במקום">{t('Pay on site', 'תשלום במקום')}</option>
                       </select>
                     </div>
                   </div>
@@ -387,11 +423,11 @@ const AppointmentManager = () => {
             <form onSubmit={handleAppointmentSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 text-start">{t('Patient', 'מטופל')}</label>
-                <select value={appointmentForm.patient_id} onChange={e => setAppointmentForm({...appointmentForm, patient_id: e.target.value})} required 
+                <select value={appointmentForm.person_id} onChange={e => setAppointmentForm({...appointmentForm, person_id: e.target.value})} required 
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none text-start text-xs">
-                  <option value="">{t('Select patient...', 'בחר מטופל...')}</option>
-                  {activePatients.map(p => (
-                    <option key={p.id} value={p.id}>{p.full_name || getPatientName(p.id)}</option>
+                  <option value="">{t('Select client or lead...', 'בחר לקוח או ליד...')}</option>
+                  {bookablePeople.map(person => (
+                    <option key={person.id} value={person.id}>{person.full_name}</option>
                   ))}
                 </select>
               </div>
@@ -429,7 +465,7 @@ const AppointmentManager = () => {
                 </div>
               </div>
 
-              <button type="submit" disabled={activePatients.length === 0 || services.length === 0} className="w-full mt-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm active:scale-[0.98] text-xs">
+              <button type="submit" disabled={bookablePeople.length === 0 || services.length === 0} className="w-full mt-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm active:scale-[0.98] text-xs">
                 {t('Save Appointment', 'שמור תור')}
               </button>
             </form>
@@ -471,8 +507,8 @@ const AppointmentManager = () => {
                           <div className="flex items-center gap-1">
                             {flexRender(header.column.columnDef.header, header.getContext())}
                             {{
-                              asc: ' 🔼',
-                              desc: ' 🔽',
+                              asc: ' ↑',
+                              desc: ' ↓',
                             }[header.column.getIsSorted()] ?? null}
                           </div>
                         </th>

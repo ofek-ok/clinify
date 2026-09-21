@@ -3,8 +3,70 @@ import { supabase } from '../supabaseClient';
 
 export const ClinicContext = createContext();
 
+const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
+
+const getIsraelDateParts = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return {
+    year: map.year,
+    month: map.month,
+    day: map.day,
+    weekday: map.weekday,
+    hour: map.hour,
+    minute: map.minute
+  };
+};
+
+const getIsraelDateKey = (value = new Date()) => {
+  const { year, month, day } = getIsraelDateParts(value);
+  return `${year}-${month}-${day}`;
+};
+
+const getIsraelOffsetString = (dateStr) => {
+  const probe = new Date(`${dateStr}T12:00:00Z`);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(probe);
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const asUtc = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour),
+    Number(map.minute),
+    Number(map.second)
+  );
+  const offsetMinutes = Math.round((asUtc - probe.getTime()) / 60000);
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const absolute = Math.abs(offsetMinutes);
+  const hours = String(Math.floor(absolute / 60)).padStart(2, '0');
+  const minutes = String(absolute % 60).padStart(2, '0');
+  return `${sign}${hours}:${minutes}`;
+};
+
+const buildIsraelIsoTimestamp = (dateStr, timeStr) =>
+  `${dateStr}T${timeStr}:00${getIsraelOffsetString(dateStr)}`;
+
 export const ClinicProvider = ({ children }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getIsraelDateKey();
 
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
@@ -468,6 +530,17 @@ export const ClinicProvider = ({ children }) => {
       if (patient) personId = patient.person_id;
     }
 
+    const service = services.find(s => String(s.id) === String(appt.service_id));
+    const durationMinutes = Number(service?.duration_minutes || 30);
+
+    if (!isWithinBusinessHours(appt.appointment_date, durationMinutes)) {
+      throw new Error('התור נמצא מחוץ לשעות הפעילות');
+    }
+
+    if (!isTimeSlotAvailable(appt.appointment_date, durationMinutes)) {
+      throw new Error('המועד שנבחר מתנגש עם תור קיים');
+    }
+
     const payload = {
       ...appt,
       person_id: personId
@@ -476,6 +549,10 @@ export const ClinicProvider = ({ children }) => {
     const { data, error } = await supabase.from('appointments').insert([payload]).select();
     if (error) {
       console.error("Error creating appointment:", error);
+      const message = String(error.message || '');
+      if (message.includes('appointments_no_overlap') || message.includes('exclusion')) {
+        throw new Error('המועד שנבחר כבר תפוס. בחר שעה אחרת.');
+      }
       throw error;
     }
     if (data && data[0]) {
@@ -508,6 +585,9 @@ export const ClinicProvider = ({ children }) => {
 
   const updateAppointmentStatus = async (apptId, newStatus) => {
     const appt = appointments.find(a => a.id === apptId);
+    if (!appt) throw new Error('התור לא נמצא');
+    if (appt.status === newStatus) return appt;
+
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
     if (error) {
       console.error("Error updating appointment status:", error);
@@ -1062,51 +1142,80 @@ export const ClinicProvider = ({ children }) => {
   };
   const getPaymentForAppointment = (apptId) => payments.find(p => p.appointment_id === apptId);
 
-  const isWithinBusinessHours = (dateTimeStr) => {
+  const isWithinBusinessHours = (dateTimeStr, durationMinutes = 0) => {
     if (!dateTimeStr) return false;
     const dt = new Date(dateTimeStr);
-    const dayName = dt.toLocaleDateString('en-US', { weekday: 'long' });
-    const hours = businessHours.find(h => h.dayOfWeek === dayName);
+    if (Number.isNaN(dt.getTime())) return false;
+
+    const startParts = getIsraelDateParts(dt);
+    const endParts = getIsraelDateParts(new Date(dt.getTime() + Number(durationMinutes || 0) * 60000));
+    const hours = businessHours.find(h => h.dayOfWeek === startParts.weekday);
+
     if (!hours || !hours.isOpen) return false;
-    const timeStr = dt.toTimeString().substring(0, 5);
-    return timeStr >= hours.startTime && timeStr < hours.endTime;
+
+    const startTime = `${startParts.hour}:${startParts.minute}`;
+    const endTime = `${endParts.hour}:${endParts.minute}`;
+    const sameBusinessDate =
+      startParts.year === endParts.year &&
+      startParts.month === endParts.month &&
+      startParts.day === endParts.day;
+
+    return sameBusinessDate && startTime >= hours.startTime && endTime <= hours.endTime;
   };
 
-  const isTimeSlotAvailable = (dateTimeStr, durationMinutes) => {
+  const isTimeSlotAvailable = (dateTimeStr, durationMinutes = 30, excludeAppointmentId = null) => {
     const dt = new Date(dateTimeStr);
-    const endTime = new Date(dt.getTime() + durationMinutes * 60000);
-    
+    if (Number.isNaN(dt.getTime())) return false;
+    const endTime = new Date(dt.getTime() + Number(durationMinutes || 30) * 60000);
+
     return !appointments.some(appt => {
-      if(appt.status === 'cancelled') return false;
+      if (!appt || appt.id === excludeAppointmentId) return false;
+      if (appt.status === 'cancelled' || appt.status === 'rescheduled') return false;
+
       const apptStart = new Date(appt.appointment_date);
-      const service = services.find(s => s.id === appt.service_id);
-      const apptDuration = service ? service.duration_minutes : 30;
-      const apptEnd = new Date(apptStart.getTime() + apptDuration * 60000);
-      
-      return (dt < apptEnd && endTime > apptStart);
+      if (Number.isNaN(apptStart.getTime())) return false;
+
+      let apptEnd = appt.end_date ? new Date(appt.end_date) : null;
+      if (!apptEnd || Number.isNaN(apptEnd.getTime())) {
+        const service = services.find(s => String(s.id) === String(appt.service_id));
+        const apptDuration = Number(service?.duration_minutes || 30);
+        apptEnd = new Date(apptStart.getTime() + apptDuration * 60000);
+      }
+
+      return dt < apptEnd && endTime > apptStart;
     });
   };
 
   const getAvailableSlotsForDate = (dateStr, durationMinutes = 30) => {
     if (!dateStr) return [];
-    const dt = new Date(dateStr);
-    const dayName = dt.toLocaleDateString('en-US', { weekday: 'long' });
-    const hours = businessHours.find(h => h.dayOfWeek === dayName);
 
+    const weekday = new Intl.DateTimeFormat('en-US', {
+      timeZone: BUSINESS_TIME_ZONE,
+      weekday: 'long'
+    }).format(new Date(`${dateStr}T12:00:00Z`));
+
+    const hours = businessHours.find(h => h.dayOfWeek === weekday);
     if (!hours || !hours.isOpen) return [];
 
-    const slots = [];
-    let current = new Date(`${dateStr}T${hours.startTime}:00`);
-    const end = new Date(`${dateStr}T${hours.endTime}:00`);
+    const toMinutes = (time) => {
+      const [hour, minute] = String(time).split(':').map(Number);
+      return hour * 60 + minute;
+    };
+    const toTime = (minutes) =>
+      `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
-    while (current.getTime() + durationMinutes * 60000 <= end.getTime()) {
-      const timeDisplay = current.toTimeString().substring(0, 5);
-      const available = isTimeSlotAvailable(current.toISOString().split('T')[0] + 'T' + timeDisplay, durationMinutes);
-      if (available) {
+    const startMinutes = toMinutes(hours.startTime);
+    const endMinutes = toMinutes(hours.endTime);
+    const slots = [];
+
+    for (let current = startMinutes; current + Number(durationMinutes || 30) <= endMinutes; current += 30) {
+      const timeDisplay = toTime(current);
+      const candidateIso = buildIsraelIsoTimestamp(dateStr, timeDisplay);
+      if (isTimeSlotAvailable(candidateIso, durationMinutes)) {
         slots.push(timeDisplay);
       }
-      current = new Date(current.getTime() + 30 * 60000);
     }
+
     return slots;
   };
 
