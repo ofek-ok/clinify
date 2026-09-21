@@ -1,164 +1,400 @@
-import React, { useContext, useMemo, useState } from 'react';
-import { 
-  useReactTable, 
-  getCoreRowModel, 
-  getSortedRowModel, 
-  flexRender 
-} from '@tanstack/react-table';
-import { LanguageContext } from '../context/LanguageContext';
+import React, { useState, useContext, useMemo } from 'react';
+import { ClinicContext } from '../context/ClinicContext';
+import Drawer from './ui/Drawer';
+import { useToast } from './ui/Toast';
+import { Plus, Wallet, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const FinanceView = () => {
-  const { t } = useContext(LanguageContext);
-  const [sorting, setSorting] = useState([]);
+export default function FinanceView({ initialTab = 'overview' }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const { payments, expenses, patients, appointments, addPayment, addExpense, todayStr } = useContext(ClinicContext);
+  const { showToast } = useToast();
 
-  const mockInvoices = useMemo(() => [
-    { id: 'INV-2026-001', client: 'ישראל ישראלי', amount: '₪450', date: '2026-08-15', status: 'paid', service: 'טיפול שיניים משמר' },
-    { id: 'INV-2026-002', client: 'מיכל אברהמי', amount: '₪850', date: '2026-08-16', status: 'pending', service: 'הלבנת שיניים בלייזר' },
-    { id: 'INV-2026-003', client: 'דניאל כהן', amount: '₪300', date: '2026-08-17', status: 'paid', service: 'ייעוץ ראשוני' },
-    { id: 'INV-2026-004', client: 'עדי לוי', amount: '₪1,200', date: '2026-08-17', status: 'pending', service: 'יישור שיניים - סד שקוף' },
-  ], []);
+  const [isPaymentDrawerOpen, setIsPaymentDrawerOpen] = useState(false);
+  const [isExpenseDrawerOpen, setIsExpenseDrawerOpen] = useState(false);
 
-  const columns = useMemo(() => [
-    {
-      accessorKey: 'id',
-      header: () => t('Invoice #', 'מס׳ חשבונית'),
-      cell: ({ getValue }) => <span className="font-bold text-slate-800">{getValue()}</span>,
-    },
-    {
-      accessorKey: 'client',
-      header: () => t('Client Name', 'שם הלקוח'),
-      cell: ({ getValue }) => <span className="font-bold text-slate-800">{getValue()}</span>,
-    },
-    {
-      accessorKey: 'service',
-      header: () => t('Service', 'שירות'),
-      cell: ({ getValue }) => <span className="text-slate-600 text-xs font-medium">{getValue()}</span>,
-    },
-    {
-      accessorKey: 'amount',
-      header: () => t('Amount', 'סכום'),
-      cell: ({ getValue }) => <span className="font-bold text-slate-900" dir="ltr">{getValue()}</span>,
-    },
-    {
-      accessorKey: 'date',
-      header: () => t('Date', 'תאריך'),
-      cell: ({ getValue }) => <span className="text-slate-500 text-xs font-medium">{getValue()}</span>,
-    },
-    {
-      accessorKey: 'status',
-      header: () => t('Status', 'סטטוס'),
-      cell: ({ getValue }) => {
-        const isPaid = getValue() === 'paid';
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-            isPaid 
-              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-              : 'bg-amber-100 text-amber-800 border border-amber-200'
-          }`}>
-            {isPaid ? t('Paid', 'שולם') : t('Pending', 'בהמתנה לגבייה')}
-          </span>
-        );
-      },
-    },
-  ], [t]);
+  // New Payment Form
+  const [payPatientId, setPayPatientId] = useState('');
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState('Credit Card');
+  const [payStatus, setPayStatus] = useState('paid');
+  const [payDate, setPayDate] = useState(todayStr);
 
-  const table = useReactTable({
-    data: mockInvoices,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  // New Expense Form
+  const [expDescription, setExpDescription] = useState('');
+  const [expCategory, setExpCategory] = useState('ציוד קליני');
+  const [expAmount, setExpAmount] = useState('');
+  const [expMethod, setExpMethod] = useState('Credit Card');
+  const [expDate, setExpDate] = useState(todayStr);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Current Month Operational Context Metrics
+  const currentMonthMetrics = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const monthPayments = payments.filter(p => {
+      const d = new Date(p.payment_date || p.created_at);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+
+    const monthExpenses = expenses.filter(e => {
+      const d = new Date(e.expense_date || e.created_at);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+
+    const incomeMonth = monthPayments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const expensesMonth = monthExpenses
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+    const profitMonth = incomeMonth - expensesMonth;
+
+    const pendingCollection = payments
+      .filter(p => p.status === 'pending')
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    return { incomeMonth, expensesMonth, profitMonth, pendingCollection };
+  }, [payments, expenses]);
+
+  // 6-Month Chart Data
+  const chartData = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mLabel = d.toLocaleString('he-IL', { month: 'short' });
+      const year = d.getFullYear();
+      const monthIdx = d.getMonth();
+
+      const inc = payments
+        .filter(p => p.status === 'paid' && new Date(p.payment_date || p.created_at).getFullYear() === year && new Date(p.payment_date || p.created_at).getMonth() === monthIdx)
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      const exp = expenses
+        .filter(e => new Date(e.expense_date || e.created_at).getFullYear() === year && new Date(e.expense_date || e.created_at).getMonth() === monthIdx)
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+      months.push({ name: mLabel, הכנסות: inc, הוצאות: exp });
+    }
+    return months;
+  }, [payments, expenses]);
+
+  const handleCreatePayment = async (e) => {
+    e.preventDefault();
+    if (!payPatientId || !payAmount) {
+      showToast('אנא בחר לקוח והזן סכום לתשלום', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await addPayment({
+        patient_id: payPatientId,
+        amount: parseFloat(payAmount),
+        payment_method: payMethod,
+        status: payStatus,
+        payment_date: payDate || todayStr
+      });
+      showToast('התשלום נרשם בהצלחה');
+      setIsPaymentDrawerOpen(false);
+      setPayAmount('');
+    } catch (err) {
+      showToast(err.message || 'שגיאה ברשום תשלום', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateExpense = async (e) => {
+    e.preventDefault();
+    if (!expDescription || !expAmount) {
+      showToast('אנא הזן תיאור וסכום הוצאה', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await addExpense({
+        description: expDescription.trim(),
+        category: expCategory,
+        amount: parseFloat(expAmount),
+        payment_method: expMethod,
+        expense_date: expDate || todayStr
+      });
+      showToast('ההוצאה נרשמה בהצלחה');
+      setIsExpenseDrawerOpen(false);
+      setExpDescription('');
+      setExpAmount('');
+    } catch (err) {
+      showToast(err.message || 'שגיאה ברשום הוצאה', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6 text-start">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            {t('Finance & Billing', 'ניהול כספים ופיננסים')}
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">
-            {t('Track clinic revenue, client invoices, and payment statuses.', 'מעקב אחר הכנסות המרפאה, חשבוניות מטופלים וסטטוס תשלומים.')}
-          </p>
-        </div>
+    <div className="space-y-6 dir-rtl text-start font-sans">
+      {/* Header & Tabs */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <h1 className="text-xl font-bold text-white tracking-tight">כספים</h1>
 
-        <button className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 self-start sm:self-auto active:scale-95">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          <span>{t('New Invoice', 'חשבונית חדשה')}</span>
-        </button>
-      </div>
-
-      {/* Financial KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t('Monthly Revenue', 'הכנסות החודש')}</p>
-          <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">₪24,850</h3>
-          <p className="text-xs font-semibold text-emerald-600 mt-2">+12.4% {t('vs last month', 'בהשוואה לחודש שעבר')}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t('Pending Payments', 'תשלומים בהמתנה')}</p>
-          <h3 className="text-3xl font-extrabold text-amber-600 tracking-tight">₪3,400</h3>
-          <p className="text-xs text-slate-500 font-medium mt-2">4 {t('invoices awaiting payment', 'חשבוניות ממתינות לגבייה')}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t('Average Treatment Value', 'ממוצע לטיפול')}</p>
-          <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">₪520</h3>
-          <p className="text-xs text-slate-500 font-medium mt-2">{t('Based on 48 completed appointments', 'מבוסס על 48 תורים שהושלמו')}</p>
+        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+          {[
+            { id: 'overview', label: 'סקירה' },
+            { id: 'income', label: 'הכנסות' },
+            { id: 'expenses', label: 'הוצאות' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Recent Invoices Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <h3 className="font-bold text-slate-800 text-sm">{t('Recent Invoices & Transactions', 'חשבוניות ועסקאות אחרונות')}</h3>
-          <span className="text-xs text-slate-400 font-semibold">{mockInvoices.length} {t('invoices', 'חשבוניות')}</span>
+      {/* OVERVIEW TAB */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* 4 Compact Current Month Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+              <span className="text-slate-400 text-xs font-medium">הכנסות החודש</span>
+              <p className="text-xl font-bold text-emerald-400">₪{currentMonthMetrics.incomeMonth.toLocaleString()}</p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+              <span className="text-slate-400 text-xs font-medium">הוצאות החודש</span>
+              <p className="text-xl font-bold text-rose-400">₪{currentMonthMetrics.expensesMonth.toLocaleString()}</p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+              <span className="text-slate-400 text-xs font-medium">רווח החודש</span>
+              <p className={`text-xl font-bold ${currentMonthMetrics.profitMonth >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                ₪{currentMonthMetrics.profitMonth.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+              <span className="text-slate-400 text-xs font-medium">ממתין לגבייה</span>
+              <p className="text-xl font-bold text-amber-400">₪{currentMonthMetrics.pendingCollection.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Simple 6-Month Chart */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h3 className="text-xs font-bold text-white">הכנסות מול הוצאות — 6 חודשים</h3>
+            <div className="h-64 w-full dir-ltr">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
+                  <YAxis stroke="#64748b" fontSize={11} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }} />
+                  <Area type="monotone" dataKey="הכנסות" stroke="#10b981" fill="#10b981" fillOpacity={0.15} />
+                  <Area type="monotone" dataKey="הוצאות" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.15} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-start">
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id} className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-100">
-                  {headerGroup.headers.map(header => (
-                    <th 
-                      key={header.id} 
-                      onClick={header.column.getToggleSortingHandler()}
-                      className="py-3 px-6 font-semibold cursor-pointer select-none text-start hover:text-slate-800 transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {{
-                          asc: ' 🔼',
-                          desc: ' 🔽',
-                        }[header.column.getIsSorted()] ?? null}
-                      </div>
-                    </th>
-                  ))}
+      )}
+
+      {/* INCOME TAB */}
+      {activeTab === 'income' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <span className="text-xs text-slate-400">רשימת הכנסות ותשלומים</span>
+            <button
+              onClick={() => setIsPaymentDrawerOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse"
+            >
+              <Plus className="w-4 h-4" />
+              <span>תשלום חדש</span>
+            </button>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+            <table className="w-full text-start border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                  <th className="py-3 px-4 text-start">לקוח</th>
+                  <th className="py-3 px-4 text-start">תאריך</th>
+                  <th className="py-3 px-4 text-start">סכום</th>
+                  <th className="py-3 px-4 text-start">אמצעי תשלום</th>
+                  <th className="py-3 px-4 text-start">סטטוס</th>
                 </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {table.getRowModel().rows.map(row => (
-                <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="py-4 px-6">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {payments.length === 0 ? (
+                  <tr><td colSpan={5} className="py-8 text-center text-slate-500">אין תשלומים רשומים.</td></tr>
+                ) : (
+                  payments.map(p => {
+                    const pat = patients.find(patient => patient.id === p.patient_id || patient.person_id === p.person_id);
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-4 font-bold text-white">{pat ? pat.full_name : 'לקוח כללי'}</td>
+                        <td className="py-3 px-4 text-slate-300 font-mono">{p.payment_date || '-'}</td>
+                        <td className="py-3 px-4 font-bold text-emerald-400">₪{p.amount}</td>
+                        <td className="py-3 px-4 text-slate-400">{p.payment_method === 'PayBox' ? 'PayBox' : p.payment_method === 'Credit Card' ? 'אשראי' : 'תשלום במקום'}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'paid' ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800' : 'bg-amber-950/80 text-amber-300 border border-amber-800'}`}>
+                            {p.status === 'paid' ? 'שולם' : 'ממתין'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* EXPENSES TAB */}
+      {activeTab === 'expenses' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <span className="text-xs text-slate-400">רשימת הוצאות</span>
+            <button
+              onClick={() => setIsExpenseDrawerOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse"
+            >
+              <Plus className="w-4 h-4" />
+              <span>הוצאה חדשה</span>
+            </button>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+            <table className="w-full text-start border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                  <th className="py-3 px-4 text-start">תיאור</th>
+                  <th className="py-3 px-4 text-start">קטגוריה</th>
+                  <th className="py-3 px-4 text-start">תאריך</th>
+                  <th className="py-3 px-4 text-start">סכום</th>
+                  <th className="py-3 px-4 text-start">אמצעי תשלום</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {expenses.length === 0 ? (
+                  <tr><td colSpan={5} className="py-8 text-center text-slate-500">אין הוצאות רשומות.</td></tr>
+                ) : (
+                  expenses.map(e => (
+                    <tr key={e.id} className="hover:bg-slate-800/40">
+                      <td className="py-3 px-4 font-bold text-white">{e.description}</td>
+                      <td className="py-3 px-4 text-slate-300">{e.category || '-'}</td>
+                      <td className="py-3 px-4 text-slate-300 font-mono">{e.expense_date || '-'}</td>
+                      <td className="py-3 px-4 font-bold text-rose-400">₪{e.amount}</td>
+                      <td className="py-3 px-4 text-slate-400">{e.payment_method || '-'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add Payment Drawer */}
+      <Drawer
+        isOpen={isPaymentDrawerOpen}
+        onClose={() => setIsPaymentDrawerOpen(false)}
+        title="רישום תשלום חדש"
+        footer={
+          <>
+            <button onClick={() => setIsPaymentDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800">ביטול</button>
+            <button onClick={handleCreatePayment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">
+              {isSubmitting ? 'שומר...' : 'שמור תשלום'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreatePayment} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">לקוח *</label>
+            <select required value={payPatientId} onChange={e => setPayPatientId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+              <option value="">בחר לקוח...</option>
+              {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">סכום (₪) *</label>
+            <input type="number" required step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="350" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">אמצעי תשלום</label>
+            <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+              <option value="PayBox">PayBox</option>
+              <option value="תשלום במקום">תשלום במקום</option>
+              <option value="Credit Card">כרטיס אשראי</option>
+              <option value="Bank Transfer">העברה בנקאית</option>
+              <option value="Cash">מזומן</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס תשלום</label>
+            <select value={payStatus} onChange={e => setPayStatus(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+              <option value="paid">שולם</option>
+              <option value="pending">ממתין לגבייה</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">תאריך</label>
+            <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+          </div>
+        </form>
+      </Drawer>
+
+      {/* Add Expense Drawer */}
+      <Drawer
+        isOpen={isExpenseDrawerOpen}
+        onClose={() => setIsExpenseDrawerOpen(false)}
+        title="רישום הוצאה חדשה"
+        footer={
+          <>
+            <button onClick={() => setIsExpenseDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800">ביטול</button>
+            <button onClick={handleCreateExpense} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">
+              {isSubmitting ? 'שומר...' : 'שמור הוצאה'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateExpense} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">תיאור ההוצאה *</label>
+            <input type="text" required value={expDescription} onChange={e => setExpDescription(e.target.value)} placeholder="ציוד קליני / פרסום..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">קטגוריה</label>
+            <input type="text" value={expCategory} onChange={e => setExpCategory(e.target.value)} placeholder="ציוד / שיווק / תפעול" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">סכום (₪) *</label>
+            <input type="number" required step="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="150" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">תאריך</label>
+            <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
-};
-
-export default FinanceView;
+}

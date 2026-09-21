@@ -3,6 +3,8 @@ import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
+import { useToast } from './ui/Toast';
+
 const FinancialManager = () => {
   const { 
     payments, 
@@ -22,6 +24,7 @@ const FinancialManager = () => {
   } = useContext(ClinicContext);
   
   const { t, language } = useContext(LanguageContext);
+  const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'income', 'expenses'
   const [statusFilter, setStatusFilter] = useState('all');
@@ -211,7 +214,7 @@ const FinancialManager = () => {
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
-      alert(t('Please enter a valid amount.', 'אנא הזן סכום תקין.'));
+      showToast(t('Please enter a valid amount.', 'אנא הזן סכום תקין.'), 'error');
       return;
     }
 
@@ -237,8 +240,11 @@ const FinancialManager = () => {
   };
 
   const handleDeletePayment = async (id) => {
-    if (window.confirm(t('Are you sure you want to delete this payment record?', 'האם אתה בטוח שברצונך למחוק תשלום זה?'))) {
+    try {
       await deletePayment(id);
+      showToast(t('Payment deleted', 'התשלום נמחק'));
+    } catch (err) {
+      showToast(err.message || 'שגיאה במחיקת תשלום', 'error');
     }
   };
 
@@ -269,11 +275,11 @@ const FinancialManager = () => {
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
     if (!expenseForm.title.trim()) {
-      alert(t('Please enter an expense title.', 'אנא הזן תיאור להוצאה.'));
+      showToast(t('Please enter an expense title.', 'אנא הזן תיאור להוצאה.'), 'error');
       return;
     }
     if (!expenseForm.amount || parseFloat(expenseForm.amount) <= 0) {
-      alert(t('Please enter a valid amount.', 'אנא הזן סכום תקין.'));
+      showToast(t('Please enter a valid amount.', 'אנא הזן סכום תקין.'), 'error');
       return;
     }
 
@@ -296,8 +302,11 @@ const FinancialManager = () => {
   };
 
   const handleDeleteExpense = async (id) => {
-    if (window.confirm(t('Are you sure you want to delete this expense record?', 'האם אתה בטוח שברצונך למחוק הוצאה זו?'))) {
+    try {
       await deleteExpense(id);
+      showToast(t('Expense deleted', 'ההוצאה נמחקה'));
+    } catch (err) {
+      showToast(err.message || 'שגיאה במחיקת הוצאה', 'error');
     }
   };
 

@@ -19,7 +19,6 @@ export const ClinicProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [contentItems, setContentItems] = useState([]);
-  const [performanceList, setPerformanceList] = useState([]);
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [forms, setForms] = useState([]);
@@ -47,39 +46,16 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
-  // Supabase Auth Initialization (Server-bootstrapped owner session)
+  // Supabase Auth Initialization (Strict Secure Session check)
+  // Temporary No-Login Mode: Fetch live DB data immediately on mount without auth session
   useEffect(() => {
     let isMounted = true;
 
-    async function initAuth() {
+    async function init() {
       try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        
-        if (existingSession && isMounted) {
-          setSession(existingSession);
-          setUser(existingSession.user ?? null);
-          setIsLoading(false);
-          return;
-        }
-
-        // Server-side owner session bootstrap via /api/owner-session
-        const res = await fetch('/api/owner-session');
-        if (res.ok) {
-          const body = await res.json();
-          if (body.session?.access_token && body.session?.refresh_token) {
-            const { data } = await supabase.auth.setSession({
-              access_token: body.session.access_token,
-              refresh_token: body.session.refresh_token
-            });
-
-            if (data?.session && isMounted) {
-              setSession(data.session);
-              setUser(data.session.user ?? null);
-            }
-          }
-        }
+        await fetchInitialData();
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Error fetching initial data on mount:", err);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -87,25 +63,11 @@ export const ClinicProvider = ({ children }) => {
       }
     }
 
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session && isMounted) {
-        setSession(session);
-        setUser(session.user ?? null);
-      }
-      setIsLoading(false);
-    });
+    init();
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
-  }, []);
-
-  // Fetch complete OP OS dataset on component mount
-  useEffect(() => {
-    fetchInitialData();
   }, []);
 
   const mapBookingSettingsFromDb = (dbRow) => {
@@ -141,7 +103,7 @@ export const ClinicProvider = ({ children }) => {
     try {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, projectsRes, contentItemsRes, perfListRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes
+        tasksRes, projectsRes, contentItemsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes
       ] = await Promise.all([
         supabase.from('people').select('*'),
         supabase.from('patients').select('*'),
@@ -151,7 +113,6 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('tasks').select('*'),
         supabase.from('projects').select('*'),
         supabase.from('content_items').select('*'),
-        supabase.from('performance_list').select('*'),
         supabase.from('payments').select('*'),
         supabase.from('forms').select('*'),
         supabase.from('form_submissions').select('*'),
@@ -170,7 +131,6 @@ export const ClinicProvider = ({ children }) => {
       if (tasksRes.data) setTasks(tasksRes.data);
       if (projectsRes.data) setProjects(projectsRes.data);
       if (contentItemsRes.data) setContentItems(contentItemsRes.data);
-      if (perfListRes.data) setPerformanceList(perfListRes.data);
       if (paymentsRes.data) setPayments(paymentsRes.data);
       if (formsRes.data) setForms(formsRes.data);
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
@@ -209,7 +169,6 @@ export const ClinicProvider = ({ children }) => {
     setTasks([]);
     setProjects([]);
     setContentItems([]);
-    setPerformanceList([]);
     setPayments([]);
     setExpenses([]);
   };
@@ -1176,7 +1135,7 @@ export const ClinicProvider = ({ children }) => {
       session, user, signOut, isLoading,
       people, upsertPerson, getPersonName,
       patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
-      tasks, projects, contentItems, performanceList, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages,
+      tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages,
 
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead,

@@ -1,135 +1,222 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
-import { LanguageContext } from '../context/LanguageContext';
 import AppointmentManager from './AppointmentManager';
+import Drawer from './ui/Drawer';
+import { useToast } from './ui/Toast';
+import { ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 
-const CalendarView = ({ initialTab = 'grid' }) => {
+export default function CalendarView({ initialTab = 'grid' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
-  const { appointments, getPatientName, getServiceName } = useContext(ClinicContext);
-  const { t } = useContext(LanguageContext);
+  const { 
+    appointments, 
+    services, 
+    patients, 
+    businessHours, 
+    addAppointment,
+    getPatientName, 
+    getServiceName 
+  } = useContext(ClinicContext);
 
-  const days = [
-    t('Sunday', 'ראשון'), t('Monday', 'שני'), t('Tuesday', 'שלישי'), 
-    t('Wednesday', 'רביעי'), t('Thursday', 'חמישי'), t('Friday', 'שישי'), t('Saturday', 'שבת')
-  ];
-  
-  const hours = Array.from({length: 10}, (_, i) => i + 9); // 9:00 to 18:00
+  const { showToast } = useToast();
 
-  const handleSyncClick = () => {
-    alert(t("Google Calendar Sync coming soon!", "סנכרון עם יומן גוגל (Google Calendar) יגיע בקרוב!"));
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+
+  // New Appointment Form State
+  const [patientId, setPatientId] = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [apptDate, setApptDate] = useState(new Date().toISOString().split('T')[0]);
+  const [apptTime, setApptTime] = useState('10:00');
+  const [notes, setNotes] = useState('');
+  const [status, setStatus] = useState('scheduled');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Calculate Week Days starting from Sunday
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 is Sunday
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - currentDay + (currentWeekOffset * 7));
+
+    const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
+      const dayStr = `${d.getDate()}/${d.getMonth() + 1}`;
+      const isoStr = d.toISOString().split('T')[0];
+      return {
+        dayName: dayNames[i],
+        dayStr,
+        isoStr,
+        dateObj: d,
+        dayIndex: i
+      };
+    });
+  }, [currentWeekOffset]);
+
+  // Derive operating hours from businessHours context
+  const operatingHours = useMemo(() => {
+    const openHours = businessHours.filter(h => h.isOpen);
+    let start = 9;
+    let end = 18;
+
+    if (openHours.length > 0) {
+      const startTimes = openHours.map(h => parseInt(h.startTime.split(':')[0], 10));
+      const endTimes = openHours.map(h => parseInt(h.endTime.split(':')[0], 10));
+      start = Math.min(...startTimes);
+      end = Math.max(...endTimes);
+    }
+    return Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i);
+  }, [businessHours]);
+
+  const weekRangeLabel = useMemo(() => {
+    if (weekDays.length < 7) return '';
+    const startStr = `${weekDays[0].dateObj.getDate()} ב${weekDays[0].dateObj.toLocaleString('he-IL', { month: 'long' })}`;
+    const endStr = `${weekDays[6].dateObj.getDate()} ב${weekDays[6].dateObj.toLocaleString('he-IL', { month: 'long' })}`;
+    return `${startStr} – ${endStr}`;
+  }, [weekDays]);
+
+  const handleCreateAppointment = async (e) => {
+    e.preventDefault();
+    if (!patientId || !serviceId) {
+      showToast('אנא בחר לקוח ושירות', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const fullDateTime = `${apptDate}T${apptTime}:00`;
+      await addAppointment({
+        patient_id: patientId,
+        service_id: serviceId,
+        appointment_date: new Date(fullDateTime).toISOString(),
+        status,
+        notes
+      });
+      showToast('התור נקבע בהצלחה');
+      setIsAddDrawerOpen(false);
+      setNotes('');
+    } catch (err) {
+      showToast(err.message || 'שגיאה בקביעת תור', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6 text-start">
-      {/* Header & Sub-Tabs */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            {t('Sessions & Appointments', 'יומן מפגשים ותורים')}
-          </h2>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            {t('View schedule grid, manage therapy sessions and client appointments.', 'צפה בלוח הזמנים השבועי, נהל מפגשים וסדרות טיפול.')}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Sub-Tabs Switcher */}
-          <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 border border-slate-200">
+    <div className="space-y-4 dir-rtl text-start font-sans">
+      {/* Top Header & Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+        <div className="flex items-center space-x-3 space-x-reverse">
+          {/* Tabs */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setActiveTab('grid')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'grid'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>{t('Calendar Grid', 'תצוגת יומן')}</span>
+              יומן
             </button>
-
             <button
               onClick={() => setActiveTab('list')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'list'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              <span>{t('Sessions List', 'רשימת מפגשים')}</span>
+              רשימת תורים
             </button>
           </div>
 
+          {/* Week Navigation */}
           {activeTab === 'grid' && (
-            <button onClick={handleSyncClick} className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-1.5 px-3.5 rounded-xl shadow-sm transition-colors flex items-center gap-2 text-xs">
-              <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12z" fill="#fff"/>
-                <path d="M12.446 11.238l-4.14-4.14c-1.303 1.303-1.63 3.23-.742 4.887l3.87 3.87c.928-.277 1.636-1.045 1.83-2.002.138-.675.05-1.378-.234-1.996l-.584-.62z" fill="#fbbc05"/>
-                <path d="M17.067 15.35c.677-.87.876-1.986.533-3.033l-5.154-5.153c-1.28.31-2.223 1.385-2.454 2.68l4.475 4.475c.983.336 2.06.18 2.6-.97z" fill="#ea4335"/>
-                <path d="M10.134 18.068l4.637-4.636c1.192.518 2.61.168 3.42-1.01l-6.84 6.84c-1.066.046-2.072-.375-2.73-1.156l1.513-1.038z" fill="#34a853"/>
-                <path d="M14.77 8.432c-1.192-.518-2.61-.168-3.42 1.01L18.19 2.6c-2.316-2.128-5.836-2.247-8.293-.277L4.172 8.046c-1.634 1.815-1.957 4.542-.782 6.56l7.4-7.4c.54-.78 1.48-1.22 2.443-1.127l1.536-1.01z" fill="#4285f4"/>
-              </svg>
-              <span>{t('Sync Google', 'סנכרן גוגל')}</span>
-            </button>
+            <div className="flex items-center space-x-2 space-x-reverse bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs text-white font-medium">
+              <button
+                onClick={() => setCurrentWeekOffset(prev => prev - 1)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <span className="px-2 font-bold">{weekRangeLabel}</span>
+              <button
+                onClick={() => setCurrentWeekOffset(prev => prev + 1)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {currentWeekOffset !== 0 && (
+                <button
+                  onClick={() => setCurrentWeekOffset(0)}
+                  className="mr-2 text-[11px] text-emerald-400 hover:underline font-bold"
+                >
+                  היום
+                </button>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Primary Action Button */}
+        <button
+          onClick={() => setIsAddDrawerOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>תור חדש</span>
+        </button>
       </div>
 
-      {/* Main Content Body */}
+      {/* Grid or List View */}
       {activeTab === 'grid' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] border-collapse text-start">
+            <table className="w-full min-w-[750px] border-collapse text-start">
               <thead>
-                <tr>
-                  <th className="py-3 px-4 bg-slate-50 border-b border-s border-slate-100 w-24 text-center text-xs font-bold text-slate-400 uppercase">{t('Time', 'שעה')}</th>
-                  {days.map(day => (
-                    <th key={day} className="py-3 px-4 bg-slate-50 border-b border-s border-slate-100 text-center text-xs font-semibold text-slate-700 w-[14%]">
-                      {day}
+                <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                  <th className="py-2.5 px-3 border-l border-slate-800 w-20 text-center">שעה</th>
+                  {weekDays.map(day => (
+                    <th key={day.isoStr} className="py-2.5 px-3 border-l border-slate-800 text-center w-[13.5%]">
+                      <div>{day.dayName}</div>
+                      <div className="text-[10px] font-normal text-slate-500">{day.dayStr}</div>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {hours.map(hour => (
-                  <tr key={hour} className="group">
-                    <td className="py-4 px-2 border-b border-s border-slate-100 text-center text-xs font-bold text-slate-400 bg-slate-50/40">
-                      {hour}:00
+              <tbody className="divide-y divide-slate-800/60 text-xs">
+                {operatingHours.map(hour => (
+                  <tr key={hour} className="h-16">
+                    <td className="py-2 px-2 border-l border-slate-800 text-center text-slate-400 font-mono text-[11px] bg-slate-950/40">
+                      {hour < 10 ? `0${hour}:00` : `${hour}:00`}
                     </td>
-                    {days.map((day, idx) => {
+                    {weekDays.map(day => {
                       const dayAppts = appointments.filter(a => {
                         const d = new Date(a.appointment_date);
-                        return d.getHours() === hour && (d.getDay() === idx);
+                        return d.getHours() === hour && d.toISOString().split('T')[0] === day.isoStr;
                       });
 
                       return (
-                        <td key={`${hour}-${day}`} className="border-b border-s border-slate-100 relative h-20 p-1 hover:bg-slate-50 transition-colors">
+                        <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-800 p-1 relative hover:bg-slate-800/30 transition-colors">
                           {dayAppts.map(appt => {
                             const isCompleted = appt.status === 'completed';
                             return (
-                              <div key={appt.id} className={`absolute inset-x-1 top-1 bottom-1 p-2 rounded-xl border text-xs overflow-hidden flex flex-col justify-between shadow-sm cursor-pointer ${
-                                isCompleted 
-                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
-                                  : 'bg-blue-50 border-blue-200 text-blue-900'
-                              }`}>
-                                <div>
-                                  <p className="font-bold truncate text-start">{getPatientName(appt.patient_id)}</p>
-                                  <p className="truncate font-medium text-[11px] mt-0.5 text-start">{getServiceName(appt.service_id)}</p>
-                                </div>
-                                <span className={`text-[9px] uppercase font-bold tracking-wider mt-1 text-start ${
-                                  isCompleted ? 'text-emerald-700' : 'text-blue-700'
-                                }`}>
-                                  {isCompleted ? t('Done', 'בוצע') : t('Scheduled', 'מתוכנן')}
-                                </span>
+                              <div
+                                key={appt.id}
+                                className={`p-1.5 rounded-lg border text-[11px] space-y-0.5 ${
+                                  isCompleted
+                                    ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200'
+                                    : 'bg-slate-800 border-slate-700 text-slate-100'
+                                }`}
+                              >
+                                <div className="font-bold truncate">{getPatientName(appt.patient_id)}</div>
+                                <div className="text-[10px] text-slate-400 truncate">{getServiceName(appt.service_id)}</div>
                               </div>
-                            )
+                            );
                           })}
                         </td>
-                      )
+                      );
                     })}
                   </tr>
                 ))}
@@ -140,8 +227,105 @@ const CalendarView = ({ initialTab = 'grid' }) => {
       ) : (
         <AppointmentManager />
       )}
+
+      {/* Add Appointment Drawer */}
+      <Drawer
+        isOpen={isAddDrawerOpen}
+        onClose={() => setIsAddDrawerOpen(false)}
+        title="קביעת תור חדש"
+        footer={
+          <>
+            <button
+              onClick={() => setIsAddDrawerOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={handleCreateAppointment}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {isSubmitting ? 'שומר...' : 'קבע תור'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateAppointment} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">לקוח *</label>
+            <select
+              required
+              value={patientId}
+              onChange={e => setPatientId(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            >
+              <option value="">בחר לקוח...</option>
+              {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">שירות *</label>
+            <select
+              required
+              value={serviceId}
+              onChange={e => setServiceId(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            >
+              <option value="">בחר שירות...</option>
+              {services.map(s => <option key={s.id} value={s.id}>{s.name} (₪{s.price})</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך</label>
+              <input
+                type="date"
+                value={apptDate}
+                onChange={e => setApptDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">שעה</label>
+              <input
+                type="time"
+                value={apptTime}
+                onChange={e => setApptTime(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס תור</label>
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            >
+              <option value="scheduled">מתוכנן</option>
+              <option value="confirmed">מאושר</option>
+              <option value="completed">הושלם</option>
+              <option value="cancelled">מבוטל</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">הערות</label>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="הערות לתור..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            />
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
-};
-
-export default CalendarView;
+}

@@ -2,9 +2,12 @@ import React, { useState, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
+import { useToast } from './ui/Toast';
+
 const ServicesCatalog = () => {
   const { services = [], addService, updateService, deleteService } = useContext(ClinicContext);
   const { t } = useContext(LanguageContext);
+  const { showToast } = useToast();
 
   const [activeTypeFilter, setActiveTypeFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,15 +52,18 @@ const ServicesCatalog = () => {
   };
 
   const handleDeleteItem = async (id) => {
-    if (window.confirm(t('Are you sure you want to delete this catalog item?', 'האם אתה בטוח שברצונך למחוק פריט זה מהקטלוג?'))) {
+    try {
       await deleteService(id);
+      showToast(t('Item deleted successfully', 'הפריט נמחק בהצלחה'));
+    } catch (err) {
+      showToast(err.message || 'שגיאה במחיקת פריט', 'error');
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.default_price) {
-      alert(t('Please enter item name and price.', 'אנא מלא שם פריט ומחיר.'));
+      showToast(t('Please enter item name and price.', 'אנא מלא שם פריט ומחיר.'), 'error');
       return;
     }
 
@@ -202,7 +208,7 @@ const ServicesCatalog = () => {
                     <span>⏱️ {item.duration_minutes || 30} {t('minutes', 'דקות')}</span>
                   )}
 
-                  {/* Edit & Delete Action Buttons */}
+                  {/* Edit Action Button */}
                   <div className="flex items-center gap-1.5">
                     <button 
                       onClick={() => openEditModal(item)}
@@ -210,13 +216,6 @@ const ServicesCatalog = () => {
                       title={t('Edit Item', 'ערוך פריט')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                      title={t('Delete Item', 'מחק פריט')}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                   </div>
                 </div>

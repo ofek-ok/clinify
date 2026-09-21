@@ -2,9 +2,12 @@ import React, { useState, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 
+import { useToast } from './ui/Toast';
+
 const FormBuilder = ({ navigate }) => {
   const { addForm } = useContext(ClinicContext);
   const { t } = useContext(LanguageContext);
+  const { showToast } = useToast();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -29,10 +32,11 @@ const FormBuilder = ({ navigate }) => {
   };
 
   const handleSave = async () => {
-    if(!title.trim()) return alert(t('Please enter a form title.', 'אנא הזן כותרת לטופס.'));
-    if(fields.length === 0) return alert(t('Please add at least one field.', 'אנא הוסף לפחות שדה אחד.'));
+    if(!title.trim()) return showToast(t('Please enter a form title.', 'אנא הזן כותרת לטופס.'), 'error');
+    if(fields.length === 0) return showToast(t('Please add at least one field.', 'אנא הוסף לפחות שדה אחד.'), 'error');
 
     await addForm({ title, description, fields });
+    showToast(t('Form created successfully', 'הטופס נוצר בהצלחה'));
     navigate('forms');
   };
 

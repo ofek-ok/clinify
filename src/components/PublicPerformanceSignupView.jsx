@@ -14,7 +14,6 @@ const PublicPerformanceSignupView = () => {
   const [status, setStatus] = useState({ isSubmitting: false, isSuccess: false, error: null });
 
   useEffect(() => {
-    // Parse URL search parameters for UTM tracking
     const params = new URLSearchParams(window.location.search);
     setFormData(prev => ({
       ...prev,
@@ -34,7 +33,7 @@ const PublicPerformanceSignupView = () => {
     setStatus({ isSubmitting: true, isSuccess: false, error: null });
 
     try {
-      const { data, error } = await supabase.rpc('public_subscribe_performance_list', {
+      const { error } = await supabase.rpc('public_subscribe_performance_list', {
         p_full_name: formData.full_name,
         p_email: formData.email || null,
         p_phone: formData.phone || null,
@@ -49,49 +48,46 @@ const PublicPerformanceSignupView = () => {
 
       setStatus({ isSubmitting: false, isSuccess: true, error: null });
     } catch (err) {
-      console.error("Performance list signup error:", err);
-      setStatus({ isSubmitting: false, isSuccess: false, error: err.message || 'אירעה שגיאה בעת ההרשמה. אנא נסה שוב.' });
+      console.error("Public signup error:", err);
+      setStatus({ isSubmitting: false, isSuccess: false, error: 'אירעה שגיאה בעת ההרשמה. אנא נסה שוב.' });
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-4 dir-rtl text-start font-sans">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-        {/* Glow Header Accent */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500"></div>
-
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl relative overflow-hidden">
         <div className="text-center mb-8">
-          <span className="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
-            Okonski Performance • Pre-Launch
+          <span className="inline-block px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 rounded-full text-xs font-semibold mb-3">
+            Okonski Performance
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
-            הצטרפו לרשימת הביצועים
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
+            הצטרפות לעדכונים
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm">
-            קבלו גישה מוקדמת, תכנים בלעדיים וליווי ביצועי מותאם אישית.
+            אני רוצה לקבל עדכון כשהטיפולים נפתחים ולקבל גישה מוקדמת.
           </p>
         </div>
 
         {status.isSuccess ? (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 text-center space-y-3 animate-in zoom-in-95 duration-300">
-            <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 text-center space-y-2">
+            <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
               ✓
             </div>
-            <h3 className="text-xl font-bold text-emerald-400">ההרשמה הושלמה בהצלחה!</h3>
+            <h3 className="text-lg font-bold text-white">ההרשמה התקבלה בהצלחה!</h3>
             <p className="text-xs text-slate-300">
-              פרטיכם נשמרו בהצלחה ברשימת הביצועים של Okonski Performance. נשתמע בקרוב!
+              תודה רבה. נעדכן אותך ברגע שההרשמה לטיפולים תיפתח.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {status.error && (
-              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs">
+              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-lg text-xs">
                 {status.error}
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-slate-400 mb-1">
                 שם מלא *
               </label>
               <input 
@@ -100,12 +96,12 @@ const PublicPerformanceSignupView = () => {
                 onChange={e => setFormData({ ...formData, full_name: e.target.value })} 
                 required 
                 placeholder="לדוגמה: אופק אוקונסקי" 
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm text-white placeholder-slate-600 transition-all" 
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-slate-600 outline-none text-sm text-white placeholder-slate-600 transition-colors" 
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-slate-400 mb-1">
                 דואר אלקטרוני
               </label>
               <input 
@@ -113,12 +109,12 @@ const PublicPerformanceSignupView = () => {
                 value={formData.email} 
                 onChange={e => setFormData({ ...formData, email: e.target.value })} 
                 placeholder="name@domain.com" 
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm text-white placeholder-slate-600 transition-all" 
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-slate-600 outline-none text-sm text-white placeholder-slate-600 transition-colors" 
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-slate-400 mb-1">
                 מספר טלפון
               </label>
               <input 
@@ -126,7 +122,7 @@ const PublicPerformanceSignupView = () => {
                 value={formData.phone} 
                 onChange={e => setFormData({ ...formData, phone: e.target.value })} 
                 placeholder="050-0000000" 
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm text-white placeholder-slate-600 transition-all" 
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-slate-600 outline-none text-sm text-white placeholder-slate-600 transition-colors" 
               />
             </div>
 
@@ -134,15 +130,11 @@ const PublicPerformanceSignupView = () => {
               <button 
                 type="submit" 
                 disabled={status.isSubmitting} 
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all active:scale-[0.98] text-sm"
+                className="w-full bg-white hover:bg-slate-100 disabled:opacity-50 text-slate-900 font-bold py-3 px-4 rounded-lg transition-colors text-xs"
               >
-                {status.isSubmitting ? 'שולח הרשמה...' : 'הצטרף ל-Performance List 🚀'}
+                {status.isSubmitting ? 'שולח...' : 'אני רוצה לקבל עדכון'}
               </button>
             </div>
-
-            <p className="text-[11px] text-slate-500 text-center mt-4">
-              בלחיצה על הרשמה הנך מסכים/ה לקבלת עדכונים ותכנים מ-Okonski Performance.
-            </p>
           </form>
         )}
       </div>

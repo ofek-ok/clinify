@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
-import { LanguageContext } from '../context/LanguageContext';
 import ServicesCatalog from './ServicesCatalog';
-import FormManager from './FormManager';
-import FormBuilder from './FormBuilder';
+import { useToast } from './ui/Toast';
+import { Copy, ExternalLink, Upload } from 'lucide-react';
 
-const BusinessSettings = ({ navigate, activeFormSubTab }) => {
-  const [activeTab, setActiveTab] = useState(activeFormSubTab || 'hours');
+export default function BusinessSettings({ activeFormSubTab }) {
+  const [activeTab, setActiveTab] = useState(activeFormSubTab || 'services');
   const { businessHours, updateBusinessHour, bookingSettings, updateBookingSettings } = useContext(ClinicContext);
-  const { t } = useContext(LanguageContext);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (activeFormSubTab) {
@@ -19,7 +18,7 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
   const copyBookingLink = () => {
     const link = `${window.location.origin}/book`;
     navigator.clipboard.writeText(link);
-    alert(t('Public Booking link copied to clipboard!', 'הקישור הציבורי לזימון תורים הועתק ללוח!'));
+    showToast('הקישור הציבורי לזימון תורים הועתק ללוח');
   };
 
   const handleLogoUpload = (e) => {
@@ -28,6 +27,7 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         updateBookingSettings({ logoUrl: reader.result });
+        showToast('הלוגו עודכן');
       };
       reader.readAsDataURL(file);
     }
@@ -35,142 +35,96 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
 
   const getDayName = (dayOfWeek) => {
     const dayMap = {
-      'Sunday': t('Sunday', 'ראשון'),
-      'Monday': t('Monday', 'שני'),
-      'Tuesday': t('Tuesday', 'שלישי'),
-      'Wednesday': t('Wednesday', 'רביעי'),
-      'Thursday': t('Thursday', 'חמישי'),
-      'Friday': t('Friday', 'שישי'),
-      'Saturday': t('Saturday', 'שבת')
+      'Sunday': 'ראשון',
+      'Monday': 'שני',
+      'Tuesday': 'שלישי',
+      'Wednesday': 'רביעי',
+      'Thursday': 'חמישי',
+      'Friday': 'שישי',
+      'Saturday': 'שבת'
     };
     return dayMap[dayOfWeek] || dayOfWeek;
   };
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6 text-start">
-      {/* Settings Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:px-6 sm:py-5 rounded-2xl border border-slate-100 shadow-sm">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            {t('Business Settings Hub', 'מרכז הגדרות ותשתית')}
-          </h2>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {t('Manage clinic operating hours, booking portal features, services catalog, and forms.', 'נהל שעות פעילות, הגדרות דף זימון ציבורי, קטלוג שירותים וטפסים.')}
-          </p>
-        </div>
+    <div className="space-y-6 dir-rtl text-start font-sans">
+      {/* Settings Header */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <h1 className="text-xl font-bold text-white tracking-tight">הגדרות</h1>
 
-        {/* Settings Navigation Tabs */}
-        <div className="flex flex-wrap bg-slate-100/80 p-1.5 rounded-xl border border-slate-200/60 shrink-0 gap-1">
-          <button
-            onClick={() => setActiveTab('hours')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-              activeTab === 'hours'
-                ? 'bg-white text-emerald-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{t('Operating Hours', 'שעות פעילות')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('bookingPortal')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-              activeTab === 'bookingPortal'
-                ? 'bg-white text-emerald-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>{t('Public Booking Page', 'דף זימון ציבורי')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('services')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-              activeTab === 'services'
-                ? 'bg-white text-emerald-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            <span>{t('Services Catalog', 'קטלוג שירותים')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('forms')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-              activeTab === 'forms' || activeTab === 'formBuilder'
-                ? 'bg-white text-emerald-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>{t('Forms Manager', 'ניהול טפסים')}</span>
-          </button>
+        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+          {[
+            { id: 'services', label: 'שירותים' },
+            { id: 'hours', label: 'שעות פעילות' },
+            { id: 'bookingPortal', label: 'זימון תורים' },
+            { id: 'businessDetails', label: 'פרטי העסק' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Tab Content */}
       <div className="pt-2">
-        
-        {/* TAB 1: Business Hours */}
+        {/* TAB 1: Services */}
+        {activeTab === 'services' && <ServicesCatalog />}
+
+        {/* TAB 2: Operating Hours */}
         {activeTab === 'hours' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
-                <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                {t('Operating Hours', 'שעות פעילות המרפאה')}
-              </h3>
-              <p className="text-sm text-slate-500 mt-1">{t('Set when the clinic is open for new appointments.', 'הגדר מתי הקליניקה פתוחה לקבלת תורים חדשים.')}</p>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs p-5 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-white">שעות פעילות העסק</h3>
+              <p className="text-xs text-slate-400 mt-0.5">הגדר מתי העסק פתוח לקבלת תורים חדשים.</p>
             </div>
-            
-            <div className="p-0">
-              <table className="w-full text-start border-collapse">
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-start border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="py-3 px-6 font-semibold border-b border-slate-100 text-start">{t('Day of Week', 'יום בשבוע')}</th>
-                    <th className="py-3 px-6 font-semibold border-b border-slate-100 text-center">{t('Open', 'פתוח')}</th>
-                    <th className="py-3 px-6 font-semibold border-b border-slate-100 text-start">{t('Start Time', 'שעת התחלה')}</th>
-                    <th className="py-3 px-6 font-semibold border-b border-slate-100 text-start">{t('End Time', 'שעת סיום')}</th>
+                  <tr className="bg-slate-950 border-b border-slate-800 text-slate-400">
+                    <th className="py-3 px-4 text-start font-bold">יום בשבוע</th>
+                    <th className="py-3 px-4 text-center font-bold">פתוח</th>
+                    <th className="py-3 px-4 text-start font-bold">שעת התחלה</th>
+                    <th className="py-3 px-4 text-start font-bold">שעת סיום</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-800/60">
                   {businessHours.map(hour => (
-                    <tr key={hour.dayOfWeek} className={`transition-colors hover:bg-slate-50/50 ${!hour.isOpen ? 'opacity-60 bg-slate-50' : ''}`}>
-                      <td className="py-4 px-6 font-medium text-slate-700 text-start">{getDayName(hour.dayOfWeek)}</td>
-                      <td className="py-4 px-6 text-center">
-                        <input 
-                          type="checkbox" 
-                          checked={hour.isOpen} 
+                    <tr key={hour.dayOfWeek} className={`hover:bg-slate-800/40 ${!hour.isOpen ? 'opacity-50' : ''}`}>
+                      <td className="py-3 px-4 font-bold text-white">{getDayName(hour.dayOfWeek)}</td>
+                      <td className="py-3 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { isOpen: e.target.checked })}
-                          className="w-5 h-5 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                          className="w-4 h-4 text-emerald-500 bg-slate-950 border-slate-800 rounded focus:ring-emerald-500"
                         />
                       </td>
-                      <td className="py-4 px-6 text-start">
-                        <input 
-                          type="time" 
+                      <td className="py-3 px-4">
+                        <input
+                          type="time"
                           value={hour.startTime}
                           disabled={!hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { startTime: e.target.value })}
-                          className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                          className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white disabled:opacity-50 focus:outline-none"
                         />
                       </td>
-                      <td className="py-4 px-6 text-start">
-                        <input 
-                          type="time" 
+                      <td className="py-3 px-4">
+                        <input
+                          type="time"
                           value={hour.endTime}
                           disabled={!hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { endTime: e.target.value })}
-                          className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                          className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white disabled:opacity-50 focus:outline-none"
                         />
                       </td>
                     </tr>
@@ -181,179 +135,85 @@ const BusinessSettings = ({ navigate, activeFormSubTab }) => {
           </div>
         )}
 
-        {/* TAB 2: Public Booking Page Settings */}
+        {/* TAB 3: Booking Portal */}
         {activeTab === 'bookingPortal' && (
-          <div className="space-y-6">
-            
-            {/* Quick Share Link Box */}
-            <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-md">
+          <div className="space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-extrabold tracking-tight text-white">{t('Public Booking Page URL', 'קישור לעמוד הזימון העצמאי')}</h3>
-                <p className="text-slate-400 text-xs mt-1" dir="ltr">{window.location.origin}/book</p>
+                <h3 className="text-xs font-bold text-white">כתובת דף הזימון הציבורי</h3>
+                <p className="text-slate-400 text-xs font-mono dir-ltr text-right mt-0.5">{window.location.origin}/book</p>
               </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={copyBookingLink}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                  {t('Copy Link', 'העתק קישור ללוח')}
+              <div className="flex space-x-2 space-x-reverse">
+                <button onClick={copyBookingLink} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 space-x-reverse">
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>העתק קישור</span>
                 </button>
-                <a 
-                  href="/book" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center gap-2 border border-slate-700"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                  {t('Preview Portal', 'תצוגה מקדימה')}
+                <a href="/book" target="_blank" rel="noreferrer" className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1 space-x-reverse">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>תצוגה</span>
                 </a>
               </div>
             </div>
 
-            {/* Logo Upload Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
-              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
-                <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                {t('Clinic Logo Customization', 'לוגו הקליניקה (מוצג בדף קביעת התור)')}
-              </h3>
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-4">
+              <h3 className="text-xs font-bold text-white">הגדרות דף זימון תורים</h3>
               
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative group">
-                  {bookingSettings.logoUrl ? (
-                    <img src={bookingSettings.logoUrl} alt="Clinic Logo" className="w-full h-full object-cover" />
-                  ) : (
-                    <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                  )}
-                </div>
-
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Upload Logo File', 'העלה קובץ לוגו חדש')}</label>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('Or Image URL', 'או הדבק קישור לתמונה (URL)')}</label>
-                    <input 
-                      type="text" 
-                      placeholder="https://example.com/logo.png"
-                      value={bookingSettings.logoUrl || ''}
-                      onChange={e => updateBookingSettings({ logoUrl: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Configurable Features Controls */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-6">
-              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3">
-                {t('Configure Booking Link Capabilities', 'ניהול פיצ׳רים בעמוד הזימון הציבורי')}
-              </h3>
-
-              {/* Toggles */}
-              <div className="space-y-4">
-                
-                {/* Package Redemption Toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-50/70 rounded-xl border border-slate-200/60">
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{t('Allow Package / Punch-Card Redemption', 'מאפשר ניצול כרטיסיות/חבילות במעמד הזימון')}</p>
-                    <p className="text-slate-500 text-xs mt-0.5">{t('Existing patients with active sessions can book without paying.', 'מטופלים קיבלו כרטיסייה פעילה יוכלו לממש טיפול ללא חיוב נוסף.')}</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={bookingSettings.allowPackages} 
-                    onChange={e => updateBookingSettings({ allowPackages: e.target.checked })}
-                    className="w-5 h-5 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                </div>
-
-                {/* Pay at Clinic Toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-50/70 rounded-xl border border-slate-200/60">
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{t('Allow Pay at Clinic', 'אפשר תשלום במקום בקליניקה')}</p>
-                    <p className="text-slate-500 text-xs mt-0.5">{t('Patients can choose to pay via Cash/Bit at the appointment.', 'המטופל יוכל לבחור לשלם בקליניקה במקום תשלום מראש.')}</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={bookingSettings.allowPayAtClinic} 
-                    onChange={e => updateBookingSettings({ allowPayAtClinic: e.target.checked })}
-                    className="w-5 h-5 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                </div>
-
-                {/* Require Policy Acceptance Toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-50/70 rounded-xl border border-slate-200/60">
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{t('Require Cancellation Policy Acceptance', 'דרוש אישור מדיניות ביטולים')}</p>
-                    <p className="text-slate-500 text-xs mt-0.5">{t('Displays a mandatory checkbox for terms before completing booking.', 'מציג תיבת סימון של אישור התנאים ומדיניות הביטול.')}</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={bookingSettings.requirePolicy} 
-                    onChange={e => updateBookingSettings({ requirePolicy: e.target.checked })}
-                    className="w-5 h-5 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                </div>
-
-              </div>
-
-              {/* Text Fields Settings */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Welcome / Header Message', 'הודעת ברכה בראש הדף')}</label>
-                  <textarea 
-                    rows="3"
+                  <label className="block text-slate-400 mb-1">הודעת ברכה בדף</label>
+                  <textarea
+                    rows={3}
                     value={bookingSettings.welcomeMessage}
                     onChange={e => updateBookingSettings({ welcomeMessage: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Clinic Location & Arrival Instructions', 'כתובת הקליניקה והוראות הגעה')}</label>
-                  <textarea 
-                    rows="3"
-                    value={bookingSettings.clinicAddress}
-                    onChange={e => updateBookingSettings({ clinicAddress: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('Cancellation Policy Text', 'נוסח מדיניות הביטול')}</label>
-                  <textarea 
-                    rows="3"
+                  <label className="block text-slate-400 mb-1">נוסח מדיניות הביטול</label>
+                  <textarea
+                    rows={3}
                     value={bookingSettings.cancellationPolicyText}
                     onChange={e => updateBookingSettings({ cancellationPolicyText: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
                   />
                 </div>
               </div>
-
             </div>
           </div>
         )}
 
-        {activeTab === 'services' && <ServicesCatalog />}
-        {activeTab === 'forms' && <FormManager navigate={(target) => {
-          if (target === 'formBuilder') setActiveTab('formBuilder');
-          else if (navigate) navigate(target);
-        }} />}
-        {activeTab === 'formBuilder' && <FormBuilder navigate={(target) => {
-          if (target === 'forms') setActiveTab('forms');
-          else if (navigate) navigate(target);
-        }} />}
+        {/* TAB 4: Business Details */}
+        {activeTab === 'businessDetails' && (
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-4 text-xs">
+            <h3 className="text-xs font-bold text-white">פרטי העסק והמותג</h3>
+            
+            <div className="space-y-3 max-w-md">
+              <div>
+                <label className="block text-slate-400 mb-1">שם העסק הציבורי</label>
+                <input
+                  type="text"
+                  readOnly
+                  value="Okonski Performance"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1">לוגו העסק הציבורי</label>
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="text-xs text-slate-400 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default BusinessSettings;
+}

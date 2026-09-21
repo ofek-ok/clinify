@@ -64,7 +64,7 @@ const PublicFormView = () => {
       setSubmitted(true);
     } catch (err) {
       console.error("Form submission error:", err);
-      alert(t('Error submitting form. Please try again.', 'שגיאה בשליחת הטופס. אנא נסה שנית.'));
+      setError(t('Error submitting form. Please try again.', 'שגיאה בשליחת הטופס. אנא נסה שנית.'));
     } finally {
       setIsSubmitting(false);
     }
