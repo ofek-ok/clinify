@@ -950,8 +950,26 @@ export const ClinicProvider = ({ children }) => {
       setPayments(prev => [...prev, createdPayment]);
 
       if (createdPayment.status === 'paid' && createdPayment.appointment_id) {
-        const appt = appointments.find(a => a.id === createdPayment.appointment_id);
-        if (appt && appt.status === 'completed') {
+        let appt = appointments.find(a => a.id === createdPayment.appointment_id) || null;
+
+        // Completing a session and recording its payment happen back-to-back in the UI.
+        // React state may still contain the pre-completion appointment status, so verify
+        // the source of truth before deciding whether customer conversion is eligible.
+        if (!appt || appt.status !== 'completed') {
+          const { data: dbAppointment, error: appointmentLookupError } = await supabase
+            .from('appointments')
+            .select('id, status, person_id, patient_id')
+            .eq('id', createdPayment.appointment_id)
+            .maybeSingle();
+
+          if (appointmentLookupError) {
+            console.error("Error checking appointment after payment:", appointmentLookupError);
+          } else if (dbAppointment) {
+            appt = dbAppointment;
+          }
+        }
+
+        if (appt?.status === 'completed') {
           let conversionPersonId = createdPayment.person_id || appt.person_id || null;
 
           if (!conversionPersonId && appt.patient_id) {
@@ -1354,17 +1372,20 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
-  const addPatientDocument = async (patientId, docName, docUrl = '#') => {
+  const addPatientDocument = async (patientId, docName, docUrl) => {
     const patient = patients.find(p => p.id === patientId);
-    const personId = patient ? patient.person_id : null;
+    if (!patient) throw new Error('לא נמצא תיק טיפולי תקין');
+    if (!docName?.trim()) throw new Error('שם המסמך נדרש');
+    if (!docUrl || docUrl === '#') {
+      throw new Error('יש לצרף קישור או קובץ אמיתי לפני שמירת מסמך');
+    }
 
     const newDoc = {
-      person_id: personId,
+      person_id: patient.person_id || null,
       patient_id: patientId,
-      name: docName,
+      name: docName.trim(),
       file_url: docUrl,
-      file_size: '1.2 MB',
-      uploaded_at: new Date().toISOString().split('T')[0]
+      uploaded_at: todayStr
     };
     const { data, error } = await supabase.from('patient_documents').insert([newDoc]).select();
     if (error) {
