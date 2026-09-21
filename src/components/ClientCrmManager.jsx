@@ -5,7 +5,7 @@ import { ClinicContext } from '../context/ClinicContext';
 
 export default function ClientCrmManager({ initialTab = 'leads' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
-  const { leads = [], patients = [] } = useContext(ClinicContext);
+  const { leads = [], people = [] } = useContext(ClinicContext);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -17,8 +17,8 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
   );
 
   const customersCount = useMemo(
-    () => patients.filter(patient => patient.client_status === 'customer').length,
-    [patients]
+    () => people.filter(person => person.client_status === 'customer').length,
+    [people]
   );
 
   return (
