@@ -38,7 +38,9 @@ export default function CalendarView({ initialTab = 'grid' }) {
   const { 
     appointments, 
     services, 
-    patients, 
+    patients,
+    people,
+    leads, 
     businessHours, 
     addAppointment,
     getPatientName, 
@@ -52,7 +54,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
 
   // New Appointment Form State
-  const [patientId, setPatientId] = useState('');
+  const [personId, setPersonId] = useState('');
   const [serviceId, setServiceId] = useState('');
   const [apptDate, setApptDate] = useState(getIsraelDateKey());
   const [apptTime, setApptTime] = useState('10:00');
@@ -61,6 +63,15 @@ export default function CalendarView({ initialTab = 'grid' }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedService = services.find(s => String(s.id) === String(serviceId));
+  const bookablePeople = useMemo(() => {
+    return people
+      .filter(person => {
+        if (person.client_status === 'customer') return true;
+        const lead = leads.find(item => item.person_id === person.id);
+        return lead && lead.status !== 'lost' && lead.status !== 'won';
+      })
+      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'he'));
+  }, [people, leads]);
   const availableSlots = useMemo(() => {
     if (!apptDate || !selectedService) return [];
     return getAvailableSlotsForDate(apptDate, Number(selectedService.duration_minutes || 30));
@@ -123,8 +134,8 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
-    if (!patientId || !serviceId) {
-      showToast('אנא בחר לקוח ושירות', 'error');
+    if (!personId || !serviceId) {
+      showToast('אנא בחר לקוח או ליד ושירות', 'error');
       return;
     }
     setIsSubmitting(true);
@@ -134,8 +145,10 @@ export default function CalendarView({ initialTab = 'grid' }) {
         return;
       }
       const fullDateTime = buildIsraelIsoTimestamp(apptDate, apptTime);
+      const linkedPatient = patients.find(patient => patient.person_id === personId);
       await addAppointment({
-        patient_id: patientId,
+        person_id: personId,
+        patient_id: linkedPatient?.id || null,
         service_id: serviceId,
         appointment_date: fullDateTime,
         status,
@@ -305,15 +318,19 @@ export default function CalendarView({ initialTab = 'grid' }) {
       >
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח / ליד *</label>
             <select
               required
-              value={patientId}
-              onChange={e => setPatientId(e.target.value)}
+              value={personId}
+              onChange={e => setPersonId(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
-              <option value="">בחר לקוח...</option>
-              {patients.filter(p => (p.status || 'active') === 'active').map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              <option value="">בחר לקוח או ליד...</option>
+              {bookablePeople.map(person => {
+                const lead = leads.find(item => item.person_id === person.id);
+                const suffix = person.client_status === 'customer' ? 'לקוח' : (lead?.status === 'scheduled' ? 'ליד · נקבע תור' : 'ליד');
+                return <option key={person.id} value={person.id}>{person.full_name} · {suffix}</option>;
+              })}
             </select>
           </div>
 
