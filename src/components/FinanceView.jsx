@@ -138,10 +138,10 @@ export default function FinanceView({ initialTab = 'overview' }) {
   return (
     <div className="space-y-6 dir-rtl text-start font-sans">
       {/* Header & Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <h1 className="text-xl font-bold text-white tracking-tight">כספים</h1>
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">כספים</h1>
 
-        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <div className="flex bg-white p-1 rounded-xl border border-slate-200">
           {[
             { id: 'overview', label: 'סקירה' },
             { id: 'income', label: 'הכנסות' },
@@ -153,7 +153,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab.id
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               {tab.label}
@@ -167,32 +167,32 @@ export default function FinanceView({ initialTab = 'overview' }) {
         <div className="space-y-6">
           {/* 4 Compact Current Month Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-slate-400 text-xs font-medium">הכנסות החודש</span>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-xs font-medium">הכנסות החודש</span>
               <p className="text-xl font-bold text-emerald-400">₪{currentMonthMetrics.incomeMonth.toLocaleString()}</p>
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-slate-400 text-xs font-medium">הוצאות החודש</span>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-xs font-medium">הוצאות החודש</span>
               <p className="text-xl font-bold text-rose-400">₪{currentMonthMetrics.expensesMonth.toLocaleString()}</p>
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-slate-400 text-xs font-medium">רווח החודש</span>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-xs font-medium">רווח החודש</span>
               <p className={`text-xl font-bold ${currentMonthMetrics.profitMonth >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 ₪{currentMonthMetrics.profitMonth.toLocaleString()}
               </p>
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-slate-400 text-xs font-medium">ממתין לגבייה</span>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-slate-500 text-xs font-medium">ממתין לגבייה</span>
               <p className="text-xl font-bold text-amber-400">₪{currentMonthMetrics.pendingCollection.toLocaleString()}</p>
             </div>
           </div>
 
           {/* Simple 6-Month Chart */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-            <h3 className="text-xs font-bold text-white">הכנסות מול הוצאות — 6 חודשים</h3>
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+            <h3 className="text-xs font-bold text-slate-900">הכנסות מול הוצאות — 6 חודשים</h3>
             <div className="h-64 w-full dir-ltr">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
@@ -211,8 +211,8 @@ export default function FinanceView({ initialTab = 'overview' }) {
       {/* INCOME TAB */}
       {activeTab === 'income' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-xs text-slate-400">רשימת הכנסות ותשלומים</span>
+          <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
+            <span className="text-xs text-slate-500">רשימת הכנסות ותשלומים</span>
             <button
               onClick={() => setIsPaymentDrawerOpen(true)}
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse"
@@ -222,10 +222,10 @@ export default function FinanceView({ initialTab = 'overview' }) {
             </button>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <table className="w-full text-start border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <th className="py-3 px-4 text-start">לקוח</th>
                   <th className="py-3 px-4 text-start">תאריך</th>
                   <th className="py-3 px-4 text-start">סכום</th>
@@ -233,20 +233,20 @@ export default function FinanceView({ initialTab = 'overview' }) {
                   <th className="py-3 px-4 text-start">סטטוס</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-200">
                 {payments.length === 0 ? (
                   <tr><td colSpan={5} className="py-8 text-center text-slate-500">אין תשלומים רשומים.</td></tr>
                 ) : (
                   payments.map(p => {
                     const pat = patients.find(patient => patient.id === p.patient_id || patient.person_id === p.person_id);
                     return (
-                      <tr key={p.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-4 font-bold text-white">{pat ? pat.full_name : 'לקוח כללי'}</td>
-                        <td className="py-3 px-4 text-slate-300 font-mono">{p.payment_date || '-'}</td>
+                      <tr key={p.id} className="hover:bg-slate-100">
+                        <td className="py-3 px-4 font-bold text-slate-900">{pat ? pat.full_name : 'לקוח כללי'}</td>
+                        <td className="py-3 px-4 text-slate-700 font-mono">{p.payment_date || '-'}</td>
                         <td className="py-3 px-4 font-bold text-emerald-400">₪{p.amount}</td>
-                        <td className="py-3 px-4 text-slate-400">{p.payment_method === 'PayBox' ? 'PayBox' : p.payment_method === 'Credit Card' ? 'אשראי' : 'תשלום במקום'}</td>
+                        <td className="py-3 px-4 text-slate-500">{p.payment_method === 'PayBox' ? 'PayBox' : p.payment_method === 'Credit Card' ? 'אשראי' : 'תשלום במקום'}</td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'paid' ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800' : 'bg-amber-950/80 text-amber-300 border border-amber-800'}`}>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
                             {p.status === 'paid' ? 'שולם' : 'ממתין'}
                           </span>
                         </td>
@@ -263,8 +263,8 @@ export default function FinanceView({ initialTab = 'overview' }) {
       {/* EXPENSES TAB */}
       {activeTab === 'expenses' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-            <span className="text-xs text-slate-400">רשימת הוצאות</span>
+          <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
+            <span className="text-xs text-slate-500">רשימת הוצאות</span>
             <button
               onClick={() => setIsExpenseDrawerOpen(true)}
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse"
@@ -274,10 +274,10 @@ export default function FinanceView({ initialTab = 'overview' }) {
             </button>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <table className="w-full text-start border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <th className="py-3 px-4 text-start">תיאור</th>
                   <th className="py-3 px-4 text-start">קטגוריה</th>
                   <th className="py-3 px-4 text-start">תאריך</th>
@@ -285,17 +285,17 @@ export default function FinanceView({ initialTab = 'overview' }) {
                   <th className="py-3 px-4 text-start">אמצעי תשלום</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-200">
                 {expenses.length === 0 ? (
                   <tr><td colSpan={5} className="py-8 text-center text-slate-500">אין הוצאות רשומות.</td></tr>
                 ) : (
                   expenses.map(e => (
-                    <tr key={e.id} className="hover:bg-slate-800/40">
-                      <td className="py-3 px-4 font-bold text-white">{e.description}</td>
-                      <td className="py-3 px-4 text-slate-300">{e.category || '-'}</td>
-                      <td className="py-3 px-4 text-slate-300 font-mono">{e.expense_date || '-'}</td>
+                    <tr key={e.id} className="hover:bg-slate-100">
+                      <td className="py-3 px-4 font-bold text-slate-900">{e.description}</td>
+                      <td className="py-3 px-4 text-slate-700">{e.category || '-'}</td>
+                      <td className="py-3 px-4 text-slate-700 font-mono">{e.expense_date || '-'}</td>
                       <td className="py-3 px-4 font-bold text-rose-400">₪{e.amount}</td>
-                      <td className="py-3 px-4 text-slate-400">{e.payment_method || '-'}</td>
+                      <td className="py-3 px-4 text-slate-500">{e.payment_method || '-'}</td>
                     </tr>
                   ))
                 )}
@@ -312,7 +312,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
         title="רישום תשלום חדש"
         footer={
           <>
-            <button onClick={() => setIsPaymentDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800">ביטול</button>
+            <button onClick={() => setIsPaymentDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">ביטול</button>
             <button onClick={handleCreatePayment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">
               {isSubmitting ? 'שומר...' : 'שמור תשלום'}
             </button>
@@ -321,21 +321,21 @@ export default function FinanceView({ initialTab = 'overview' }) {
       >
         <form onSubmit={handleCreatePayment} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">לקוח *</label>
-            <select required value={payPatientId} onChange={e => setPayPatientId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח *</label>
+            <select required value={payPatientId} onChange={e => setPayPatientId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="">בחר לקוח...</option>
               {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">סכום (₪) *</label>
-            <input type="number" required step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="350" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">סכום (₪) *</label>
+            <input type="number" required step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="350" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">אמצעי תשלום</label>
-            <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+            <label className="block text-xs font-medium text-slate-700 mb-1">אמצעי תשלום</label>
+            <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="PayBox">PayBox</option>
               <option value="תשלום במקום">תשלום במקום</option>
               <option value="Credit Card">כרטיס אשראי</option>
@@ -345,16 +345,16 @@ export default function FinanceView({ initialTab = 'overview' }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס תשלום</label>
-            <select value={payStatus} onChange={e => setPayStatus(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+            <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס תשלום</label>
+            <select value={payStatus} onChange={e => setPayStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="paid">שולם</option>
               <option value="pending">ממתין לגבייה</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">תאריך</label>
-            <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
+            <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
         </form>
       </Drawer>
@@ -366,7 +366,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
         title="רישום הוצאה חדשה"
         footer={
           <>
-            <button onClick={() => setIsExpenseDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800">ביטול</button>
+            <button onClick={() => setIsExpenseDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">ביטול</button>
             <button onClick={handleCreateExpense} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">
               {isSubmitting ? 'שומר...' : 'שמור הוצאה'}
             </button>
@@ -375,23 +375,23 @@ export default function FinanceView({ initialTab = 'overview' }) {
       >
         <form onSubmit={handleCreateExpense} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">תיאור ההוצאה *</label>
-            <input type="text" required value={expDescription} onChange={e => setExpDescription(e.target.value)} placeholder="ציוד קליני / פרסום..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">תיאור ההוצאה *</label>
+            <input type="text" required value={expDescription} onChange={e => setExpDescription(e.target.value)} placeholder="ציוד קליני / פרסום..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">קטגוריה</label>
-            <input type="text" value={expCategory} onChange={e => setExpCategory(e.target.value)} placeholder="ציוד / שיווק / תפעול" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">קטגוריה</label>
+            <input type="text" value={expCategory} onChange={e => setExpCategory(e.target.value)} placeholder="ציוד / שיווק / תפעול" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">סכום (₪) *</label>
-            <input type="number" required step="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="150" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">סכום (₪) *</label>
+            <input type="number" required step="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="150" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">תאריך</label>
-            <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
+            <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
         </form>
       </Drawer>

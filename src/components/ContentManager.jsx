@@ -92,17 +92,17 @@ export default function ContentManager() {
   return (
     <div className="space-y-4 dir-rtl text-start font-sans">
       {/* Top Controls Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
         <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-[280px]">
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
             <input
               type="text"
               placeholder="חיפוש תוכן..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pr-9 pl-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -110,7 +110,7 @@ export default function ContentManager() {
           <select
             value={platformFilter}
             onChange={e => setPlatformFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
           >
             <option value="all">כל הפלטפורמות</option>
             {platformsList.map(p => <option key={p} value={p}>{p}</option>)}
@@ -120,7 +120,7 @@ export default function ContentManager() {
           <select
             value={campaignFilter}
             onChange={e => setCampaignFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
           >
             <option value="all">כל הקמפיינים</option>
             {campaignsList.map(c => <option key={c} value={c}>{c}</option>)}
@@ -144,11 +144,11 @@ export default function ContentManager() {
             const colItems = filteredItems.filter(i => i.status === col.id);
 
             return (
-              <div key={col.id} className="w-[280px] bg-slate-900/50 border border-slate-800 rounded-xl p-3 space-y-3 shrink-0 min-h-[440px]">
+              <div key={col.id} className="w-[280px] bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3 shrink-0 min-h-[440px]">
                 {/* Column Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                  <span className="text-xs font-bold text-white">{col.label}</span>
-                  <span className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <span className="text-xs font-bold text-slate-900">{col.label}</span>
+                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                     {colItems.length}
                   </span>
                 </div>
@@ -159,19 +159,19 @@ export default function ContentManager() {
                     <div
                       key={item.id}
                       onClick={() => setSelectedItem(item)}
-                      className="bg-slate-900 border border-slate-800/90 hover:border-slate-700 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
+                      className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
                     >
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
                           {item.platform} · {item.format}
                         </span>
                       </div>
 
-                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors leading-snug">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-400 transition-colors leading-snug">
                         {item.title}
                       </h4>
 
-                      <div className="text-[11px] text-slate-400 space-y-0.5 pt-1 border-t border-slate-800/50">
+                      <div className="text-[11px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-200">
                         {item.publish_date && <div>פרסום: {item.publish_date}</div>}
                         {item.campaign && <div className="text-emerald-400">{item.campaign}</div>}
                       </div>
@@ -199,7 +199,7 @@ export default function ContentManager() {
           <>
             <button
               onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
               ביטול
             </button>
@@ -215,24 +215,24 @@ export default function ContentManager() {
       >
         <form onSubmit={handleCreateContent} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">כותרת / נושא התוכן *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">כותרת / נושא התוכן *</label>
             <input
               type="text"
               required
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="כותרת התוכן..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">פלטפורמה</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">פלטפורמה</label>
               <select
                 value={platform}
                 onChange={e => setPlatform(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 <option value="instagram">Instagram</option>
                 <option value="youtube">YouTube</option>
@@ -244,11 +244,11 @@ export default function ContentManager() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">פורמט</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">פורמט</label>
               <select
                 value={format}
                 onChange={e => setFormat(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 <option value="reel">Reel / Short</option>
                 <option value="post">Post / Carousel</option>
@@ -261,44 +261,44 @@ export default function ContentManager() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 {statusColumns.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך פרסום</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך פרסום</label>
               <input
                 type="date"
                 value={publishDate}
                 onChange={e => setPublishDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">קמפיין</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">קמפיין</label>
             <input
               type="text"
               value={campaign}
               onChange={e => setCampaign(e.target.value)}
               placeholder="שם קמפיין..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">שיוך לפרויקט</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">שיוך לפרויקט</label>
             <select
               value={projectId}
               onChange={e => setProjectId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="">ללא קישור לפרויקט</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -326,7 +326,7 @@ export default function ContentManager() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">כותרת</label>
+              <label className="block text-xs text-slate-500 mb-1">כותרת</label>
               <input
                 type="text"
                 value={selectedItem.title}
@@ -335,12 +335,12 @@ export default function ContentManager() {
                   setSelectedItem(prev => ({ ...prev, title: val }));
                   updateContentItem(selectedItem.id, { title: val });
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-slate-400 mb-1">סטטוס</label>
+              <label className="block text-xs text-slate-500 mb-1">סטטוס</label>
               <select
                 value={selectedItem.status || 'idea'}
                 onChange={e => {
@@ -348,7 +348,7 @@ export default function ContentManager() {
                   setSelectedItem(prev => ({ ...prev, status: val }));
                   updateContentItem(selectedItem.id, { status: val });
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
               >
                 {statusColumns.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>

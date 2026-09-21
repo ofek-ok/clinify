@@ -4,10 +4,9 @@ import { X } from 'lucide-react';
 export default function Drawer({ isOpen, onClose, title, children, width = 'max-w-lg', footer }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
+      if (e.key === 'Escape' && isOpen) onClose();
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
@@ -16,38 +15,37 @@ export default function Drawer({ isOpen, onClose, title, children, width = 'max-
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden dir-rtl">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+      <button
+        type="button"
+        aria-label="סגור חלונית"
+        className="fixed inset-0 bg-slate-950/35"
         onClick={onClose}
       />
 
-      {/* Slide-over panel from Right */}
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
-        <div className={`w-screen ${width} bg-slate-900 border-r border-slate-800 text-slate-100 shadow-2xl flex flex-col`}>
-          {/* Drawer Header */}
-          <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 sticky top-0 z-10">
-            <h2 className="text-base font-bold text-white tracking-tight">{title}</h2>
+        <section className={`flex w-screen ${width} flex-col border-r border-slate-200 bg-white text-slate-900 shadow-xl`}>
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="סגור"
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          <div className="flex-1 space-y-5 overflow-y-auto p-6">
             {children}
           </div>
 
-          {/* Drawer Footer (Optional) */}
           {footer && (
-            <div className="px-6 py-4 border-t border-slate-800 bg-slate-900/90 flex items-center justify-end space-x-3 space-x-reverse sticky bottom-0">
+            <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
               {footer}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

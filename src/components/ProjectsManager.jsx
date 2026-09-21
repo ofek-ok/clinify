@@ -76,9 +76,9 @@ export default function ProjectsManager() {
   return (
     <div className="space-y-4 dir-rtl text-start font-sans">
       {/* Top Toolbar */}
-      <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-        <div className="text-xs text-slate-400">
-          סה״כ פרויקטים פתוחים: <span className="text-white font-bold">{projects.filter(p => p.status !== 'completed').length}</span>
+      <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
+        <div className="text-xs text-slate-500">
+          סה״כ פרויקטים פתוחים: <span className="text-slate-900 font-bold">{projects.filter(p => p.status !== 'completed').length}</span>
         </div>
 
         <button
@@ -91,11 +91,11 @@ export default function ProjectsManager() {
       </div>
 
       {/* Projects Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-start border-collapse">
             <thead>
-              <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                 <th className="py-3 px-4 text-start">שם הפרויקט</th>
                 <th className="py-3 px-4 text-start">סטטוס</th>
                 <th className="py-3 px-4 text-start">תחום</th>
@@ -104,7 +104,7 @@ export default function ProjectsManager() {
                 <th className="py-3 px-4 text-start">משימות פתוחות</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
+            <tbody className="divide-y divide-slate-200 text-xs">
               {projects.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-500">
@@ -122,44 +122,44 @@ export default function ProjectsManager() {
                     <tr
                       key={proj.id}
                       onClick={() => setSelectedProject(proj)}
-                      className="hover:bg-slate-800/50 transition-colors cursor-pointer"
+                      className="hover:bg-slate-100/50 transition-colors cursor-pointer"
                     >
                       {/* Name */}
-                      <td className="py-3.5 px-4 font-bold text-white">
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
                         {proj.name}
                       </td>
 
                       {/* Status */}
                       <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
                           {proj.status === 'active' ? 'פעיל' : proj.status === 'planned' ? 'מתוכנן' : proj.status === 'completed' ? 'הושלם' : 'חסום'}
                         </span>
                       </td>
 
                       {/* Area */}
-                      <td className="py-3.5 px-4 text-slate-400">
+                      <td className="py-3.5 px-4 text-slate-500">
                         {proj.area === 'clinical' ? 'קליני' : proj.area === 'business' ? 'עסקי' : 'תפעול'}
                       </td>
 
                       {/* Due Date */}
-                      <td className="py-3.5 px-4 font-mono text-slate-300">
+                      <td className="py-3.5 px-4 font-mono text-slate-700">
                         {proj.due_date || '-'}
                       </td>
 
                       {/* Progress */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center space-x-2 space-x-reverse min-w-[140px]">
-                          <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
                           </div>
-                          <span className="text-[11px] font-medium text-slate-300">
+                          <span className="text-[11px] font-medium text-slate-700">
                             {completedTasksCount} / {projTasks.length} ({progressPct}%)
                           </span>
                         </div>
                       </td>
 
                       {/* Open Tasks Count */}
-                      <td className="py-3.5 px-4 font-bold text-slate-300">
+                      <td className="py-3.5 px-4 font-bold text-slate-700">
                         {openTasksCount}
                       </td>
                     </tr>
@@ -180,7 +180,7 @@ export default function ProjectsManager() {
           <>
             <button
               onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
               ביטול
             </button>
@@ -196,35 +196,35 @@ export default function ProjectsManager() {
       >
         <form onSubmit={handleCreateProject} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">שם הפרויקט *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">שם הפרויקט *</label>
             <input
               type="text"
               required
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="שם הפרויקט..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">יעד / מטרה</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">יעד / מטרה</label>
             <textarea
               rows={2}
               value={objective}
               onChange={e => setObjective(e.target.value)}
               placeholder="תיאור מטרת הפרויקט..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תחום</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תחום</label>
               <select
                 value={area}
                 onChange={e => setArea(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 <option value="business">עסקי</option>
                 <option value="clinical">קליני</option>
@@ -233,11 +233,11 @@ export default function ProjectsManager() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 <option value="planned">מתוכנן</option>
                 <option value="active">פעיל</option>
@@ -249,22 +249,22 @@ export default function ProjectsManager() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך התחלה</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך התחלה</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך יעד</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך יעד</label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function ProjectsManager() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">שם הפרויקט</label>
+              <label className="block text-xs text-slate-500 mb-1">שם הפרויקט</label>
               <input
                 type="text"
                 value={selectedProject.name}
@@ -300,27 +300,27 @@ export default function ProjectsManager() {
                   setSelectedProject(prev => ({ ...prev, name: val }));
                   updateProject(selectedProject.id, { name: val });
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold"
               />
             </div>
 
             {selectedProject.objective && (
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                <span className="text-[11px] text-slate-400 block mb-0.5">יעד:</span>
-                <p className="text-xs text-white">{selectedProject.objective}</p>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <span className="text-[11px] text-slate-500 block mb-0.5">יעד:</span>
+                <p className="text-xs text-slate-900">{selectedProject.objective}</p>
               </div>
             )}
 
             {/* Linked Tasks List */}
             <div className="space-y-2 pt-2">
-              <h4 className="text-xs font-bold text-slate-300">משימות בפרויקט זה</h4>
+              <h4 className="text-xs font-bold text-slate-700">משימות בפרויקט זה</h4>
               <div className="space-y-1.5">
                 {tasks.filter(t => t.project_id === selectedProject.id).map(t => (
-                  <div key={t.id} className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                    <span className={t.status === 'done' ? 'line-through text-slate-500' : 'text-white'}>
+                  <div key={t.id} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex justify-between items-center text-xs">
+                    <span className={t.status === 'done' ? 'line-through text-slate-500' : 'text-slate-900'}>
                       {t.title}
                     </span>
-                    <span className="text-[10px] text-slate-400">{t.due_date || '-'}</span>
+                    <span className="text-[10px] text-slate-500">{t.due_date || '-'}</span>
                   </div>
                 ))}
                 {tasks.filter(t => t.project_id === selectedProject.id).length === 0 && (

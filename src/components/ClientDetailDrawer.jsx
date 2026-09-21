@@ -244,25 +244,25 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
           <div className="space-y-3 pt-1">
             {parsed.subjective && (
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
-                <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 me-2">S - Subjective</span>
+                <span className="text-[10px] font-bold uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 me-2">S - Subjective</span>
                 <p className="text-xs text-slate-700 font-medium mt-1">{parsed.subjective}</p>
               </div>
             )}
             {parsed.objective && (
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
-                <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 me-2">O - Objective</span>
+                <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 me-2">O - Objective</span>
                 <p className="text-xs text-slate-700 font-medium mt-1">{parsed.objective}</p>
               </div>
             )}
             {parsed.assessment && (
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
-                <span className="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 me-2">A - Assessment</span>
+                <span className="text-[10px] font-bold uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 me-2">A - Assessment</span>
                 <p className="text-xs text-slate-700 font-medium mt-1">{parsed.assessment}</p>
               </div>
             )}
             {parsed.plan && (
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
-                <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 me-2">P - Plan</span>
+                <span className="text-[10px] font-bold uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 me-2">P - Plan</span>
                 <p className="text-xs text-slate-700 font-medium mt-1">{parsed.plan}</p>
               </div>
             )}
@@ -277,20 +277,20 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     <div className="fixed inset-0 z-50 overflow-hidden text-start">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-300"
+        className="absolute inset-0 bg-white backdrop-blur-xs transition-opacity animate-in fade-in duration-300"
         onClick={onClose}
       />
 
       <div className="fixed inset-y-0 end-0 max-w-full flex ps-10">
-        <div className="w-screen max-w-3xl bg-white shadow-2xl border-s border-slate-100 flex flex-col animate-in slide-in-from-end duration-300">
+        <div className="w-screen max-w-3xl bg-white shadow-lg border-s border-slate-100 flex flex-col animate-in slide-in-from-end duration-300">
           
           {/* Header */}
-          <div className="p-6 bg-slate-900 text-white relative overflow-hidden shrink-0">
+          <div className="p-6 bg-white text-slate-900 relative overflow-hidden shrink-0">
             <div className="absolute top-0 end-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-xl font-bold text-white shadow-lg border border-white/20">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-xl font-bold text-slate-900 shadow-lg border border-white/20">
                   {name.charAt(0)}
                 </div>
                 <div>
@@ -298,8 +298,8 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                       clientStatus === 'customer' 
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        ? 'bg-emerald-500/20 text-emerald-700 border-emerald-500/30' 
+                        : 'bg-amber-500/20 text-amber-700 border-amber-500/30'
                     }`}>
                       {clientStatus === 'customer' ? t('Customer', 'לקוח משלם') : t('Lead', 'ליד / פוטנציאלי')}
                     </span>
@@ -310,12 +310,12 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       </span>
                     )}
 
-                    <span className="text-[11px] text-slate-400 font-medium">
+                    <span className="text-[11px] text-slate-500 font-medium">
                       {t('Source', 'מקור')}: {source}
                     </span>
 
                     {person.customer_since && (
-                      <span className="text-[10px] text-slate-400 font-mono">
+                      <span className="text-[10px] text-slate-500 font-mono">
                         {t('Customer Since', 'לקוח מ-')}: {new Date(person.customer_since).toLocaleDateString()}
                       </span>
                     )}
@@ -328,37 +328,37 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   href={whatsappUrl} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 transition-colors"
+                  className="text-xs font-bold text-emerald-400 hover:text-emerald-700 flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 transition-colors"
                 >
                   🟢 WhatsApp
                 </a>
-                <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1">
+                <button onClick={onClose} className="text-slate-500 hover:text-slate-900 transition-colors p-1">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               </div>
             </div>
 
             {/* Quick Contact Bar */}
-            <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-slate-800/80 text-xs text-slate-300">
+            <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-slate-200/80 text-xs text-slate-700">
               <span dir="ltr">📞 {phone}</span>
-              {email !== '-' && <span dir="ltr">✉️ {email}</span>}
+              {email !== '-' && <span dir="ltr">✉ {email}</span>}
             </div>
           </div>
 
           {/* V1 Summary Cards Bar */}
           <div className="p-4 bg-slate-50 border-b border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
             <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Paid Revenue', 'סה"כ הכנסות')}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('Paid Revenue', 'סה"כ הכנסות')}</p>
               <p className="text-base font-extrabold text-emerald-600 mt-0.5">₪{totalPaidRevenue.toLocaleString()}</p>
             </div>
 
             <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Completed Sessions', 'פגישות שהושלמו')}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('Completed Sessions', 'פגישות שהושלמו')}</p>
               <p className="text-base font-extrabold text-slate-800 mt-0.5">{completedSessionsCount}</p>
             </div>
 
             <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Next Appointment', 'תור קרוב')}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('Next Appointment', 'תור קרוב')}</p>
               <p className="text-xs font-bold text-indigo-600 mt-1 truncate">
                 {nextAppointment ? new Date(nextAppointment.appointment_date).toLocaleDateString() : t('None Scheduled', 'אין תור קרוב')}
               </p>
@@ -366,8 +366,8 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
             <div className={`bg-white p-3 rounded-2xl border shadow-2xs ${nextAction?.isOverdue ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200/60'}`}>
               <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Next Action', 'פעולה הבאה')}</p>
-                {nextAction?.isOverdue && <span className="bg-rose-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded">{t('Overdue', 'באיחור')}</span>}
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('Next Action', 'פעולה הבאה')}</p>
+                {nextAction?.isOverdue && <span className="bg-rose-500 text-white text-[8px] font-bold px-1.5 py-0.2 rounded">{t('Overdue', 'באיחור')}</span>}
               </div>
               <p className={`text-xs font-bold mt-1 truncate ${nextAction?.isOverdue ? 'text-rose-700' : 'text-slate-800'}`}>
                 {nextAction ? `${nextAction.title} (${nextAction.date || ''})` : t('No Action Set', 'ללא יעד מעקב')}
@@ -384,7 +384,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               { id: 'tasks', label: `${t('Tasks & Follow-up', 'משימות ומעקב')} (${clientTasks.length})` },
               { id: 'communications', label: `${t('Communications', 'תקשורת')} (${clientCommunications.length})` },
               { id: 'forms', label: `${t('Forms', 'טפסים')} (${clientSubmissions.length})` },
-              { id: 'clinical', label: `${t('Clinical Profile', 'תיק רפואי')}${patient ? '' : ' ⚠️'}` }
+              { id: 'clinical', label: `${t('Clinical Profile', 'תיק רפואי')}${patient ? '' : ' ⚠'}` }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -412,12 +412,12 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     {t('Identity & Relationship Overview', 'פרטי זהות וסטטוס קשר')}
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div><span className="text-slate-400 font-semibold">{t('Full Name', 'שם מלא')}:</span> <p className="font-bold text-slate-800">{name}</p></div>
-                    <div><span className="text-slate-400 font-semibold">{t('Phone', 'טלפון')}:</span> <p className="font-bold text-slate-800" dir="ltr">{phone}</p></div>
-                    <div><span className="text-slate-400 font-semibold">{t('Email', 'אימייל')}:</span> <p className="font-bold text-slate-800" dir="ltr">{email}</p></div>
-                    <div><span className="text-slate-400 font-semibold">{t('Source', 'מקור הגעה')}:</span> <p className="font-bold text-slate-800">{source}</p></div>
-                    <div><span className="text-slate-400 font-semibold">{t('Relationship Status', 'סטטוס קשר')}:</span> <p className="font-bold text-emerald-600">{clientStatus}</p></div>
-                    <div><span className="text-slate-400 font-semibold">{t('Clinical Profile', 'תיק רפואי')}:</span> <p className="font-bold text-slate-800">{patient ? t('Active Profile', 'קיים במערכת') : t('None', 'טרם נפתח')}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Full Name', 'שם מלא')}:</span> <p className="font-bold text-slate-800">{name}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Phone', 'טלפון')}:</span> <p className="font-bold text-slate-800" dir="ltr">{phone}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Email', 'אימייל')}:</span> <p className="font-bold text-slate-800" dir="ltr">{email}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Source', 'מקור הגעה')}:</span> <p className="font-bold text-slate-800">{source}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Relationship Status', 'סטטוס קשר')}:</span> <p className="font-bold text-emerald-600">{clientStatus}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Clinical Profile', 'תיק רפואי')}:</span> <p className="font-bold text-slate-800">{patient ? t('Active Profile', 'קיים במערכת') : t('None', 'טרם נפתח')}</p></div>
                   </div>
                 </div>
 
@@ -446,7 +446,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 </div>
 
                 {clientAppointments.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
+                  <div className="p-8 text-center text-slate-500 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
                     {t('No appointments recorded yet.', 'אין תורים רשומים עבור מטופל זה.')}
                   </div>
                 ) : (
@@ -456,9 +456,9 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         <div>
                           <p className="font-bold text-xs text-slate-800">{getServiceName(appt.service_id) || t('General Consultation', 'פגישת ייעוץ')}</p>
                           <p className="text-[11px] text-slate-500 font-medium mt-0.5">📅 {new Date(appt.appointment_date).toLocaleString('he-IL')}</p>
-                          {appt.notes && <p className="text-[11px] text-slate-400 italic mt-1">{appt.notes}</p>}
+                          {appt.notes && <p className="text-[11px] text-slate-500 italic mt-1">{appt.notes}</p>}
                         </div>
-                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
                           appt.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                           appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                           'bg-indigo-50 text-indigo-700 border-indigo-200'
@@ -495,7 +495,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       <div key={pkg.id} className="flex justify-between items-center text-xs bg-white p-3 rounded-xl border border-violet-100">
                         <div>
                           <p className="font-bold text-slate-800">{pkg.name}</p>
-                          <p className="text-[10px] text-slate-400">{t('Purchased', 'נרכשה ב-')}: {pkg.purchased_date}</p>
+                          <p className="text-[10px] text-slate-500">{t('Purchased', 'נרכשה ב-')}: {pkg.purchased_date}</p>
                         </div>
                         <span className="font-extrabold text-violet-700 bg-violet-100 px-2.5 py-1 rounded-lg">
                           {pkg.remaining_sessions} / {pkg.total_sessions} {t('sessions left', 'טיפולים נותרו')}
@@ -506,7 +506,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 )}
 
                 {clientPayments.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
+                  <div className="p-8 text-center text-slate-500 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
                     {t('No payment records found.', 'אין תשלומים רשומים.')}
                   </div>
                 ) : (
@@ -515,7 +515,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       <div key={p.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs flex justify-between items-center">
                         <div>
                           <p className="font-bold text-xs text-slate-800">{p.description || t('Payment Transaction', 'עסקת תשלום')}</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">{new Date(p.payment_date).toLocaleDateString()} • {p.payment_method}</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{new Date(p.payment_date).toLocaleDateString()} • {p.payment_method}</p>
                         </div>
                         <div className="text-end">
                           <p className="font-extrabold text-sm text-emerald-600">₪{parseFloat(p.amount).toLocaleString()}</p>
@@ -558,7 +558,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     </div>
                     <button 
                       onClick={handleSaveFollowUp}
-                      className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                      className="px-4 py-1.5 bg-slate-100 hover:bg-white text-slate-900 font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
                     >
                       {t('Save Follow-up Details', 'שמור פרטי מעקב')}
                     </button>
@@ -584,7 +584,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
                     />
                   </div>
-                  <button type="submit" className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
+                  <button type="submit" className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-slate-900 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
                     {t('Add Task', 'הוסף משימה')}
                   </button>
                 </form>
@@ -593,7 +593,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 <div className="space-y-3">
                   <h4 className="font-extrabold text-xs text-slate-700">{t('Linked Tasks', 'משימות משויכות')}</h4>
                   {clientTasks.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic text-center py-4">{t('No tasks linked to this person.', 'אין משימות פתוחות.')}</p>
+                    <p className="text-xs text-slate-500 italic text-center py-4">{t('No tasks linked to this person.', 'אין משימות פתוחות.')}</p>
                   ) : (
                     clientTasks.map(task => (
                       <div key={task.id} className="p-3 bg-white border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 text-xs">
@@ -604,7 +604,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                             onChange={(e) => updateTaskStatus(task.id, e.target.checked ? 'done' : 'todo')}
                             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                           />
-                          <span className={`font-semibold ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{task.title}</span>
+                          <span className={`font-semibold ${task.status === 'done' ? 'line-through text-slate-500' : 'text-slate-800'}`}>{task.title}</span>
                         </div>
                         {task.due_date && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{task.due_date}</span>}
                       </div>
@@ -628,7 +628,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     >
                       <option value="call">📞 {t('Phone Call', 'שיחת טלפון')}</option>
                       <option value="whatsapp">🟢 WhatsApp</option>
-                      <option value="email">✉️ {t('Email', 'אימייל')}</option>
+                      <option value="email">✉ {t('Email', 'אימייל')}</option>
                     </select>
                     <input 
                       type="text"
@@ -648,15 +648,15 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 <div className="space-y-3">
                   <h4 className="font-extrabold text-xs text-slate-700">{t('Communication Log', 'יומן תקשורת')}</h4>
                   {clientCommunications.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic text-center py-4">{t('No communications logged yet.', 'אין תיעודי תקשורת רשומים.')}</p>
+                    <p className="text-xs text-slate-500 italic text-center py-4">{t('No communications logged yet.', 'אין תיעודי תקשורת רשומים.')}</p>
                   ) : (
                     clientCommunications.map(comm => (
                       <div key={comm.id} className="p-3.5 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-1">
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="font-bold text-slate-800 uppercase">
-                            {comm.type === 'whatsapp' ? '🟢 WhatsApp' : comm.type === 'call' ? '📞 Phone Call' : '✉️ Email'}
+                            {comm.type === 'whatsapp' ? '🟢 WhatsApp' : comm.type === 'call' ? '📞 Phone Call' : '✉ Email'}
                           </span>
-                          <span className="text-slate-400 text-[10px]">{new Date(comm.created_at).toLocaleString('he-IL')}</span>
+                          <span className="text-slate-500 text-[10px]">{new Date(comm.created_at).toLocaleString('he-IL')}</span>
                         </div>
                         <p className="text-xs text-slate-700 font-medium">{comm.note}</p>
                       </div>
@@ -671,7 +671,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               <div className="space-y-4">
                 <h4 className="font-extrabold text-sm text-slate-800">{t('Submitted Forms & Intake Questionnaires', 'טפסי קבלה והצהרות שהוגשו')}</h4>
                 {clientSubmissions.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
+                  <div className="p-8 text-center text-slate-500 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
                     {t('No form submissions recorded for this person.', 'אין טפסים שהוגשו על ידי מגיש זה.')}
                   </div>
                 ) : (
@@ -682,7 +682,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         <div key={sub.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2">
                           <div className="flex justify-between items-center">
                             <h5 className="font-bold text-xs text-slate-800">{formObj?.title || t('Intake Form', 'טופס קבלה')}</h5>
-                            <span className="text-[10px] text-slate-400">{new Date(sub.submitted_at).toLocaleString('he-IL')}</span>
+                            <span className="text-[10px] text-slate-500">{new Date(sub.submitted_at).toLocaleString('he-IL')}</span>
                           </div>
                           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60 text-xs space-y-1">
                             {Object.entries(sub.responses || {}).map(([k, v]) => (
@@ -783,11 +783,11 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     <div className="space-y-3">
                       <h4 className="font-extrabold text-xs text-slate-700">{t('Clinical Notes History', 'היסטוריית תרשומות טיפול')}</h4>
                       {(!patient.clinical_notes || patient.clinical_notes.length === 0) ? (
-                        <p className="text-xs text-slate-400 italic text-center py-4">{t('No clinical notes recorded yet.', 'אין תרשומות רפואיות.')}</p>
+                        <p className="text-xs text-slate-500 italic text-center py-4">{t('No clinical notes recorded yet.', 'אין תרשומות רפואיות.')}</p>
                       ) : (
                         patient.clinical_notes.map(note => (
                           <div key={note.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2">
-                            <div className="flex justify-between items-center text-[10px] text-slate-400">
+                            <div className="flex justify-between items-center text-[10px] text-slate-500">
                               <span className="font-bold text-slate-700">{note.author || 'מטפל'}</span>
                               <span>{new Date(note.created_at).toLocaleString('he-IL')}</span>
                             </div>
@@ -809,7 +809,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           onChange={e => setNewDocName(e.target.value)}
                           className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
                         />
-                        <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl cursor-pointer">
+                        <button type="submit" className="px-4 py-2 bg-slate-100 hover:bg-white text-slate-900 font-extrabold text-xs rounded-xl cursor-pointer">
                           + {t('Add Doc', 'הוסף קובץ')}
                         </button>
                       </form>
@@ -818,7 +818,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         {(patient.documents || []).map(doc => (
                           <div key={doc.id} className="p-3 bg-white border border-slate-200/80 rounded-xl flex justify-between items-center text-xs">
                             <span className="font-bold text-slate-800">📄 {doc.name}</span>
-                            <span className="text-[10px] text-slate-400">{doc.uploaded_at}</span>
+                            <span className="text-[10px] text-slate-500">{doc.uploaded_at}</span>
                           </div>
                         ))}
                       </div>

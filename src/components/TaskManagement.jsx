@@ -39,10 +39,10 @@ export default function TaskManagement() {
 
   // Status mapping
   const statusOptions = [
-    { id: 'todo', label: 'לביצוע', color: 'bg-slate-800 text-slate-300' },
-    { id: 'in_progress', label: 'בתהליך', color: 'bg-blue-950/80 text-blue-300 border border-blue-800' },
-    { id: 'blocked', label: 'חסום', color: 'bg-rose-950/80 text-rose-300 border border-rose-800' },
-    { id: 'done', label: 'הושלם', color: 'bg-emerald-950/80 text-emerald-300 border border-emerald-800' }
+    { id: 'todo', label: 'לביצוע', color: 'bg-slate-100 text-slate-700' },
+    { id: 'in_progress', label: 'בתהליך', color: 'bg-blue-50 text-blue-700 border border-blue-200' },
+    { id: 'blocked', label: 'חסום', color: 'bg-rose-50 text-rose-700 border border-rose-200' },
+    { id: 'done', label: 'הושלם', color: 'bg-emerald-50 text-emerald-700 border border-emerald-200' }
   ];
 
   // Priority mapping
@@ -50,7 +50,7 @@ export default function TaskManagement() {
     { id: 'critical', label: 'קריטי', color: 'text-rose-400 font-bold' },
     { id: 'high', label: 'גבוה', color: 'text-amber-400 font-bold' },
     { id: 'medium', label: 'בינוני', color: 'text-blue-400' },
-    { id: 'low', label: 'נמוך', color: 'text-slate-400' }
+    { id: 'low', label: 'נמוך', color: 'text-slate-500' }
   ];
 
   const filteredTasks = tasks.filter(task => {
@@ -152,10 +152,10 @@ export default function TaskManagement() {
   return (
     <div className="space-y-4 dir-rtl text-start font-sans">
       {/* Top Filter & Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
         <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-[280px]">
           {/* Quick Filters */}
-          <div className="flex items-center space-x-1 space-x-reverse bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center space-x-1 space-x-reverse bg-slate-50 p-1 rounded-xl border border-slate-200">
             {[
               { id: 'all', label: 'הכול' },
               { id: 'today', label: 'היום' },
@@ -169,7 +169,7 @@ export default function TaskManagement() {
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                   filterMode === f.id
                     ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 {f.label}
@@ -179,13 +179,13 @@ export default function TaskManagement() {
 
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
             <input
               type="text"
               placeholder="חיפוש משימה..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pr-9 pl-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
         </div>
@@ -201,11 +201,11 @@ export default function TaskManagement() {
       </div>
 
       {/* Monday-Style Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-start border-collapse">
             <thead>
-              <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                 <th className="py-3 px-4 text-start">משימה</th>
                 <th className="py-3 px-4 text-start">סטטוס</th>
                 <th className="py-3 px-4 text-start">עדיפות</th>
@@ -215,7 +215,7 @@ export default function TaskManagement() {
                 <th className="py-3 px-4 text-start">תחום</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
+            <tbody className="divide-y divide-slate-200 text-xs">
               {filteredTasks.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-500">
@@ -231,10 +231,10 @@ export default function TaskManagement() {
                     <tr
                       key={task.id}
                       onClick={() => setSelectedTask(task)}
-                      className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                      className="hover:bg-slate-100/50 transition-colors cursor-pointer group"
                     >
                       {/* Title */}
-                      <td className="py-3 px-4 font-bold text-white">
+                      <td className="py-3 px-4 font-bold text-slate-900">
                         <span className={isDone ? 'line-through text-slate-500 font-normal' : ''}>
                           {task.title}
                         </span>
@@ -245,7 +245,7 @@ export default function TaskManagement() {
                         <select
                           value={task.status || 'todo'}
                           onChange={e => handleInlineStatusChange(task, e.target.value)}
-                          className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                         >
                           {statusOptions.map(s => (
                             <option key={s.id} value={s.id}>{s.label}</option>
@@ -258,7 +258,7 @@ export default function TaskManagement() {
                         <select
                           value={task.priority || 'medium'}
                           onChange={e => handleInlinePriorityChange(task, e.target.value)}
-                          className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs focus:outline-none"
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none"
                         >
                           {priorityOptions.map(p => (
                             <option key={p.id} value={p.id} className={p.color}>{p.label}</option>
@@ -267,22 +267,22 @@ export default function TaskManagement() {
                       </td>
 
                       {/* Project */}
-                      <td className="py-3 px-4 text-slate-300 font-medium">
+                      <td className="py-3 px-4 text-slate-700 font-medium">
                         {resolveProjectName(task.project_id)}
                       </td>
 
                       {/* Due Date */}
-                      <td className={`py-3 px-4 font-mono ${isOverdue ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>
+                      <td className={`py-3 px-4 font-mono ${isOverdue ? 'text-rose-400 font-bold' : 'text-slate-700'}`}>
                         {task.due_date || '-'}
                       </td>
 
                       {/* Related Entity */}
-                      <td className="py-3 px-4 text-slate-400">
+                      <td className="py-3 px-4 text-slate-500">
                         {resolveRelatedEntity(task)}
                       </td>
 
                       {/* Area */}
-                      <td className="py-3 px-4 text-slate-400">
+                      <td className="py-3 px-4 text-slate-500">
                         {task.area === 'clinical' ? 'קליני' : task.area === 'business' ? 'עסקי' : 'תפעול'}
                       </td>
                     </tr>
@@ -303,7 +303,7 @@ export default function TaskManagement() {
           <>
             <button
               onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
               ביטול
             </button>
@@ -319,35 +319,35 @@ export default function TaskManagement() {
       >
         <form onSubmit={handleCreateTask} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">כותרת משימה *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">כותרת משימה *</label>
             <input
               type="text"
               required
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="תיאור המשימה..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">סטטוס</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 {statusOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">עדיפות</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">עדיפות</label>
               <select
                 value={priority}
                 onChange={e => setPriority(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 {priorityOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
@@ -356,21 +356,21 @@ export default function TaskManagement() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תאריך יעד</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך יעד</label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">תחום</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תחום</label>
               <select
                 value={area}
                 onChange={e => setArea(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 <option value="operations">תפעול</option>
                 <option value="business">עסקי</option>
@@ -380,11 +380,11 @@ export default function TaskManagement() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">שיוך לפרויקט</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">שיוך לפרויקט</label>
             <select
               value={projectId}
               onChange={e => setProjectId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="">ללא פרויקט</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -392,11 +392,11 @@ export default function TaskManagement() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">קשור ללקוח</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">קשור ללקוח</label>
             <select
               value={patientId}
               onChange={e => setPatientId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="">ללא שיוך ללקוח</option>
               {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
@@ -424,7 +424,7 @@ export default function TaskManagement() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">כותרת משימה</label>
+              <label className="block text-xs text-slate-500 mb-1">כותרת משימה</label>
               <input
                 type="text"
                 value={selectedTask.title}
@@ -433,28 +433,28 @@ export default function TaskManagement() {
                   setSelectedTask(prev => ({ ...prev, title: val }));
                   updateTask(selectedTask.id, { title: val });
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">סטטוס</label>
+                <label className="block text-xs text-slate-500 mb-1">סטטוס</label>
                 <select
                   value={selectedTask.status || 'todo'}
                   onChange={e => handleInlineStatusChange(selectedTask, e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
                 >
                   {statusOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">עדיפות</label>
+                <label className="block text-xs text-slate-500 mb-1">עדיפות</label>
                 <select
                   value={selectedTask.priority || 'medium'}
                   onChange={e => handleInlinePriorityChange(selectedTask, e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
                 >
                   {priorityOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                 </select>
@@ -462,7 +462,7 @@ export default function TaskManagement() {
             </div>
 
             <div>
-              <label className="block text-xs text-slate-400 mb-1">תאריך יעד</label>
+              <label className="block text-xs text-slate-500 mb-1">תאריך יעד</label>
               <input
                 type="date"
                 value={selectedTask.due_date || ''}
@@ -471,7 +471,7 @@ export default function TaskManagement() {
                   setSelectedTask(prev => ({ ...prev, due_date: val }));
                   updateTask(selectedTask.id, { due_date: val });
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
               />
             </div>
           </div>
