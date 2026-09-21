@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
+import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 const ToastContext = createContext();
 
@@ -18,35 +19,45 @@ export const ToastProvider = ({ children }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const getIcon = (type) => {
+    if (type === 'error') return AlertCircle;
+    if (type === 'info') return Info;
+    return CheckCircle2;
+  };
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-5 left-5 z-[9999] flex flex-col space-y-2 pointer-events-none dir-rtl">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto flex items-center justify-between min-w-[280px] max-w-md px-4 py-3 rounded-xl shadow-lg text-xs font-medium transition-all transform translate-y-0 ${
-              toast.type === 'error'
-                ? 'bg-rose-900 text-rose-100 border border-rose-700'
-                : toast.type === 'info'
-                ? 'bg-slate-800 text-slate-100 border border-slate-700'
-                : 'bg-emerald-900 text-emerald-100 border border-emerald-700'
-            }`}
-          >
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <span>
-                {toast.type === 'error' ? '❌' : toast.type === 'info' ? 'ℹ️' : '✓'}
-              </span>
-              <span>{toast.message}</span>
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="mr-3 text-slate-400 hover:text-white"
+      <div className="pointer-events-none fixed bottom-5 left-5 z-[9999] flex flex-col gap-2 dir-rtl">
+        {toasts.map(toast => {
+          const Icon = getIcon(toast.type);
+          const tone = toast.type === 'error'
+            ? 'border-rose-200 text-rose-700'
+            : toast.type === 'info'
+              ? 'border-slate-200 text-slate-700'
+              : 'border-emerald-200 text-emerald-700';
+
+          return (
+            <div
+              key={toast.id}
+              role="status"
+              className={`pointer-events-auto flex min-w-[280px] max-w-md items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 text-xs font-medium shadow-lg ${tone}`}
             >
-              ✕
-            </button>
-          </div>
-        ))}
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{toast.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeToast(toast.id)}
+                aria-label="סגור הודעה"
+                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );
@@ -55,7 +66,7 @@ export const ToastProvider = ({ children }) => {
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    return { showToast: (msg) => console.log("Toast:", msg) };
+    return { showToast: (msg) => console.log('Toast:', msg) };
   }
   return context;
 };
