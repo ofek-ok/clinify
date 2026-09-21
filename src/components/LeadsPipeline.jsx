@@ -3,11 +3,23 @@ import { ClinicContext } from '../context/ClinicContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
-import { Search, Plus, Phone, MessageSquare } from 'lucide-react';
+import { Search, Plus, Phone, MessageSquare, Mail } from 'lucide-react';
+
+const getIsraelDateKey = () => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+};
 
 export default function LeadsPipeline({ onSelectLead }) {
   const { leads, leadCommunications, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication } = useContext(ClinicContext);
   const { showToast } = useToast();
+  const todayKey = getIsraelDateKey();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
@@ -191,7 +203,7 @@ export default function LeadsPipeline({ onSelectLead }) {
             <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
             <input
               type="text"
-              placeholder="חיפוש ליד לפי שם/טלפון..."
+              placeholder="חיפוש לפי שם, טלפון או אימייל..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
@@ -230,7 +242,8 @@ export default function LeadsPipeline({ onSelectLead }) {
       </div>
 
       {/* Kanban Board Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-start">
+      <div className="overflow-x-auto pb-2">
+        <div className="grid min-w-[1220px] grid-cols-5 gap-3 items-start">
         {statusColumns.map(col => {
           const colLeads = filteredLeads.filter(l => l.status === col.id);
 
@@ -274,8 +287,15 @@ export default function LeadsPipeline({ onSelectLead }) {
                         <div className="truncate text-slate-700 dir-ltr text-right">{lead.email}</div>
                       ) : null}
                       {lead.follow_up_date && (
-                        <div className="text-amber-400 font-medium">
-                          חזרה: {lead.follow_up_date}
+                        <div className={`font-medium ${
+                          lead.follow_up_date < todayKey && !['lost', 'won'].includes(lead.status)
+                            ? 'text-rose-600'
+                            : 'text-amber-600'
+                        }`}>
+                          {lead.follow_up_date < todayKey && !['lost', 'won'].includes(lead.status)
+                            ? 'מעקב באיחור: '
+                            : 'חזרה: '}
+                          {lead.follow_up_date}
                         </div>
                       )}
                     </div>
@@ -291,6 +311,7 @@ export default function LeadsPipeline({ onSelectLead }) {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Add Lead Drawer */}
@@ -412,6 +433,15 @@ export default function LeadsPipeline({ onSelectLead }) {
                     <span>WhatsApp</span>
                   </a>
                 </>
+              )}
+              {selectedLead.email && (
+                <a
+                  href={`mailto:${selectedLead.email}`}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>מייל</span>
+                </a>
               )}
             </div>
 
