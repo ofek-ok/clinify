@@ -47,19 +47,15 @@ export const ClinicProvider = ({ children }) => {
   ]);
 
   // Supabase Auth Initialization (Strict Secure Session check)
+  // Temporary No-Login Mode: Fetch live DB data immediately on mount without auth session
   useEffect(() => {
     let isMounted = true;
 
-    async function initAuth() {
+    async function init() {
       try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        
-        if (existingSession && isMounted) {
-          setSession(existingSession);
-          setUser(existingSession.user ?? null);
-        }
+        await fetchInitialData();
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Error fetching initial data on mount:", err);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -67,28 +63,12 @@ export const ClinicProvider = ({ children }) => {
       }
     }
 
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (isMounted) {
-        setSession(session ?? null);
-        setUser(session?.user ?? null);
-      }
-      setIsLoading(false);
-    });
+    init();
 
     return () => {
       isMounted = false;
-      subscription?.unsubscribe();
     };
   }, []);
-
-  // Fetch complete Clinify dataset only when authenticated session exists
-  useEffect(() => {
-    if (session) {
-      fetchInitialData();
-    }
-  }, [session]);
 
   const mapBookingSettingsFromDb = (dbRow) => {
     if (!dbRow) return null;
@@ -189,7 +169,6 @@ export const ClinicProvider = ({ children }) => {
     setTasks([]);
     setProjects([]);
     setContentItems([]);
-    setPerformanceList([]);
     setPayments([]);
     setExpenses([]);
   };
