@@ -279,14 +279,7 @@ export default function ProjectsManager() {
           title={`פרויקט: ${selectedProject.name}`}
           width="max-w-xl"
           footer={
-            <div className="flex justify-between items-center w-full">
-              <button
-                onClick={() => setDeleteModalProj(selectedProject)}
-                className="text-rose-400 hover:text-rose-300 text-xs font-bold flex items-center space-x-1 space-x-reverse"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>מחק פרויקט</span>
-              </button>
+            <div className="flex justify-end items-center w-full">
               <button
                 onClick={() => setSelectedProject(null)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -338,17 +331,6 @@ export default function ProjectsManager() {
           </div>
         </Drawer>
       )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={Boolean(deleteModalProj)}
-        onClose={() => setDeleteModalProj(null)}
-        onConfirm={handleConfirmDelete}
-        title="מחיקת פרויקט"
-        message={`האם אתה בטוח שברצונך למחוק את הפרויקט "${deleteModalProj?.name}"?`}
-        confirmText="מחק"
-        isDanger={true}
-      />
     </div>
   );
 }

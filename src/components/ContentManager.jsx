@@ -314,14 +314,7 @@ export default function ContentManager() {
           onClose={() => setSelectedItem(null)}
           title={`פריט תוכן: ${selectedItem.title}`}
           footer={
-            <div className="flex justify-between items-center w-full">
-              <button
-                onClick={() => setDeleteModalItem(selectedItem)}
-                className="text-rose-400 hover:text-rose-300 text-xs font-bold flex items-center space-x-1 space-x-reverse"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>מחק תוכן</span>
-              </button>
+            <div className="flex justify-end items-center w-full">
               <button
                 onClick={() => setSelectedItem(null)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -363,17 +356,6 @@ export default function ContentManager() {
           </div>
         </Drawer>
       )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={Boolean(deleteModalItem)}
-        onClose={() => setDeleteModalItem(null)}
-        onConfirm={handleConfirmDelete}
-        title="מחיקת פריט תוכן"
-        message={`האם אתה בטוח שברצונך למחוק את פריט התוכן "${deleteModalItem?.title}"?`}
-        confirmText="מחק"
-        isDanger={true}
-      />
     </div>
   );
 }

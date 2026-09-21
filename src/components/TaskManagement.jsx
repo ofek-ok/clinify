@@ -412,14 +412,7 @@ export default function TaskManagement() {
           onClose={() => setSelectedTask(null)}
           title={`משימה: ${selectedTask.title}`}
           footer={
-            <div className="flex justify-between items-center w-full">
-              <button
-                onClick={() => setDeleteModalTask(selectedTask)}
-                className="text-rose-400 hover:text-rose-300 text-xs font-bold flex items-center space-x-1 space-x-reverse"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>מחק משימה</span>
-              </button>
+            <div className="flex justify-end items-center w-full">
               <button
                 onClick={() => setSelectedTask(null)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -484,17 +477,6 @@ export default function TaskManagement() {
           </div>
         </Drawer>
       )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={Boolean(deleteModalTask)}
-        onClose={() => setDeleteModalTask(null)}
-        onConfirm={handleConfirmDelete}
-        title="מחיקת משימה"
-        message={`האם אתה בטוח שברצונך למחוק את המשימה "${deleteModalTask?.title}"?`}
-        confirmText="מחק"
-        isDanger={true}
-      />
     </div>
   );
 }

@@ -142,8 +142,8 @@ const Layout = () => {
           })}
         </nav>
         
-        {/* User Profile & Language Switcher */}
-        <div className="p-4 border-t border-slate-800 shrink-0 space-y-3">
+        {/* Language Switcher Footer */}
+        <div className="p-4 border-t border-slate-800 shrink-0">
           <button 
             onClick={toggleLanguage}
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-950/60 hover:bg-slate-800/60 text-slate-300 text-xs font-medium transition-colors border border-slate-800"
@@ -156,18 +156,6 @@ const Layout = () => {
               {language === 'he' ? 'EN' : 'HE'}
             </span>
           </button>
-
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-800 text-emerald-400 font-bold flex items-center justify-center text-xs border border-slate-700">
-                {userInitial}
-              </div>
-              <div className="truncate max-w-[110px]">
-                <p className="text-xs font-bold text-white truncate">{userDisplayName}</p>
-                <p className="text-[10px] text-slate-400 truncate">{user?.email || 'ofek@clinify.co'}</p>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 

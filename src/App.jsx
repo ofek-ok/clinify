@@ -25,20 +25,20 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6 text-center font-sans">
-          <div className="bg-slate-800 border border-slate-700 p-8 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 text-center font-sans">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
             <div className="w-12 h-12 bg-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center mx-auto">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
-            <h2 className="text-xl font-black text-white">ארעה שגיאה בטעינת המסך</h2>
+            <h2 className="text-xl font-bold text-white">ארעה שגיאה בטעינת המסך</h2>
             <p className="text-slate-400 text-xs leading-relaxed">
               הרכיב נתקל בשגיאה לא צפויה. לחץ על הכפתור למטה כדי לרענן את העמוד ולחזור לפעילות תקינה.
             </p>
             <button 
               onClick={() => window.location.reload()}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition-colors text-xs"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg transition-colors text-xs"
             >
-              רענן עמוד 🔄
+              רענן עמוד
             </button>
           </div>
         </div>
@@ -48,21 +48,15 @@ class ErrorBoundary extends Component {
   }
 }
 
-import OwnerAuthScreen from './components/OwnerAuthScreen';
-
-const ProtectedDashboardRoute = () => {
-  const { session, isLoading } = useContext(ClinicContext);
+const MainAppRoute = () => {
+  const { isLoading } = useContext(ClinicContext);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6 text-center font-sans">
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 text-center font-sans">
         <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
-  }
-
-  if (!session) {
-    return <OwnerAuthScreen />;
   }
 
   return <Layout />;
@@ -74,17 +68,17 @@ function App() {
       <BrowserRouter>
         <LanguageProvider>
           <Routes>
-            {/* Public routes - lightweight, no owner auth bootstrap, no private CRM data fetches */}
+            {/* Public Customer Pages */}
             <Route path="/book" element={<PublicBookingView />} />
             <Route path="/form/:id" element={<PublicFormView />} />
             <Route path="/performance" element={<PublicPerformanceSignupView />} />
             
-            {/* Private Clinify OS routes - wrapped in ClinicProvider */}
+            {/* Main Application - Temporary No-Login Direct Access */}
             <Route 
               path="/*" 
               element={
                 <ClinicProvider>
-                  <ProtectedDashboardRoute />
+                  <MainAppRoute />
                 </ClinicProvider>
               } 
             />
