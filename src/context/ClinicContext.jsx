@@ -636,8 +636,14 @@ export const ClinicProvider = ({ children }) => {
 
     if (newStatus === 'completed' && appt) {
       const payment = payments.find(p => p.appointment_id === apptId && p.status === 'paid');
-      if (payment && appt.person_id) {
-        await triggerCustomerConversionIfEligible(appt.person_id);
+      let appointmentPersonId = appt.person_id || payment?.person_id || null;
+
+      if (!appointmentPersonId && appt.patient_id) {
+        appointmentPersonId = patients.find(patient => patient.id === appt.patient_id)?.person_id || null;
+      }
+
+      if (payment && appointmentPersonId) {
+        await triggerCustomerConversionIfEligible(appointmentPersonId);
       }
 
       if (appt.patient_id) {
@@ -928,8 +934,16 @@ export const ClinicProvider = ({ children }) => {
 
       if (createdPayment.status === 'paid' && createdPayment.appointment_id) {
         const appt = appointments.find(a => a.id === createdPayment.appointment_id);
-        if (appt && appt.status === 'completed' && appt.person_id) {
-          await triggerCustomerConversionIfEligible(appt.person_id);
+        if (appt && appt.status === 'completed') {
+          let conversionPersonId = createdPayment.person_id || appt.person_id || null;
+
+          if (!conversionPersonId && appt.patient_id) {
+            conversionPersonId = patients.find(patient => patient.id === appt.patient_id)?.person_id || null;
+          }
+
+          if (conversionPersonId) {
+            await triggerCustomerConversionIfEligible(conversionPersonId);
+          }
         }
       }
 
