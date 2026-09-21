@@ -2,6 +2,7 @@ import React, { useState, useContext, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { useToast } from './ui/Toast';
+import { ClipboardList, Mail, MessageSquare, Phone } from 'lucide-react';
 
 const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const { showToast } = useToast();
@@ -57,7 +58,9 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
   const clientCommunications = useMemo(() => {
     const leadId = lead?.id;
-    return leadCommunications.filter(c => (leadId && c.lead_id === leadId) || (personId && c.person_id === personId));
+    return leadCommunications
+      .filter(c => (leadId && c.lead_id === leadId) || (personId && c.person_id === personId))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [leadCommunications, lead, personId]);
 
   const clientSubmissions = useMemo(() => {
@@ -139,21 +142,21 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const phone = person.phone || '-';
   const email = person.email || '-';
   const source = person.source || 'Website';
-  const clientStatus = person.client_status || (patient ? 'customer' : 'lead');
+  const clientStatus = person.client_status || 'lead';
 
   // Format phone for WhatsApp link
   const cleanPhone = phone.replace(/\D/g, '');
   const formattedWaPhone = cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1) : cleanPhone;
-  const whatsappUrl = `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, פניתי אלייך ממרפאת Clinify`)}`;
+  const whatsappUrl = `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, כאן אופק מ-Okonski Performance`)}`;
 
   // Handlers
   const handleCreateClinicalProfile = async () => {
     try {
       await addPatient({ full_name: name, phone, email, source, status: 'active' });
       setActiveTab('clinical');
-      showToast('תיק רפואי נפתח בהצלחה!');
+      showToast('תיק טיפולי נפתח בהצלחה!');
     } catch (err) {
-      showToast(err.message || 'שגיאה ביצירת תיק רפואי', 'error');
+      showToast(err.message || 'שגיאה ביצירת תיק טיפולי', 'error');
     }
   };
 
@@ -236,6 +239,30 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     showToast('הכרטיסייה הונפקה בהצלחה!');
   };
 
+  const getLeadStatusLabel = (status) => {
+    const labels = {
+      new: t('New', 'חדש'),
+      contacted: t('Contacted', 'יצרנו קשר'),
+      qualified: t('Qualified', 'מתאים'),
+      scheduled: t('Scheduled', 'נקבע תור'),
+      won: t('Customer', 'לקוח'),
+      lost: t('Lost', 'אבוד')
+    };
+    return labels[status] || status;
+  };
+
+  const getAppointmentStatusLabel = (status) => {
+    const labels = {
+      scheduled: t('Scheduled', 'נקבע'),
+      confirmed: t('Confirmed', 'אושר'),
+      completed: t('Completed', 'הושלם'),
+      cancelled: t('Cancelled', 'בוטל'),
+      no_show: t('No Show', 'לא הגיע'),
+      rescheduled: t('Rescheduled', 'נקבע מחדש')
+    };
+    return labels[status] || status;
+  };
+
   const renderNoteContent = (noteContent) => {
     try {
       const parsed = JSON.parse(noteContent);
@@ -277,7 +304,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     <div className="fixed inset-0 z-50 overflow-hidden text-start">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-white backdrop-blur-xs transition-opacity animate-in fade-in duration-300"
+        className="absolute inset-0 bg-slate-950/35 transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
 
@@ -290,7 +317,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-xl font-bold text-slate-900 shadow-lg border border-white/20">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-xl font-bold text-white border border-slate-800">
                   {name.charAt(0)}
                 </div>
                 <div>
@@ -306,7 +333,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
                     {lead?.status && (
                       <span className="text-xs font-semibold text-violet-300 bg-violet-500/20 px-2.5 py-0.5 rounded-full border border-violet-500/30 uppercase tracking-wider">
-                        {t('Stage', 'שלב')}: {lead.status}
+                        {t('Stage', 'שלב')}: {getLeadStatusLabel(lead.status)}
                       </span>
                     )}
 
@@ -330,7 +357,8 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   rel="noreferrer"
                   className="text-xs font-bold text-emerald-400 hover:text-emerald-700 flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 transition-colors"
                 >
-                  🟢 WhatsApp
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  WhatsApp
                 </a>
                 <button onClick={onClose} className="text-slate-500 hover:text-slate-900 transition-colors p-1">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -340,8 +368,8 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
             {/* Quick Contact Bar */}
             <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-slate-200/80 text-xs text-slate-700">
-              <span dir="ltr">📞 {phone}</span>
-              {email !== '-' && <span dir="ltr">✉ {email}</span>}
+              <span className="flex items-center gap-1.5" dir="ltr"><Phone className="w-3.5 h-3.5" /> {phone}</span>
+              {email !== '-' && <span className="flex items-center gap-1.5" dir="ltr"><Mail className="w-3.5 h-3.5" /> {email}</span>}
             </div>
           </div>
 
@@ -384,7 +412,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               { id: 'tasks', label: `${t('Tasks & Follow-up', 'משימות ומעקב')} (${clientTasks.length})` },
               { id: 'communications', label: `${t('Communications', 'תקשורת')} (${clientCommunications.length})` },
               { id: 'forms', label: `${t('Forms', 'טפסים')} (${clientSubmissions.length})` },
-              { id: 'clinical', label: `${t('Clinical Profile', 'תיק רפואי')}${patient ? '' : ' ⚠'}` }
+              { id: 'clinical', label: `${t('Treatment Profile', 'תיק טיפולי')}${patient ? '' : ''}` }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -417,21 +445,21 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     <div><span className="text-slate-500 font-semibold">{t('Email', 'אימייל')}:</span> <p className="font-bold text-slate-800" dir="ltr">{email}</p></div>
                     <div><span className="text-slate-500 font-semibold">{t('Source', 'מקור הגעה')}:</span> <p className="font-bold text-slate-800">{source}</p></div>
                     <div><span className="text-slate-500 font-semibold">{t('Relationship Status', 'סטטוס קשר')}:</span> <p className="font-bold text-emerald-600">{clientStatus}</p></div>
-                    <div><span className="text-slate-500 font-semibold">{t('Clinical Profile', 'תיק רפואי')}:</span> <p className="font-bold text-slate-800">{patient ? t('Active Profile', 'קיים במערכת') : t('None', 'טרם נפתח')}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Treatment Profile', 'תיק טיפולי')}:</span> <p className="font-bold text-slate-800">{patient ? t('Active Profile', 'קיים במערכת') : t('None', 'טרם נפתח')}</p></div>
                   </div>
                 </div>
 
                 {!patient && (
                   <div className="p-5 bg-emerald-50/60 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h4 className="font-extrabold text-sm text-emerald-900">{t('No Clinical Profile Found', 'טרם נפתח תיק טיפולי רפואי')}</h4>
-                      <p className="text-xs text-emerald-700 font-medium mt-0.5">{t('Open a clinical profile to manage SOAP notes, diagnoses, and medical documents without converting client status to customer.', 'פתח תיק טיפולי להוספת הערכות SOAP ומסמכים רפואיים מבלי לשנות את סטטוס הלקוח.')}</p>
+                      <h4 className="font-extrabold text-sm text-emerald-900">{t('No Treatment Profile Found', 'טרם נפתח תיק טיפולי')}</h4>
+                      <p className="text-xs text-emerald-700 font-medium mt-0.5">{t('Open a treatment profile to manage SOAP notes and treatment documents without changing the CRM relationship status.', 'פתח תיק טיפולי כדי לנהל תרשומות SOAP ומסמכי טיפול, בלי לשנות את סטטוס הקשר ב-CRM.')}</p>
                     </div>
                     <button 
                       onClick={handleCreateClinicalProfile}
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
                     >
-                      + {t('Create Clinical Profile', 'פתח תיק רפואי')}
+                      + {t('Create Treatment Profile', 'פתח תיק טיפולי')}
                     </button>
                   </div>
                 )}
@@ -455,7 +483,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       <div key={appt.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs flex justify-between items-center gap-4">
                         <div>
                           <p className="font-bold text-xs text-slate-800">{getServiceName(appt.service_id) || t('General Consultation', 'פגישת ייעוץ')}</p>
-                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">📅 {new Date(appt.appointment_date).toLocaleString('he-IL')}</p>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">{new Date(appt.appointment_date).toLocaleString('he-IL')}</p>
                           {appt.notes && <p className="text-[11px] text-slate-500 italic mt-1">{appt.notes}</p>}
                         </div>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
@@ -463,7 +491,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                           'bg-indigo-50 text-indigo-700 border-indigo-200'
                         }`}>
-                          {appt.status}
+                          {getAppointmentStatusLabel(appt.status)}
                         </span>
                       </div>
                     ))}
@@ -584,7 +612,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
                     />
                   </div>
-                  <button type="submit" className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-slate-900 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
+                  <button type="submit" className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
                     {t('Add Task', 'הוסף משימה')}
                   </button>
                 </form>
@@ -626,9 +654,9 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       onChange={(e) => setCommType(e.target.value)}
                       className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
                     >
-                      <option value="call">📞 {t('Phone Call', 'שיחת טלפון')}</option>
-                      <option value="whatsapp">🟢 WhatsApp</option>
-                      <option value="email">✉ {t('Email', 'אימייל')}</option>
+                      <option value="call">{t('Phone Call', 'שיחת טלפון')}</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="email">{t('Email', 'אימייל')}</option>
                     </select>
                     <input 
                       type="text"
@@ -654,7 +682,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       <div key={comm.id} className="p-3.5 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-1">
                         <div className="flex justify-between items-center text-[11px]">
                           <span className="font-bold text-slate-800 uppercase">
-                            {comm.type === 'whatsapp' ? '🟢 WhatsApp' : comm.type === 'call' ? '📞 Phone Call' : '✉ Email'}
+                            {comm.type === 'whatsapp' ? 'WhatsApp' : comm.type === 'call' ? t('Phone Call', 'שיחת טלפון') : t('Email', 'אימייל')}
                           </span>
                           <span className="text-slate-500 text-[10px]">{new Date(comm.created_at).toLocaleString('he-IL')}</span>
                         </div>
@@ -706,19 +734,19 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 {!patient ? (
                   <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                     <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                      📋
+                      <ClipboardList className="w-5 h-5" />
                     </div>
                     <div>
                       <h4 className="font-extrabold text-base text-slate-800">{t('No Clinical Profile Active', 'טרם נפתח תיק טיפולי')}</h4>
                       <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 font-medium">
-                        {t('Creating a clinical profile enables clinical notes, SOAP documentation, and medical attachment uploads.', 'פתיחת תיק טיפולי מאפשרת הוספת תרשומות SOAP ומסמכים רפואיים.')}
+                        {t('Creating a treatment profile enables SOAP notes and treatment document management.', 'פתיחת תיק טיפולי מאפשרת הוספת תרשומות SOAP וניהול מסמכי טיפול.')}
                       </p>
                     </div>
                     <button 
                       onClick={handleCreateClinicalProfile}
                       className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                     >
-                      + {t('Create Clinical Profile Now', 'פתח תיק טיפולי כעת')}
+                      + {t('Create Treatment Profile Now', 'פתח תיק טיפולי כעת')}
                     </button>
                   </div>
                 ) : (
@@ -726,7 +754,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     {/* SOAP / Simple Note Form */}
                     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
                       <div className="flex justify-between items-center">
-                        <h4 className="font-extrabold text-xs text-slate-800">+ {t('Add Clinical Entry / Note', 'הוספת תרשומת רפואית')}</h4>
+                        <h4 className="font-extrabold text-xs text-slate-800">+ {t('Add Treatment Entry / Note', 'הוספת תרשומת טיפול')}</h4>
                         <div className="flex bg-slate-200/80 p-0.5 rounded-lg text-[10px] font-bold">
                           <button 
                             onClick={() => setNoteMode('soap')} 
@@ -783,7 +811,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     <div className="space-y-3">
                       <h4 className="font-extrabold text-xs text-slate-700">{t('Clinical Notes History', 'היסטוריית תרשומות טיפול')}</h4>
                       {(!patient.clinical_notes || patient.clinical_notes.length === 0) ? (
-                        <p className="text-xs text-slate-500 italic text-center py-4">{t('No clinical notes recorded yet.', 'אין תרשומות רפואיות.')}</p>
+                        <p className="text-xs text-slate-500 italic text-center py-4">{t('No treatment notes recorded yet.', 'אין עדיין תרשומות טיפול.')}</p>
                       ) : (
                         patient.clinical_notes.map(note => (
                           <div key={note.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2">
@@ -799,7 +827,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
                     {/* Documents Upload Section */}
                     <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-                      <h4 className="font-extrabold text-xs text-slate-800">{t('Medical Documents & Attachments', 'מסמכים וקבצים מצורפים')}</h4>
+                      <h4 className="font-extrabold text-xs text-slate-800">{t('Treatment Documents & Attachments', 'מסמכי טיפול וקבצים מצורפים')}</h4>
                       <form onSubmit={handleAddDoc} className="flex gap-2">
                         <input 
                           type="text"

@@ -3,10 +3,10 @@ import { ClinicContext } from '../context/ClinicContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
-import { Search, Plus, Phone, MessageSquare, Calendar, CheckSquare } from 'lucide-react';
+import { Search, Plus, Phone, MessageSquare } from 'lucide-react';
 
 export default function LeadsPipeline({ onSelectLead }) {
-  const { leads, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication } = useContext(ClinicContext);
+  const { leads, leadCommunications, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication } = useContext(ClinicContext);
   const { showToast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +38,29 @@ export default function LeadsPipeline({ onSelectLead }) {
     { id: 'lost', title: 'אבוד' }
   ];
 
+
+  const selectedLeadCommunications = (leadCommunications || [])
+    .filter(item => item.lead_id === selectedLead?.id)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const formatWhatsAppPhone = (phone) => {
+    const clean = String(phone || '').replace(/\D/g, '');
+    if (!clean) return '';
+    if (clean.startsWith('972')) return clean;
+    if (clean.startsWith('0')) return `972${clean.slice(1)}`;
+    return clean;
+  };
+
+  const getCommunicationTypeLabel = (type) => {
+    const labels = {
+      call: 'שיחה',
+      whatsapp: 'WhatsApp',
+      email: 'מייל',
+      note: 'הערה'
+    };
+    return labels[type] || type;
+  };
+
   // Sources & Campaigns lists for filter
   const sourcesList = Array.from(new Set(leads.map(l => l.source).filter(Boolean)));
   const campaignsList = Array.from(new Set(leads.map(l => l.campaign).filter(Boolean)));
@@ -54,25 +77,40 @@ export default function LeadsPipeline({ onSelectLead }) {
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    if (!newLeadName || !newLeadPhone) {
-      showToast('אנא הזן שם מלא ומספר טלפון', 'error');
+
+    if (!newLeadName.trim()) {
+      showToast('אנא הזן שם מלא', 'error');
       return;
     }
+
+    if (!newLeadPhone.trim() && !newLeadEmail.trim()) {
+      showToast('יש להזין לפחות טלפון או דוא״ל', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await addLead({
+      const result = await addLead({
         full_name: newLeadName.trim(),
-        phone: newLeadPhone.trim(),
+        phone: newLeadPhone.trim() || null,
         email: newLeadEmail.trim() || null,
         source: newLeadSource,
-        campaign: newLeadCampaign,
+        campaign: newLeadCampaign.trim() || 'General Inquiries',
         status: 'new'
       });
-      showToast('הליד נוצר בהצלחה');
+
+      if (result?._existing) {
+        showToast('הליד כבר קיים במערכת', 'info');
+        setSelectedLead(result);
+      } else {
+        showToast('הליד נוצר בהצלחה');
+      }
+
       setIsAddDrawerOpen(false);
       setNewLeadName('');
       setNewLeadPhone('');
       setNewLeadEmail('');
+      setNewLeadCampaign('General Inquiries');
     } catch (err) {
       showToast(err.message || 'שגיאה ביצירת הליד', 'error');
     } finally {
@@ -121,6 +159,25 @@ export default function LeadsPipeline({ onSelectLead }) {
       setCommNote('');
     } catch (err) {
       showToast('שגיאה בשמירת תיעוד', 'error');
+    }
+  };
+
+
+  const handleFollowUpChange = async (value) => {
+    if (!selectedLead) return;
+    const previousValue = selectedLead.follow_up_date || '';
+    setSelectedLead(prev => ({ ...prev, follow_up_date: value || null }));
+
+    try {
+      await updateLeadFollowUp(
+        selectedLead.id,
+        value || null,
+        selectedLead.lost_reason || null
+      );
+      showToast(value ? 'תאריך המעקב עודכן' : 'תאריך המעקב הוסר');
+    } catch (err) {
+      setSelectedLead(prev => ({ ...prev, follow_up_date: previousValue || null }));
+      showToast('שגיאה בעדכון תאריך המעקב', 'error');
     }
   };
 
@@ -211,7 +268,11 @@ export default function LeadsPipeline({ onSelectLead }) {
                           {lead.campaign && <span> · {lead.campaign}</span>}
                         </div>
                       )}
-                      {lead.phone && <div className="font-mono text-slate-700 dir-ltr text-right">{lead.phone}</div>}
+                      {lead.phone ? (
+                        <div className="font-mono text-slate-700 dir-ltr text-right">{lead.phone}</div>
+                      ) : lead.email ? (
+                        <div className="truncate text-slate-700 dir-ltr text-right">{lead.email}</div>
+                      ) : null}
                       {lead.follow_up_date && (
                         <div className="text-amber-400 font-medium">
                           חזרה: {lead.follow_up_date}
@@ -269,16 +330,17 @@ export default function LeadsPipeline({ onSelectLead }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">טלפון *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">טלפון</label>
             <input
               type="tel"
-              required
               value={newLeadPhone}
               onChange={e => setNewLeadPhone(e.target.value)}
               placeholder="050-0000000"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-emerald-500"
             />
           </div>
+
+          <p className="text-[11px] text-slate-500">יש להזין לפחות טלפון או דוא״ל.</p>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">דוא״ל</label>
@@ -341,7 +403,7 @@ export default function LeadsPipeline({ onSelectLead }) {
                     <span>התקשר</span>
                   </a>
                   <a
-                    href={`https://wa.me/${selectedLead.phone.replace(/\D/g, '')}`}
+                    href={`https://wa.me/${formatWhatsAppPhone(selectedLead.phone)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
@@ -380,6 +442,10 @@ export default function LeadsPipeline({ onSelectLead }) {
                   <span className="text-slate-900 font-mono dir-ltr inline-block">{selectedLead.phone || '-'}</span>
                 </div>
                 <div>
+                  <span className="text-slate-500">דוא״ל: </span>
+                  <span className="text-slate-900 font-medium dir-ltr inline-block">{selectedLead.email || '-'}</span>
+                </div>
+                <div>
                   <span className="text-slate-500">מקור: </span>
                   <span className="text-slate-900 font-medium">{selectedLead.source || '-'}</span>
                 </div>
@@ -396,7 +462,7 @@ export default function LeadsPipeline({ onSelectLead }) {
               <input
                 type="date"
                 value={selectedLead.follow_up_date || ''}
-                onChange={e => updateLeadFollowUp(selectedLead.id, e.target.value || null, selectedLead.lost_reason)}
+                onChange={e => handleFollowUpChange(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
@@ -431,6 +497,35 @@ export default function LeadsPipeline({ onSelectLead }) {
                   </button>
                 </div>
               </form>
+
+              <div className="space-y-2 border-t border-slate-200 pt-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-[11px] font-bold text-slate-600">היסטוריית תקשורת</h5>
+                  <span className="text-[10px] text-slate-400">{selectedLeadCommunications.length} רשומות</span>
+                </div>
+
+                {selectedLeadCommunications.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
+                    עדיין אין תיעוד תקשורת.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedLeadCommunications.map(item => (
+                      <div key={item.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="mb-1 flex items-center justify-between gap-3">
+                          <span className="text-[10px] font-bold text-slate-600">
+                            {getCommunicationTypeLabel(item.type)}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {item.created_at ? new Date(item.created_at).toLocaleString('he-IL') : ''}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed text-slate-700">{item.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Drawer>

@@ -1,9 +1,25 @@
-import React, { useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import PatientDirectory from './PatientDirectory';
 import LeadsPipeline from './LeadsPipeline';
+import { ClinicContext } from '../context/ClinicContext';
 
 export default function ClientCrmManager({ initialTab = 'leads' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const { leads = [], patients = [] } = useContext(ClinicContext);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  const openLeadsCount = useMemo(
+    () => leads.filter(lead => ['new', 'contacted', 'qualified', 'scheduled'].includes(lead.status)).length,
+    [leads]
+  );
+
+  const customersCount = useMemo(
+    () => patients.filter(patient => patient.client_status === 'customer').length,
+    [patients]
+  );
 
   return (
     <div className="space-y-6 dir-rtl text-start">
@@ -21,7 +37,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            לידים
+            לידים <span className="mr-1 text-[10px] opacity-75">{openLeadsCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('clients')}
@@ -31,7 +47,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            לקוחות
+            לקוחות <span className="mr-1 text-[10px] opacity-75">{customersCount}</span>
           </button>
         </div>
       </div>
