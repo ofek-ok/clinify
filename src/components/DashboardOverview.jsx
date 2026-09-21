@@ -1,6 +1,7 @@
 import React, { useContext, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
+import { AreaChart, Area, BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
 const OPEN_LEAD_STATUSES = new Set(['new', 'contacted', 'qualified', 'scheduled']);
@@ -63,6 +64,7 @@ const DashboardOverview = ({ navigate }) => {
     services = [],
     tasks = [],
     payments = [],
+    expenses = [],
     getPatientName = () => '',
     getPersonName = () => '',
     getServiceName = () => ''
@@ -158,6 +160,63 @@ const DashboardOverview = ({ navigate }) => {
       })
       .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   }, [payments, currentMonthKey]);
+
+
+  const financialTrendData = useMemo(() => {
+    const nowParts = getDateParts();
+    const baseMonth = new Date(
+      Date.UTC(Number(nowParts.year), Number(nowParts.month) - 1, 1, 12)
+    );
+
+    return Array.from({ length: 6 }, (_, index) => {
+      const offset = 5 - index;
+      const monthDate = new Date(
+        Date.UTC(baseMonth.getUTCFullYear(), baseMonth.getUTCMonth() - offset, 1, 12)
+      );
+      const key = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+      const label = monthDate.toLocaleDateString('he-IL', {
+        month: 'short',
+        timeZone: 'UTC'
+      });
+
+      const income = payments
+        .filter(payment => {
+          if (!payment || payment.status !== 'paid' || !payment.payment_date) return false;
+          return getMonthKey(payment.payment_date) === key;
+        })
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+      const spend = expenses
+        .filter(expense => {
+          if (!expense?.expense_date) return false;
+          return getMonthKey(expense.expense_date) === key;
+        })
+        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+
+      return {
+        key,
+        label,
+        income,
+        expenses: spend
+      };
+    });
+  }, [payments, expenses]);
+
+  const leadStageData = useMemo(() => {
+    const stages = [
+      { id: 'new', label: t('New', 'חדש') },
+      { id: 'contacted', label: t('Contacted', 'יצרנו קשר') },
+      { id: 'qualified', label: t('Qualified', 'מתאים') },
+      { id: 'scheduled', label: t('Scheduled', 'נקבע תור') },
+      { id: 'won', label: t('Client', 'לקוח') },
+      { id: 'lost', label: t('Lost', 'אבוד') }
+    ];
+
+    return stages.map(stage => ({
+      stage: stage.label,
+      value: leads.filter(lead => lead?.status === stage.id).length
+    }));
+  }, [leads, t]);
 
   const actionItemsCount =
     newLeads.length + overdueTasks.length + outstandingAppointments.length;
@@ -321,6 +380,100 @@ const DashboardOverview = ({ navigate }) => {
           </div>
         </section>
       )}
+
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">
+                {t('Revenue vs. Expenses — 6 Months', 'הכנסות מול הוצאות — 6 חודשים')}
+              </h3>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {t('Based only on recorded payments and expenses', 'מבוסס רק על תשלומים והוצאות שנרשמו במערכת')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('finance')}
+              className="shrink-0 text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+            >
+              {t('Open finance', 'פתח כספים')}
+            </button>
+          </div>
+
+          <div className="h-64 w-full" dir="ltr">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={financialTrendData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tickFormatter={(value) => `₪${Number(value).toLocaleString('he-IL')}`}
+                />
+                <Tooltip
+                  formatter={(value, name) => [
+                    `₪${formatMoney(value)}`,
+                    name === 'income' ? t('Revenue', 'הכנסות') : t('Expenses', 'הוצאות')
+                  ]}
+                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
+                  contentStyle={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+                    fontSize: '12px'
+                  }}
+                />
+                <Area type="monotone" dataKey="income" stroke="#059669" fill="#10b981" fillOpacity={0.12} strokeWidth={2} />
+                <Area type="monotone" dataKey="expenses" stroke="#e11d48" fill="#fb7185" fillOpacity={0.08} strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">
+                {t('Leads by Current Stage', 'לידים לפי שלב נוכחי')}
+              </h3>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {t('Live CRM status — no estimated or synthetic data', 'מצב ה-CRM בפועל — ללא נתונים משוערים או נתוני דמה')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('leads')}
+              className="shrink-0 text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+            >
+              {t('Open CRM', 'פתח CRM')}
+            </button>
+          </div>
+
+          <div className="h-64 w-full" dir="ltr">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={leadStageData} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="stage" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                <Tooltip
+                  formatter={(value) => [value, t('Leads', 'לידים')]}
+                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
+                  contentStyle={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+                    fontSize: '12px'
+                  }}
+                />
+                <Bar dataKey="value" fill="#059669" radius={[6, 6, 0, 0]} maxBarSize={42} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs lg:col-span-2">
