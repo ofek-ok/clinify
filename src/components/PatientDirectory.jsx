@@ -9,7 +9,9 @@ export default function PatientDirectory() {
   const [selectedClient, setSelectedClient] = useState(null);
 
   const clientsData = useMemo(() => {
-    return patients.map(p => {
+    return patients
+      .filter(p => p.client_status === 'customer')
+      .map(p => {
       // Find appointments for client
       const clientAppts = appointments.filter(a => a.patient_id === p.id || a.person_id === p.person_id);
       const now = new Date();
@@ -35,7 +37,7 @@ export default function PatientDirectory() {
         lastApptDate: lastAppt ? new Date(lastAppt.appointment_date).toLocaleDateString('he-IL') : '-',
         totalPaid
       };
-    });
+      });
   }, [patients, appointments, payments]);
 
   const filteredClients = useMemo(() => {
@@ -63,7 +65,11 @@ export default function PatientDirectory() {
           />
         </div>
         <div className="text-xs text-slate-500 font-medium">
-          סה״כ לקוחות: <span className="text-slate-900 font-bold">{filteredClients.length}</span>
+          {searchTerm ? (
+            <>מוצגים: <span className="text-slate-900 font-bold">{filteredClients.length}</span> מתוך {clientsData.length}</>
+          ) : (
+            <>סה״כ לקוחות: <span className="text-slate-900 font-bold">{clientsData.length}</span></>
+          )}
         </div>
       </div>
 
@@ -108,7 +114,7 @@ export default function PatientDirectory() {
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-slate-100 text-slate-500'
                       }`}>
-                        {(client.status || 'active') === 'active' ? 'לקוח פעיל' : 'לא פעיל'}
+                        {(client.status || 'active') === 'active' ? 'פעיל' : 'לא פעיל'}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-700 font-medium">
