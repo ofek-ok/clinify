@@ -127,17 +127,17 @@ export default function LeadsPipeline({ onSelectLead }) {
   return (
     <div className="space-y-4 dir-rtl text-start font-sans">
       {/* Top Controls Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
         <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-[280px]">
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
             <input
               type="text"
               placeholder="חיפוש ליד לפי שם/טלפון..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pr-9 pl-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -145,7 +145,7 @@ export default function LeadsPipeline({ onSelectLead }) {
           <select
             value={sourceFilter}
             onChange={e => setSourceFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
           >
             <option value="all">כל המקורות</option>
             {sourcesList.map(s => <option key={s} value={s}>{s}</option>)}
@@ -155,7 +155,7 @@ export default function LeadsPipeline({ onSelectLead }) {
           <select
             value={campaignFilter}
             onChange={e => setCampaignFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
           >
             <option value="all">כל הקמפיינים</option>
             {campaignsList.map(c => <option key={c} value={c}>{c}</option>)}
@@ -178,11 +178,11 @@ export default function LeadsPipeline({ onSelectLead }) {
           const colLeads = filteredLeads.filter(l => l.status === col.id);
 
           return (
-            <div key={col.id} className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 space-y-3 min-h-[400px]">
+            <div key={col.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3 min-h-[400px]">
               {/* Column Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-xs font-bold text-white">{col.title}</span>
-                <span className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <span className="text-xs font-bold text-slate-900">{col.title}</span>
+                <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                   {colLeads.length}
                 </span>
               </div>
@@ -196,22 +196,22 @@ export default function LeadsPipeline({ onSelectLead }) {
                       if (onSelectLead) onSelectLead(lead);
                       setSelectedLead(lead);
                     }}
-                    className="bg-slate-900 border border-slate-800/90 hover:border-slate-700 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
+                    className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
                   >
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-400 transition-colors">
                         {lead.full_name}
                       </h4>
                     </div>
 
-                    <div className="text-[11px] text-slate-400 space-y-0.5">
+                    <div className="text-[11px] text-slate-500 space-y-0.5">
                       {lead.source && (
                         <div>
                           <span>{lead.source}</span>
                           {lead.campaign && <span> · {lead.campaign}</span>}
                         </div>
                       )}
-                      {lead.phone && <div className="font-mono text-slate-300 dir-ltr text-right">{lead.phone}</div>}
+                      {lead.phone && <div className="font-mono text-slate-700 dir-ltr text-right">{lead.phone}</div>}
                       {lead.follow_up_date && (
                         <div className="text-amber-400 font-medium">
                           חזרה: {lead.follow_up_date}
@@ -241,7 +241,7 @@ export default function LeadsPipeline({ onSelectLead }) {
           <>
             <button
               onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
               ביטול
             </button>
@@ -257,46 +257,46 @@ export default function LeadsPipeline({ onSelectLead }) {
       >
         <form onSubmit={handleCreateLead} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">שם מלא *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">שם מלא *</label>
             <input
               type="text"
               required
               value={newLeadName}
               onChange={e => setNewLeadName(e.target.value)}
               placeholder="ישראל ישראלי"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">טלפון *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">טלפון *</label>
             <input
               type="tel"
               required
               value={newLeadPhone}
               onChange={e => setNewLeadPhone(e.target.value)}
               placeholder="050-0000000"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white dir-ltr text-left focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">דוא״ל</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">דוא״ל</label>
             <input
               type="email"
               value={newLeadEmail}
               onChange={e => setNewLeadEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white dir-ltr text-left focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">מקור פנייה</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">מקור פנייה</label>
             <select
               value={newLeadSource}
               onChange={e => setNewLeadSource(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             >
               <option value="Instagram">Instagram</option>
               <option value="Facebook">Facebook</option>
@@ -308,13 +308,13 @@ export default function LeadsPipeline({ onSelectLead }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">קמפיין</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">קמפיין</label>
             <input
               type="text"
               value={newLeadCampaign}
               onChange={e => setNewLeadCampaign(e.target.value)}
               placeholder="שם קמפיין / Pre-Launch"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
         </form>
@@ -330,12 +330,12 @@ export default function LeadsPipeline({ onSelectLead }) {
         >
           <div className="space-y-6">
             {/* Quick Action Bar */}
-            <div className="flex items-center space-x-2 space-x-reverse bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <div className="flex items-center space-x-2 space-x-reverse bg-slate-50 p-2 rounded-xl border border-slate-200">
               {selectedLead.phone && (
                 <>
                   <a
                     href={`tel:${selectedLead.phone}`}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
                   >
                     <Phone className="w-3.5 h-3.5" />
                     <span>התקשר</span>
@@ -355,11 +355,11 @@ export default function LeadsPipeline({ onSelectLead }) {
 
             {/* Editable Status */}
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">סטטוס פנייה</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">סטטוס פנייה</label>
               <select
                 value={selectedLead.status || 'new'}
                 onChange={e => handleStatusChange(selectedLead, e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
                 {statusColumns.map(s => (
                   <option key={s.id} value={s.id}>{s.title}</option>
@@ -368,48 +368,48 @@ export default function LeadsPipeline({ onSelectLead }) {
             </div>
 
             {/* Lead Metadata */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-              <h4 className="text-xs font-bold text-slate-300">פרטי פנייה</h4>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-bold text-slate-700">פרטי פנייה</h4>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-slate-500">שם: </span>
-                  <span className="text-white font-medium">{selectedLead.full_name}</span>
+                  <span className="text-slate-900 font-medium">{selectedLead.full_name}</span>
                 </div>
                 <div>
                   <span className="text-slate-500">טלפון: </span>
-                  <span className="text-white font-mono dir-ltr inline-block">{selectedLead.phone || '-'}</span>
+                  <span className="text-slate-900 font-mono dir-ltr inline-block">{selectedLead.phone || '-'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500">מקור: </span>
-                  <span className="text-white font-medium">{selectedLead.source || '-'}</span>
+                  <span className="text-slate-900 font-medium">{selectedLead.source || '-'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500">קמפיין: </span>
-                  <span className="text-white font-medium">{selectedLead.campaign || '-'}</span>
+                  <span className="text-slate-900 font-medium">{selectedLead.campaign || '-'}</span>
                 </div>
               </div>
             </div>
 
             {/* Follow-up Date */}
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">תאריך חזרה למעקב</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">תאריך חזרה למעקב</label>
               <input
                 type="date"
                 value={selectedLead.follow_up_date || ''}
                 onChange={e => updateLeadFollowUp(selectedLead.id, e.target.value || null, selectedLead.lost_reason)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               />
             </div>
 
             {/* Log Communication */}
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-slate-300">תיעוד תקשורת</h4>
+              <h4 className="text-xs font-bold text-slate-700">תיעוד תקשורת</h4>
               <form onSubmit={handleLogComm} className="space-y-2">
                 <div className="flex space-x-2 space-x-reverse">
                   <select
                     value={commType}
                     onChange={e => setCommType(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900"
                   >
                     <option value="call">שיחה</option>
                     <option value="whatsapp">ווטסאפ</option>
@@ -421,11 +421,11 @@ export default function LeadsPipeline({ onSelectLead }) {
                     placeholder="תיעוד סיכום שיחה..."
                     value={commNote}
                     onChange={e => setCommNote(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
                   />
                   <button
                     type="submit"
-                    className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold"
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg text-xs font-bold"
                   >
                     שמור
                   </button>
