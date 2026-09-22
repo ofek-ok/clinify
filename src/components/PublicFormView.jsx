@@ -73,7 +73,7 @@ const PublicFormView = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
-        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -93,7 +93,7 @@ const PublicFormView = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-center font-sans">
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md w-full animate-in zoom-in-95 duration-500">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-16 h-16 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-800 mb-2">{t('Thank You!', 'תודה רבה!')}</h2>
@@ -120,19 +120,19 @@ const PublicFormView = () => {
                 </label>
                 
                 {field.type === 'text' && (
-                  <input type="text" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-medium" />
+                  <input type="text" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-sm font-medium" />
                 )}
                 
                 {field.type === 'tel' && (
-                  <input type="tel" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} dir="ltr" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-end text-sm font-medium" />
+                  <input type="tel" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} dir="ltr" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-end text-sm font-medium" />
                 )}
                 
                 {field.type === 'textarea' && (
-                  <textarea required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} rows="4" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none text-sm font-medium"></textarea>
+                  <textarea required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} rows="4" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all resize-none text-sm font-medium"></textarea>
                 )}
                 
                 {field.type === 'dropdown' && (
-                  <select required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all cursor-pointer text-sm font-medium">
+                  <select required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all cursor-pointer text-sm font-medium">
                     <option value="">{t('Select an option...', 'בחר אפשרות...')}</option>
                     {(field.options || []).map(opt => (
                       <option key={opt} value={opt}>{opt}</option>
@@ -142,7 +142,7 @@ const PublicFormView = () => {
                 
                 {field.type === 'checkbox' && (
                   <label className="flex items-start gap-3 p-4 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
-                    <input type="checkbox" required={field.required} checked={responses[field.id] || false} onChange={e => handleInputChange(field.id, e.target.checked)} className="mt-0.5 w-5 h-5 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500" />
+                    <input type="checkbox" required={field.required} checked={responses[field.id] || false} onChange={e => handleInputChange(field.id, e.target.checked)} className="mt-0.5 w-5 h-5 text-violet-500 rounded border-slate-300 focus:ring-violet-500" />
                     <span className="text-sm font-semibold text-slate-700">{field.label}</span>
                   </label>
                 )}
@@ -151,7 +151,7 @@ const PublicFormView = () => {
           </div>
           
           <div className="p-6 sm:p-10 bg-slate-50 border-t border-slate-100">
-            <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs">
+            <button type="submit" disabled={isSubmitting} className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs">
               {isSubmitting ? t('Submitting...', 'שולח...') : t('Submit Form', 'שלח טופס')}
             </button>
           </div>
