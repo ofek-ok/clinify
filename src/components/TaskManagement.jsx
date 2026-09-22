@@ -1,37 +1,46 @@
-import React, { useState, useContext } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
-import { Search, Plus, Trash2 } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Trash2,
+  SlidersHorizontal,
+  X,
+  CalendarDays,
+  Tag,
+  FolderKanban
+} from 'lucide-react';
 
 export default function TaskManagement() {
-  const { 
-    tasks, 
+  const {
+    tasks,
     projects,
-    patients, 
+    patients,
     contentItems,
-    addTask, 
+    addTask,
     updateTask,
-    updateTaskStatus, 
+    updateTaskStatus,
     deleteTask,
     workOptions,
-    todayStr 
+    todayStr
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'today' | 'week' | 'overdue' | 'blocked'
+  const [filterMode, setFilterMode] = useState('all');
   const [projectFilter, setProjectFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [areaFilter, setAreaFilter] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [deleteModalTask, setDeleteModalTask] = useState(null);
 
-  // New Task Form State
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(todayStr);
   const [status, setStatus] = useState('todo');
@@ -50,53 +59,74 @@ export default function TaskManagement() {
   const configuredOptions = (type, fallback) => {
     const values = (workOptions || [])
       .filter(option => option.option_type === type && option.is_active)
-      .sort((a,b) => a.sort_order - b.sort_order)
-      .map(option => ({ id: option.value, label: option.label, color: option.color }));
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(option => ({ id: option.value, label: option.label, color: option.color || '#64748b' }));
     return values.length ? values : fallback;
   };
 
   const statusOptions = configuredOptions('status', [
-    { id: 'todo', label: 'לביצוע' },
-    { id: 'in_progress', label: 'בתהליך' },
-    { id: 'blocked', label: 'חסום' },
-    { id: 'done', label: 'הושלם' }
+    { id: 'todo', label: 'לביצוע', color: '#64748b' },
+    { id: 'in_progress', label: 'בתהליך', color: '#3b82f6' },
+    { id: 'blocked', label: 'חסום', color: '#f43f5e' },
+    { id: 'done', label: 'הושלם', color: '#10b981' }
   ]);
 
   const priorityOptions = configuredOptions('priority', [
-    { id: 'critical', label: 'קריטי' },
-    { id: 'high', label: 'גבוה' },
-    { id: 'medium', label: 'בינוני' },
-    { id: 'low', label: 'נמוך' }
+    { id: 'critical', label: 'קריטי', color: '#e11d48' },
+    { id: 'high', label: 'גבוה', color: '#f59e0b' },
+    { id: 'medium', label: 'בינוני', color: '#3b82f6' },
+    { id: 'low', label: 'נמוך', color: '#64748b' }
   ]);
 
   const areaOptions = configuredOptions('area', [
-    { id: 'operations', label: 'תפעול' },
-    { id: 'business', label: 'עסקי' },
-    { id: 'clinical', label: 'קליני' }
+    { id: 'operations', label: 'תפעול', color: '#64748b' },
+    { id: 'business', label: 'עסקי', color: '#8b5cf6' },
+    { id: 'clinical', label: 'קליני', color: '#10b981' }
   ]);
 
   const managedLabels = configuredOptions('label', []);
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = !searchTerm || (task.title && task.title.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    if (!matchesSearch) return false;
-    if (projectFilter && task.project_id !== projectFilter) return false;
-    if (statusFilter && task.status !== statusFilter) return false;
-    if (priorityFilter && task.priority !== priorityFilter) return false;
-    if (areaFilter && task.area !== areaFilter) return false;
+  const optionLabel = (options, value, fallback = '-') =>
+    options.find(option => option.id === value)?.label || fallback;
 
-    if (filterMode === 'today') return task.due_date === todayStr && task.status !== 'done';
-    if (filterMode === 'overdue') return task.due_date < todayStr && task.status !== 'done';
-    if (filterMode === 'blocked') return task.status === 'blocked';
-    if (filterMode === 'week') {
-      const taskDate = new Date(task.due_date);
-      const now = new Date();
-      const nextWeek = new Date(now.getTime() + 7 * 86400000);
-      return taskDate >= now && taskDate <= nextWeek && task.status !== 'done';
-    }
-    return true;
-  });
+  const optionColor = (options, value) =>
+    options.find(option => option.id === value)?.color || '#64748b';
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const matchesSearch =
+        !searchTerm ||
+        String(task.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(task.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) return false;
+      if (projectFilter && task.project_id !== projectFilter) return false;
+      if (statusFilter && task.status !== statusFilter) return false;
+      if (priorityFilter && task.priority !== priorityFilter) return false;
+      if (areaFilter && task.area !== areaFilter) return false;
+
+      if (filterMode === 'today') return task.due_date === todayStr && task.status !== 'done';
+      if (filterMode === 'overdue') return task.due_date && task.due_date < todayStr && task.status !== 'done';
+      if (filterMode === 'blocked') return task.status === 'blocked';
+      if (filterMode === 'week') {
+        if (!task.due_date) return false;
+        const taskDate = new Date(task.due_date + 'T12:00:00');
+        const now = new Date();
+        const nextWeek = new Date(now.getTime() + 7 * 86400000);
+        return taskDate >= now && taskDate <= nextWeek && task.status !== 'done';
+      }
+      return true;
+    });
+  }, [tasks, searchTerm, projectFilter, statusFilter, priorityFilter, areaFilter, filterMode, todayStr]);
+
+  const activeAdvancedFilterCount = [projectFilter, statusFilter, priorityFilter, areaFilter].filter(Boolean).length;
+
+  const resetAdvancedFilters = () => {
+    setProjectFilter('');
+    setStatusFilter('');
+    setPriorityFilter('');
+    setAreaFilter('');
+  };
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
@@ -104,6 +134,7 @@ export default function TaskManagement() {
       showToast('אנא הזן כותרת משימה', 'error');
       return;
     }
+
     setIsSubmitting(true);
     try {
       await addTask({
@@ -121,6 +152,7 @@ export default function TaskManagement() {
         estimated_minutes: estimatedMinutes ? Number(estimatedMinutes) : null,
         dependency_task_id: dependencyTaskId || null
       });
+
       showToast('המשימה נוצרה בהצלחה');
       setIsAddDrawerOpen(false);
       setTitle('');
@@ -135,10 +167,23 @@ export default function TaskManagement() {
     }
   };
 
+  const updateSelectedTaskField = async (field, value) => {
+    if (!selectedTask) return;
+    try {
+      const updates = { [field]: value };
+      await updateTask(selectedTask.id, updates);
+      setSelectedTask(prev => ({ ...prev, ...updates }));
+    } catch (err) {
+      showToast(err.message || 'לא ניתן לעדכן את המשימה', 'error');
+    }
+  };
+
   const handleInlineStatusChange = async (task, newStatus) => {
     try {
       await updateTaskStatus(task.id, newStatus);
-      showToast('סטטוס המשימה עודכן');
+      if (selectedTask?.id === task.id) {
+        setSelectedTask(prev => ({ ...prev, status: newStatus }));
+      }
     } catch (err) {
       showToast('שגיאה בעדכון סטטוס', 'error');
     }
@@ -147,7 +192,9 @@ export default function TaskManagement() {
   const handleInlinePriorityChange = async (task, newPriority) => {
     try {
       await updateTask(task.id, { priority: newPriority });
-      showToast('עדיפות המשימה עודכנה');
+      if (selectedTask?.id === task.id) {
+        setSelectedTask(prev => ({ ...prev, priority: newPriority }));
+      }
     } catch (err) {
       showToast('שגיאה בעדכון עדיפות', 'error');
     }
@@ -157,12 +204,10 @@ export default function TaskManagement() {
     if (!deleteModalTask) return;
     try {
       await deleteTask(deleteModalTask.id);
-      showToast('המשימה נמחקה');
-      if (selectedTask?.id === deleteModalTask.id) {
-        setSelectedTask(null);
-      }
+      showToast('המשימה הועברה לאשפה');
+      if (selectedTask?.id === deleteModalTask.id) setSelectedTask(null);
     } catch (err) {
-      showToast('שגיאה במחיקת המשימה', 'error');
+      showToast(err.message || 'שגיאה במחיקת המשימה', 'error');
     } finally {
       setDeleteModalTask(null);
     }
@@ -170,111 +215,155 @@ export default function TaskManagement() {
 
   const resolveRelatedEntity = (task) => {
     if (task.patient_id) {
-      const p = patients.find(pat => pat.id === task.patient_id);
-      return p ? `לקוח: ${p.full_name}` : 'לקוח';
+      const patient = patients.find(item => item.id === task.patient_id);
+      return patient ? patient.full_name : 'לקוח';
     }
     if (task.content_item_id) {
-      const c = contentItems.find(ci => ci.id === task.content_item_id);
-      return c ? `תוכן: ${c.title}` : 'תוכן';
+      const item = contentItems.find(content => content.id === task.content_item_id);
+      return item ? item.title : 'תוכן';
     }
     return '-';
   };
 
-  const resolveProjectName = (projId) => {
-    if (!projId) return '-';
-    const proj = projects.find(p => p.id === projId);
-    return proj ? proj.name : '-';
-  };
+  const quickFilters = [
+    { id: 'all', label: 'הכול' },
+    { id: 'today', label: 'היום' },
+    { id: 'week', label: 'השבוע' },
+    { id: 'overdue', label: 'באיחור' },
+    { id: 'blocked', label: 'חסום' }
+  ];
 
   return (
-    <div className="space-y-4 dir-rtl text-start font-sans">
-      {/* Top Filter & Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
-        <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-[280px]">
-          {/* Quick Filters */}
-          <div className="flex items-center space-x-1 space-x-reverse bg-slate-50 p-1 rounded-xl border border-slate-200">
-            {[
-              { id: 'all', label: 'הכול' },
-              { id: 'today', label: 'היום' },
-              { id: 'week', label: 'השבוע' },
-              { id: 'overdue', label: 'באיחור' },
-              { id: 'blocked', label: 'חסום' }
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilterMode(f.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  filterMode === f.id
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+    <div className="space-y-4 dir-rtl text-start">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1 lg:max-w-sm">
+              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="חיפוש משימה..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pr-9 pl-3 text-xs text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+              />
+            </div>
+
+            <div className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-xl bg-slate-100/80 p-1">
+              {quickFilters.map(filter => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setFilterMode(filter.id)}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold transition ${filterMode === filter.id ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAdvancedFilters(prev => !prev)}
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition ${showAdvancedFilters || activeAdvancedFilterCount ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              סינון
+              {activeAdvancedFilterCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] text-white">
+                  {activeAdvancedFilterCount}
+                </span>
+              )}
+            </button>
           </div>
 
-          <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-            <option value="">כל הפרויקטים</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-            <option value="">כל הסטטוסים</option>
-            {statusOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
-          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-            <option value="">כל העדיפויות</option>
-            {priorityOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-          <select value={areaFilter} onChange={e => setAreaFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-            <option value="">כל התחומים</option>
-            {areaOptions.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-          </select>
+          <button
+            type="button"
+            onClick={() => setIsAddDrawerOpen(true)}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            משימה חדשה
+          </button>
+        </div>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="חיפוש משימה..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-            />
+        {showAdvancedFilters && (
+          <div className="border-t border-slate-100 bg-slate-50/70 p-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <FilterSelect label="פרויקט" value={projectFilter} onChange={setProjectFilter}>
+                <option value="">כל הפרויקטים</option>
+                {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+              </FilterSelect>
+
+              <FilterSelect label="סטטוס" value={statusFilter} onChange={setStatusFilter}>
+                <option value="">כל הסטטוסים</option>
+                {statusOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </FilterSelect>
+
+              <FilterSelect label="עדיפות" value={priorityFilter} onChange={setPriorityFilter}>
+                <option value="">כל העדיפויות</option>
+                {priorityOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </FilterSelect>
+
+              <FilterSelect label="תחום" value={areaFilter} onChange={setAreaFilter}>
+                <option value="">כל התחומים</option>
+                {areaOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </FilterSelect>
+
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={resetAdvancedFilters}
+                  disabled={!activeAdvancedFilterCount}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <X className="h-4 w-4" />
+                  נקה סינון
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <div>
+            <p className="text-xs font-bold text-slate-900">{filteredTasks.length} משימות</p>
+            <p className="mt-0.5 text-[10px] text-slate-400">עריכה ישירה מתוך הטבלה</p>
+          </div>
+          <div className="hidden items-center gap-2 text-[10px] text-slate-400 sm:flex">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            השינויים נשמרים אוטומטית
           </div>
         </div>
 
-        {/* Primary CTA */}
-        <button
-          onClick={() => setIsAddDrawerOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>משימה חדשה</span>
-        </button>
-      </div>
-
-      {/* Monday-Style Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-start border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
-                <th className="py-3 px-4 text-start">משימה</th>
-                <th className="py-3 px-4 text-start">סטטוס</th>
-                <th className="py-3 px-4 text-start">עדיפות</th>
-                <th className="py-3 px-4 text-start">פרויקט</th>
-                <th className="py-3 px-4 text-start">תאריך יעד</th>
-                <th className="py-3 px-4 text-start">קשור ל-</th>
-                <th className="py-3 px-4 text-start">תחום</th>
-                <th className="py-3 px-4 text-start">תגיות</th>
+          <table className="w-full min-w-[1180px] border-collapse text-start">
+            <thead className="bg-slate-50/90">
+              <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                <th className="px-4 py-3 text-start">משימה</th>
+                <th className="px-3 py-3 text-start">סטטוס</th>
+                <th className="px-3 py-3 text-start">עדיפות</th>
+                <th className="px-3 py-3 text-start">פרויקט</th>
+                <th className="px-3 py-3 text-start">תאריך יעד</th>
+                <th className="px-3 py-3 text-start">קשור ל־</th>
+                <th className="px-3 py-3 text-start">תחום</th>
+                <th className="px-3 py-3 text-start">תגיות</th>
+                <th className="sticky left-0 bg-slate-50/95 px-3 py-3 text-center">פעולות</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-xs">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
-                    אין משימות להצגה.
+                  <td colSpan={9} className="px-4 py-16 text-center">
+                    <div className="mx-auto flex max-w-xs flex-col items-center">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                        <FolderKanban className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <p className="font-bold text-slate-700">אין משימות להצגה</p>
+                      <p className="mt-1 text-[11px] text-slate-400">נסה לשנות את הסינון או ליצור משימה חדשה.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -286,69 +375,99 @@ export default function TaskManagement() {
                     <tr
                       key={task.id}
                       onClick={() => setSelectedTask(task)}
-                      className="hover:bg-slate-100/50 transition-colors cursor-pointer group"
+                      className="group cursor-pointer transition hover:bg-slate-50/80"
                     >
-                      {/* Title */}
-                      <td className="py-3 px-4 font-bold text-slate-900">
-                        <span className={isDone ? 'line-through text-slate-500 font-normal' : ''}>
-                          {task.title}
-                        </span>
-                      </td>
-
-                      {/* Inline Editable Status */}
-                      <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                        <select
-                          value={task.status || 'todo'}
-                          onChange={e => handleInlineStatusChange(task, e.target.value)}
-                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
-                        >
-                          {statusOptions.map(s => (
-                            <option key={s.id} value={s.id}>{s.label}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      {/* Inline Editable Priority */}
-                      <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                        <select
-                          value={task.priority || 'medium'}
-                          onChange={e => handleInlinePriorityChange(task, e.target.value)}
-                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none"
-                        >
-                          {priorityOptions.map(p => (
-                            <option key={p.id} value={p.id} className={p.color}>{p.label}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      {/* Project */}
-                      <td className="py-3 px-4 text-slate-700 font-medium" onClick={e => e.stopPropagation()}>
-                        <select value={task.project_id || ''} onChange={e => updateTask(task.id,{project_id:e.target.value || null})} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs">
-                          <option value="">ללא פרויקט</option>
-                          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </td>
-
-                      {/* Due Date */}
-                      <td className={`py-3 px-4 font-mono ${isOverdue ? 'text-rose-400 font-bold' : 'text-slate-700'}`} onClick={e => e.stopPropagation()}>
-                        <input type="date" value={task.due_date || ''} onChange={e => updateTask(task.id,{due_date:e.target.value})} className="bg-transparent text-xs"/>
-                      </td>
-
-                      {/* Related Entity */}
-                      <td className="py-3 px-4 text-slate-500">
-                        {resolveRelatedEntity(task)}
-                      </td>
-
-                      {/* Area */}
-                      <td className="py-3 px-4 text-slate-500" onClick={e => e.stopPropagation()}>
-                        <select value={task.area || 'operations'} onChange={e => updateTask(task.id,{area:e.target.value})} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs">
-                          {areaOptions.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-                        </select>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {(task.labels || []).slice(0,3).map(label => <span key={label} className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600">{label}</span>)}
+                      <td className="max-w-[280px] px-4 py-3.5">
+                        <div className="flex items-start gap-3">
+                          <span
+                            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: optionColor(statusOptions, task.status || 'todo') }}
+                          />
+                          <div className="min-w-0">
+                            <p className={`truncate font-bold ${isDone ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p className="mt-1 max-w-[240px] truncate text-[10px] text-slate-400">{task.description}</p>
+                            )}
+                          </div>
                         </div>
+                      </td>
+
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <ChipSelect
+                          value={task.status || 'todo'}
+                          options={statusOptions}
+                          onChange={value => handleInlineStatusChange(task, value)}
+                        />
+                      </td>
+
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <ChipSelect
+                          value={task.priority || 'medium'}
+                          options={priorityOptions}
+                          onChange={value => handleInlinePriorityChange(task, value)}
+                        />
+                      </td>
+
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <select
+                          value={task.project_id || ''}
+                          onChange={e => updateTask(task.id, { project_id: e.target.value || null })}
+                          className="h-8 max-w-[190px] rounded-lg border border-transparent bg-transparent px-2 text-[11px] font-medium text-slate-600 outline-none transition hover:border-slate-200 hover:bg-white focus:border-emerald-300"
+                        >
+                          <option value="">ללא פרויקט</option>
+                          {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+                        </select>
+                      </td>
+
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <div className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${isOverdue ? 'bg-rose-50 text-rose-700' : 'text-slate-500'}`}>
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          <input
+                            type="date"
+                            value={task.due_date || ''}
+                            onChange={e => updateTask(task.id, { due_date: e.target.value })}
+                            className="w-[105px] bg-transparent text-[11px] outline-none"
+                          />
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3 text-[11px] text-slate-500">{resolveRelatedEntity(task)}</td>
+
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <ChipSelect
+                          value={task.area || 'operations'}
+                          options={areaOptions}
+                          onChange={value => updateTask(task.id, { area: value })}
+                        />
+                      </td>
+
+                      <td className="px-3 py-3">
+                        <div className="flex max-w-[180px] flex-wrap gap-1">
+                          {(task.labels || []).slice(0, 3).map(label => (
+                            <span key={label} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-600">
+                              <Tag className="h-2.5 w-2.5" />
+                              {label}
+                            </span>
+                          ))}
+                          {(task.labels || []).length > 3 && (
+                            <span className="rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-400">
+                              +{task.labels.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="sticky left-0 bg-white/95 px-3 py-3 text-center backdrop-blur group-hover:bg-slate-50/95" onClick={e => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          title="העבר לאשפה"
+                          onClick={() => setDeleteModalTask(task)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -357,237 +476,322 @@ export default function TaskManagement() {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      {/* Add Task Drawer */}
       <Drawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
-        title="יצירת משימה חדשה"
+        title="משימה חדשה"
+        width="max-w-xl"
         footer={
           <>
             <button
+              type="button"
               onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
+              className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
             >
               ביטול
             </button>
             <button
+              type="button"
               onClick={handleCreateTask}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+              className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600 disabled:opacity-50"
             >
-              {isSubmitting ? 'שומר...' : 'שמור משימה'}
+              {isSubmitting ? 'שומר...' : 'צור משימה'}
             </button>
           </>
         }
       >
-        <form onSubmit={handleCreateTask} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">כותרת משימה *</label>
+        <form onSubmit={handleCreateTask} className="space-y-5">
+          <Field label="כותרת משימה *">
             <input
               type="text"
               required
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="תיאור המשימה..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+              placeholder="מה צריך לקרות?"
+              className="work-input"
             />
-          </div>
+          </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              >
-                {statusOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            <Field label="סטטוס">
+              <select value={status} onChange={e => setStatus(e.target.value)} className="work-input">
+                {statusOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">עדיפות</label>
-              <select
-                value={priority}
-                onChange={e => setPriority(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              >
-                {priorityOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </Field>
+            <Field label="עדיפות">
+              <select value={priority} onChange={e => setPriority(e.target.value)} className="work-input">
+                {priorityOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">תיאור</label>
-            <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="פרטים, תוצאה רצויה, הערות..." />
+          <Field label="תיאור">
+            <textarea
+              rows={4}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="פרטים, תוצאה רצויה, הערות..."
+              className="work-input resize-none"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="תאריך התחלה">
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="work-input" />
+            </Field>
+            <Field label="תאריך יעד">
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="work-input" />
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך התחלה</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך יעד</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">תחום</label>
-            <select value={area} onChange={e => setArea(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
-              <option value="operations">תפעול</option>
-              <option value="business">עסקי</option>
-              <option value="clinical">קליני</option>
-            </select>
+            <Field label="תחום">
+              <select value={area} onChange={e => setArea(e.target.value)} className="work-input">
+                {areaOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </select>
+            </Field>
+            <Field label="הערכת זמן">
+              <input type="number" min="0" value={estimatedMinutes} onChange={e => setEstimatedMinutes(e.target.value)} placeholder="60 דקות" className="work-input" />
+            </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">הערכת זמן בדקות</label>
-              <input type="number" min="0" value={estimatedMinutes} onChange={e => setEstimatedMinutes(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="60" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תגיות</label>
-              <input list="managed-work-labels" value={labels} onChange={e => setLabels(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="שיווק, דחוף, אתר" />
-              <datalist id="managed-work-labels">
-                {managedLabels.map(option => <option key={option.id} value={option.label} />)}
-              </datalist>
-            </div>
-          </div>
+          <Field label="תגיות">
+            <input
+              list="managed-work-labels"
+              value={labels}
+              onChange={e => setLabels(e.target.value)}
+              placeholder="למשל: שיווק, דחוף, אתר"
+              className="work-input"
+            />
+            <datalist id="managed-work-labels">
+              {managedLabels.map(option => <option key={option.id} value={option.label} />)}
+            </datalist>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">שיוך לפרויקט</label>
-            <select
-              value={projectId}
-              onChange={e => setProjectId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            >
+          <Field label="פרויקט">
+            <select value={projectId} onChange={e => setProjectId(e.target.value)} className="work-input">
               <option value="">ללא פרויקט</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
             </select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">תלויה במשימה</label>
-            <select value={dependencyTaskId} onChange={e => setDependencyTaskId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900">
+          <Field label="תלויה במשימה">
+            <select value={dependencyTaskId} onChange={e => setDependencyTaskId(e.target.value)} className="work-input">
               <option value="">ללא תלות</option>
-              {tasks.filter(t => t.status !== 'done').map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+              {tasks.filter(task => task.status !== 'done').map(task => <option key={task.id} value={task.id}>{task.title}</option>)}
             </select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">קשור ללקוח</label>
-            <select
-              value={patientId}
-              onChange={e => setPatientId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            >
+          <Field label="קשור ללקוח">
+            <select value={patientId} onChange={e => setPatientId(e.target.value)} className="work-input">
               <option value="">ללא שיוך ללקוח</option>
-              {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              {patients.map(patient => <option key={patient.id} value={patient.id}>{patient.full_name}</option>)}
             </select>
-          </div>
+          </Field>
         </form>
       </Drawer>
 
-      {/* Selected Task Detail / Edit Drawer */}
-      {selectedTask && (
-        <Drawer
-          isOpen={Boolean(selectedTask)}
-          onClose={() => setSelectedTask(null)}
-          title={`משימה: ${selectedTask.title}`}
-          footer={
-            <div className="flex justify-end items-center w-full">
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
-              >
-                סגור
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">כותרת משימה</label>
+      <Drawer
+        isOpen={Boolean(selectedTask)}
+        onClose={() => setSelectedTask(null)}
+        title={selectedTask ? selectedTask.title : ''}
+        width="max-w-xl"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => selectedTask && setDeleteModalTask(selectedTask)}
+              className="mr-auto inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
+            >
+              <Trash2 className="h-4 w-4" />
+              העבר לאשפה
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTask(null)}
+              className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600"
+            >
+              סגור
+            </button>
+          </>
+        }
+      >
+        {selectedTask && (
+          <div className="space-y-5">
+            <Field label="כותרת משימה">
               <input
                 type="text"
-                value={selectedTask.title}
+                value={selectedTask.title || ''}
                 onChange={e => {
-                  const val = e.target.value;
-                  setSelectedTask(prev => ({ ...prev, title: val }));
-                  updateTask(selectedTask.id, { title: val });
+                  const value = e.target.value;
+                  setSelectedTask(prev => ({ ...prev, title: value }));
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold"
+                onBlur={e => updateSelectedTaskField('title', e.target.value)}
+                className="work-input text-sm font-bold"
               />
-            </div>
+            </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">סטטוס</label>
+              <Field label="סטטוס">
                 <select
                   value={selectedTask.status || 'todo'}
                   onChange={e => handleInlineStatusChange(selectedTask, e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                  className="work-input"
                 >
-                  {statusOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  {statusOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">עדיפות</label>
+              </Field>
+              <Field label="עדיפות">
                 <select
                   value={selectedTask.priority || 'medium'}
                   onChange={e => handleInlinePriorityChange(selectedTask, e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                  className="work-input"
                 >
-                  {priorityOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                  {priorityOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
-              </div>
+              </Field>
             </div>
 
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">תיאור</label>
-              <textarea rows={3} value={selectedTask.description || ''} onChange={e => { const val=e.target.value; setSelectedTask(prev=>({...prev,description:val})); updateTask(selectedTask.id,{description:val||null}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">תאריך התחלה</label>
-                <input type="date" value={selectedTask.start_date || ''} onChange={e => { const val=e.target.value; setSelectedTask(prev=>({...prev,start_date:val})); updateTask(selectedTask.id,{start_date:val||null}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
-              </div>
-              <div>
-              <label className="block text-xs text-slate-500 mb-1">תאריך יעד</label>
-              <input
-                type="date"
-                value={selectedTask.due_date || ''}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSelectedTask(prev => ({ ...prev, due_date: val }));
-                  updateTask(selectedTask.id, { due_date: val });
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+            <Field label="תיאור">
+              <textarea
+                rows={5}
+                value={selectedTask.description || ''}
+                onChange={e => setSelectedTask(prev => ({ ...prev, description: e.target.value }))}
+                onBlur={e => updateSelectedTaskField('description', e.target.value || null)}
+                className="work-input resize-none"
               />
-              </div>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="תאריך התחלה">
+                <input
+                  type="date"
+                  value={selectedTask.start_date || ''}
+                  onChange={e => updateSelectedTaskField('start_date', e.target.value || null)}
+                  className="work-input"
+                />
+              </Field>
+              <Field label="תאריך יעד">
+                <input
+                  type="date"
+                  value={selectedTask.due_date || ''}
+                  onChange={e => updateSelectedTaskField('due_date', e.target.value)}
+                  className="work-input"
+                />
+              </Field>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">הערכת זמן</label>
-                <input type="number" min="0" value={selectedTask.estimated_minutes || ''} onChange={e => { const val=e.target.value; setSelectedTask(prev=>({...prev,estimated_minutes:val})); updateTask(selectedTask.id,{estimated_minutes:val ? Number(val) : null}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">תגיות</label>
-                <input list="managed-work-labels-edit" value={(selectedTask.labels || []).join(', ')} onChange={e => { const val=e.target.value.split(',').map(v=>v.trim()).filter(Boolean); setSelectedTask(prev=>({...prev,labels:val})); updateTask(selectedTask.id,{labels:val}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
-                <datalist id="managed-work-labels-edit">
-                  {managedLabels.map(option => <option key={option.id} value={option.label} />)}
-                </datalist>
-              </div>
+              <Field label="פרויקט">
+                <select
+                  value={selectedTask.project_id || ''}
+                  onChange={e => updateSelectedTaskField('project_id', e.target.value || null)}
+                  className="work-input"
+                >
+                  <option value="">ללא פרויקט</option>
+                  {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+                </select>
+              </Field>
+              <Field label="תחום">
+                <select
+                  value={selectedTask.area || 'operations'}
+                  onChange={e => updateSelectedTaskField('area', e.target.value)}
+                  className="work-input"
+                >
+                  {areaOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                </select>
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="הערכת זמן">
+                <input
+                  type="number"
+                  min="0"
+                  value={selectedTask.estimated_minutes || ''}
+                  onChange={e => updateSelectedTaskField('estimated_minutes', e.target.value ? Number(e.target.value) : null)}
+                  className="work-input"
+                />
+              </Field>
+              <Field label="תגיות">
+                <input
+                  value={(selectedTask.labels || []).join(', ')}
+                  onChange={e => setSelectedTask(prev => ({
+                    ...prev,
+                    labels: e.target.value.split(',').map(value => value.trim()).filter(Boolean)
+                  }))}
+                  onBlur={() => updateSelectedTaskField('labels', selectedTask.labels || [])}
+                  className="work-input"
+                />
+              </Field>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500">
+              סטטוס: <strong className="text-slate-700">{optionLabel(statusOptions, selectedTask.status, 'לביצוע')}</strong>
+              {' · '}
+              עדיפות: <strong className="text-slate-700">{optionLabel(priorityOptions, selectedTask.priority, 'בינוני')}</strong>
             </div>
           </div>
-        </Drawer>
-      )}
+        )}
+      </Drawer>
+
+      <ConfirmModal
+        isOpen={Boolean(deleteModalTask)}
+        onClose={() => setDeleteModalTask(null)}
+        onConfirm={handleConfirmDelete}
+        title="להעביר את המשימה לאשפה?"
+        message={deleteModalTask ? `המשימה “${deleteModalTask.title}” תוסר מהלוח ותישאר זמינה לשחזור באשפה.` : ''}
+        confirmText="העבר לאשפה"
+        cancelText="ביטול"
+        isDanger
+      />
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] font-bold text-slate-500">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function FilterSelect({ label, value, onChange, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-bold text-slate-400">{label}</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function ChipSelect({ value, options, onChange }) {
+  const selected = options.find(option => option.id === value) || options[0];
+
+  return (
+    <div className="relative inline-flex">
+      <span
+        className="pointer-events-none absolute right-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+        style={{ backgroundColor: selected?.color || '#64748b' }}
+      />
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="h-8 min-w-[96px] appearance-none rounded-lg border border-slate-200 bg-white pr-6 pl-6 text-[10px] font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-emerald-400"
+      >
+        {options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+      </select>
     </div>
   );
 }
