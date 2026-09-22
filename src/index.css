@@ -132,3 +132,35 @@
     font-size: 14px;
   }
 }
+
+
+/* 2026 visual refresh */
+.clinify-workspace {
+  --accent-violet: #7c3aed;
+  --accent-indigo: #4f46e5;
+  --accent-cyan: #06b6d4;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+}
+
+.clinify-workspace ::selection {
+  background: rgba(124, 58, 237, .18);
+}
+
+.clinify-workspace .premium-panel {
+  border: 1px solid rgba(226,232,240,.82);
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 16px 50px rgba(15,23,42,.06);
+  backdrop-filter: blur(14px);
+}
+
+.clinify-workspace .vivid-ring:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139,92,246,.11);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clinify-workspace * {
+    scroll-behavior: auto !important;
+  }
+}
