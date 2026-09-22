@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
+import { Trash2 } from 'lucide-react';
 import { useToast } from './ui/Toast';
 import { Search, Plus, Phone, MessageSquare, Mail } from 'lucide-react';
 
@@ -17,7 +18,7 @@ const getIsraelDateKey = () => {
 };
 
 export default function LeadsPipeline({ onSelectLead }) {
-  const { leads, leadCommunications, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication } = useContext(ClinicContext);
+  const { leads, leadCommunications, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication, deleteLead } = useContext(ClinicContext);
   const { showToast } = useToast();
   const todayKey = getIsraelDateKey();
 
@@ -29,6 +30,7 @@ export default function LeadsPipeline({ onSelectLead }) {
   
   // Lost Reason modal state
   const [lostModalLead, setLostModalLead] = useState(null);
+  const [deleteModalLead, setDeleteModalLead] = useState(null);
 
   // New Lead form state
   const [newLeadName, setNewLeadName] = useState('');
@@ -127,6 +129,19 @@ export default function LeadsPipeline({ onSelectLead }) {
       showToast(err.message || 'שגיאה ביצירת הליד', 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteLead = async () => {
+    if (!deleteModalLead) return;
+    try {
+      await deleteLead(deleteModalLead.id);
+      if (selectedLead?.id === deleteModalLead.id) setSelectedLead(null);
+      showToast('הליד הועבר לאשפה');
+    } catch (err) {
+      showToast(err.message || 'לא ניתן להעביר את הליד לאשפה', 'error');
+    } finally {
+      setDeleteModalLead(null);
     }
   };
 
@@ -313,6 +328,15 @@ export default function LeadsPipeline({ onSelectLead }) {
         })}
         </div>
       </div>
+
+      {selectedLead && (
+        <div className="fixed bottom-6 end-6 z-[70]">
+          <button type="button" onClick={() => setDeleteModalLead(selectedLead)}
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-600 shadow-lg hover:bg-rose-50">
+            <Trash2 className="h-4 w-4" /> העבר ליד לאשפה
+          </button>
+        </div>
+      )}
 
       {/* Add Lead Drawer */}
       <Drawer
@@ -573,6 +597,14 @@ export default function LeadsPipeline({ onSelectLead }) {
           placeholder: "סיבת אובדן...",
           required: true
         }}
+      />
+      <ConfirmModal
+        isOpen={Boolean(deleteModalLead)}
+        onClose={() => setDeleteModalLead(null)}
+        onConfirm={handleDeleteLead}
+        title="העברת ליד לאשפה"
+        message={deleteModalLead ? `להעביר את ${deleteModalLead.full_name || 'הליד'} לאשפה? ניתן לשחזר אותו ממסך האשפה.` : ''}
+        confirmText="העבר לאשפה"
       />
     </div>
   );
