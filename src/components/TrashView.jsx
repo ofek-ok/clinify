@@ -155,7 +155,7 @@ export default function TrashView() {
                     type="button"
                     disabled={restoringKey === key}
                     onClick={() => handleRestore(item)}
-                    className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700 hover:bg-violet-100 disabled:opacity-50"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                     {restoringKey === key ? 'משחזר...' : 'שחזור'}
