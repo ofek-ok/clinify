@@ -57,6 +57,16 @@ export default function CalendarView({ initialTab = 'week' }) {
   const [viewMode, setViewMode] = useState(initialMode || 'week');
   const [focusDate, setFocusDate] = useState(dateFromKey(getIsraelDateKey()));
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isEditingAppointment, setIsEditingAppointment] = useState(false);
+  const [editForm, setEditForm] = useState({
+    person_id: '',
+    service_id: '',
+    appointment_date: '',
+    appointment_time: '',
+    status: 'scheduled',
+    notes: ''
+  });
 
   const {
     appointments,
@@ -67,6 +77,8 @@ export default function CalendarView({ initialTab = 'week' }) {
     businessHours,
     calendarBlocks,
     addAppointment,
+    updateAppointment,
+    deleteAppointment,
     getPatientName,
     getPersonName,
     getServiceName,
@@ -213,10 +225,24 @@ export default function CalendarView({ initialTab = 'week' }) {
       .filter(block => getIsraelDateKey(block.starts_at) === dateKey)
       .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
 
+  const openAppointment = (appt) => {
+    setSelectedAppointment(appt);
+    setEditForm({
+      person_id: appt.person_id || '',
+      service_id: appt.service_id || '',
+      appointment_date: getIsraelDateKey(appt.appointment_date),
+      appointment_time: getAppointmentTime(appt.appointment_date),
+      status: appt.status || 'scheduled',
+      notes: appt.notes || ''
+    });
+  };
+
   const renderEventCard = (appt, compact = false) => (
-    <div
+    <button
+      type="button"
       key={appt.id}
-      className={`${compact ? 'px-1.5 py-1' : 'p-2'} rounded-lg border text-[11px] space-y-0.5 ${getAppointmentStatusClasses(appt.status)}`}
+      onClick={() => openAppointment(appt)}
+      className={`w-full text-start ${compact ? 'px-1.5 py-1' : 'p-2'} rounded-lg border text-[11px] space-y-0.5 transition hover:shadow-sm ${getAppointmentStatusClasses(appt.status)}`}
       title={`${getAppointmentTime(appt.appointment_date)} · ${getAppointmentPersonName(appt)} · ${getServiceName(appt.service_id)}`}
     >
       <div className="flex items-center justify-between gap-1">
@@ -224,7 +250,7 @@ export default function CalendarView({ initialTab = 'week' }) {
         <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(appt.appointment_date)}</span>
       </div>
       {!compact && <div className="text-[10px] opacity-75 truncate">{getServiceName(appt.service_id)}</div>}
-    </div>
+    </button>
   );
 
   const renderBusyCard = (block, compact = false) => (
@@ -239,6 +265,48 @@ export default function CalendarView({ initialTab = 'week' }) {
       </div>
     </div>
   );
+
+  const handleUpdateAppointment = async () => {
+    if (!selectedAppointment) return;
+    if (!editForm.person_id || !editForm.service_id || !editForm.appointment_date || !editForm.appointment_time) {
+      showToast('יש למלא לקוח, שירות, תאריך ושעה', 'error');
+      return;
+    }
+
+    setIsEditingAppointment(true);
+    try {
+      const updated = await updateAppointment(selectedAppointment.id, {
+        person_id: editForm.person_id,
+        service_id: editForm.service_id,
+        appointment_date: buildIsraelIsoTimestamp(editForm.appointment_date, editForm.appointment_time),
+        status: editForm.status,
+        notes: editForm.notes || null
+      });
+      setSelectedAppointment(updated);
+      showToast('התור עודכן בהצלחה');
+    } catch (err) {
+      showToast(err.message || 'לא ניתן לעדכן את התור', 'error');
+    } finally {
+      setIsEditingAppointment(false);
+    }
+  };
+
+  const handleDeleteSelectedAppointment = async () => {
+    if (!selectedAppointment) return;
+    const confirmed = window.confirm(`להעביר את התור של ${getAppointmentPersonName(selectedAppointment)} לאשפה?`);
+    if (!confirmed) return;
+
+    setIsEditingAppointment(true);
+    try {
+      await deleteAppointment(selectedAppointment.id);
+      showToast('התור הועבר לאשפה');
+      setSelectedAppointment(null);
+    } catch (err) {
+      showToast(err.message || 'לא ניתן למחוק את התור', 'error');
+    } finally {
+      setIsEditingAppointment(false);
+    }
+  };
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
@@ -517,6 +585,127 @@ export default function CalendarView({ initialTab = 'week' }) {
             זמינות השעות מתחשבת בשעות הפעילות, בתורים קיימים ובזמנים תפוסים שיסונכרנו מ-Google Calendar.
           </div>
         </form>
+      </Drawer>
+
+      <Drawer
+        isOpen={Boolean(selectedAppointment)}
+        onClose={() => setSelectedAppointment(null)}
+        title="פרטי תור"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleDeleteSelectedAppointment}
+              disabled={isEditingAppointment}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50"
+            >
+              העבר לאשפה
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setSelectedAppointment(null)}
+              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
+            >
+              סגור
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdateAppointment}
+              disabled={isEditingAppointment}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {isEditingAppointment ? 'שומר...' : 'שמור שינויים'}
+            </button>
+          </>
+        }
+      >
+        {selectedAppointment && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">לקוח / ליד</label>
+              <select
+                value={editForm.person_id}
+                onChange={e => setEditForm(prev => ({ ...prev, person_id: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+              >
+                <option value="">בחר לקוח...</option>
+                {bookablePeople.map(person => (
+                  <option key={person.id} value={person.id}>{person.full_name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">שירות</label>
+              <select
+                value={editForm.service_id}
+                onChange={e => setEditForm(prev => ({ ...prev, service_id: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+              >
+                <option value="">בחר שירות...</option>
+                {services.map(service => (
+                  <option key={service.id} value={service.id}>
+                    {service.name} · {service.duration_minutes || 30} דק׳
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
+                <input
+                  type="date"
+                  value={editForm.appointment_date}
+                  onChange={e => setEditForm(prev => ({ ...prev, appointment_date: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">שעה</label>
+                <input
+                  type="time"
+                  step="1800"
+                  value={editForm.appointment_time}
+                  onChange={e => setEditForm(prev => ({ ...prev, appointment_time: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
+              <select
+                value={editForm.status}
+                onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+              >
+                <option value="scheduled">מתוכנן</option>
+                <option value="confirmed">מאושר</option>
+                <option value="completed">הושלם</option>
+                <option value="no_show">אי הופעה</option>
+                <option value="cancelled">מבוטל</option>
+                <option value="rescheduled">הוזז</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">הערות</label>
+              <textarea
+                rows={4}
+                value={editForm.notes}
+                onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                placeholder="הערות לתור..."
+              />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500">
+              שינוי תאריך, שעה או שירות נבדק מול שעות הפעילות, תורים קיימים וזמנים תפוסים לפני השמירה.
+            </div>
+          </div>
+        )}
       </Drawer>
     </div>
   );
