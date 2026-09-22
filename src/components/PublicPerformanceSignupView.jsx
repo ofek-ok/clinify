@@ -70,7 +70,7 @@ const PublicPerformanceSignupView = () => {
 
         {status.isSuccess ? (
           <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 text-center space-y-2">
-            <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+            <div className="w-10 h-10 bg-violet-500/20 text-violet-400 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
               ✓
             </div>
             <h3 className="text-lg font-bold text-white">ההרשמה התקבלה בהצלחה!</h3>
