@@ -45,12 +45,12 @@ export default function OwnerAuthScreen() {
 
         {sent ? (
           <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 text-center space-y-3">
-            <div className="w-8 h-8 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-sm font-bold">
+            <div className="w-8 h-8 bg-violet-500/20 text-violet-400 rounded-full flex items-center justify-center mx-auto text-sm font-bold">
               ✓
             </div>
-            <h2 className="text-sm font-bold text-emerald-400">קישור התחברות נשלח</h2>
+            <h2 className="text-sm font-bold text-violet-400">קישור התחברות נשלח</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
-              נשלח הודעת דוא״ל לכתובת <span className="font-mono text-emerald-400 font-bold">{email}</span>. לחץ על הקישור במייל כדי להיכנס למערכת.
+              נשלח הודעת דוא״ל לכתובת <span className="font-mono text-violet-400 font-bold">{email}</span>. לחץ על הקישור במייל כדי להיכנס למערכת.
             </p>
             <button
               onClick={() => setSent(false)}
@@ -71,7 +71,7 @@ export default function OwnerAuthScreen() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@domain.com"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 dir-ltr text-left outline-none transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-violet-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 dir-ltr text-left outline-none transition-colors"
               />
             </div>
 
@@ -84,7 +84,7 @@ export default function OwnerAuthScreen() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-xs flex items-center justify-center"
+              className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-xs flex items-center justify-center"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
