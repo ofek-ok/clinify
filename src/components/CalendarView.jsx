@@ -82,7 +82,9 @@ export default function CalendarView({ initialTab = 'week' }) {
     getPatientName,
     getPersonName,
     getServiceName,
-    getAvailableSlotsForDate
+    getAvailableSlotsForDate,
+    isTimeSlotAvailable,
+    isWithinBusinessHours
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
@@ -114,10 +116,10 @@ export default function CalendarView({ initialTab = 'week' }) {
   };
 
   const getAppointmentStatusClasses = (appointmentStatus) => {
-    if (appointmentStatus === 'completed') return 'bg-violet-50 border-violet-200 text-violet-800';
+    if (appointmentStatus === 'completed') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
     if (appointmentStatus === 'cancelled') return 'bg-rose-50 border-rose-200 text-rose-700';
     if (appointmentStatus === 'confirmed') return 'bg-sky-50 border-sky-200 text-sky-800';
-    if (appointmentStatus === 'no_show') return 'bg-violet-50 border-violet-200 text-violet-800';
+    if (appointmentStatus === 'no_show') return 'bg-rose-50 border-rose-200 text-rose-800';
     if (appointmentStatus === 'rescheduled') return 'bg-amber-50 border-amber-200 text-amber-800';
     return 'bg-slate-100 border-slate-300 text-slate-900';
   };
@@ -273,12 +275,24 @@ export default function CalendarView({ initialTab = 'week' }) {
       return;
     }
 
+    const service = services.find(item => String(item.id) === String(editForm.service_id));
+    const duration = Number(service?.duration_minutes || 30);
+    const nextDateTime = buildIsraelIsoTimestamp(editForm.appointment_date, editForm.appointment_time);
+    if (isWithinBusinessHours && !isWithinBusinessHours(nextDateTime, duration)) {
+      showToast('השעה שנבחרה מחוץ לשעות הפעילות', 'error');
+      return;
+    }
+    if (isTimeSlotAvailable && !isTimeSlotAvailable(nextDateTime, duration, selectedAppointment.id)) {
+      showToast('השעה שנבחרה מתנגשת עם תור או זמן תפוס אחר', 'error');
+      return;
+    }
+
     setIsEditingAppointment(true);
     try {
       const updated = await updateAppointment(selectedAppointment.id, {
         person_id: editForm.person_id,
         service_id: editForm.service_id,
-        appointment_date: buildIsraelIsoTimestamp(editForm.appointment_date, editForm.appointment_time),
+        appointment_date: nextDateTime,
         status: editForm.status,
         notes: editForm.notes || null
       });
