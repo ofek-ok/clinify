@@ -20,7 +20,7 @@ export default function FormManager({ navigate }) {
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">טפסים</h1>
         <button
           onClick={() => navigate('formBuilder')}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+          className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>טופס חדש</span>
@@ -44,7 +44,7 @@ export default function FormManager({ navigate }) {
               {forms.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-slate-500">
-                    אין עדיין טפסים. <button onClick={() => navigate('formBuilder')} className="text-emerald-400 underline font-bold mr-1">צור טופס</button>
+                    אין עדיין טפסים. <button onClick={() => navigate('formBuilder')} className="text-violet-400 underline font-bold mr-1">צור טופס</button>
                   </td>
                 </tr>
               ) : (
@@ -68,7 +68,7 @@ export default function FormManager({ navigate }) {
                           }}
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           form.is_public !== false
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-violet-50 text-violet-700 border border-violet-200'
                             : 'bg-slate-100 text-slate-500'
                         }`}>
                           {form.is_public !== false ? 'ציבורי' : 'פנימי'}
@@ -93,7 +93,7 @@ export default function FormManager({ navigate }) {
                             href={`/form/${form.id}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-slate-500 hover:text-emerald-400 p-1 rounded hover:bg-slate-100"
+                            className="text-slate-500 hover:text-violet-400 p-1 rounded hover:bg-slate-100"
                             title="תצוגה"
                           >
                             <ExternalLink className="w-4 h-4" />
