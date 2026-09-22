@@ -52,7 +52,7 @@ const ContentOsManager = () => {
     { id: 'planned', label: t('Planned', 'בתכנון'), color: 'bg-blue-100 text-blue-700' },
     { id: 'in_production', label: t('In Production', 'בהפקה'), color: 'bg-amber-100 text-amber-700' },
     { id: 'ready', label: t('Ready', 'מוכן לפרסום'), color: 'bg-purple-100 text-purple-700' },
-    { id: 'published', label: t('Published', 'פורסם'), color: 'bg-emerald-100 text-emerald-700' }
+    { id: 'published', label: t('Published', 'פורסם'), color: 'bg-violet-100 text-violet-700' }
   ];
 
   return (
