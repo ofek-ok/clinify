@@ -7,7 +7,18 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 export default function FinanceView({ initialTab = 'overview' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
-  const { payments, expenses, patients, appointments, addPayment, addExpense, todayStr } = useContext(ClinicContext);
+  const {
+    payments,
+    expenses,
+    patients,
+    appointments,
+    addPayment,
+    addExpense,
+    updatePaymentStatus,
+    deletePayment,
+    deleteExpense,
+    todayStr
+  } = useContext(ClinicContext);
   const { showToast } = useToast();
 
   const [isPaymentDrawerOpen, setIsPaymentDrawerOpen] = useState(false);
@@ -118,7 +129,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
     setIsSubmitting(true);
     try {
       await addExpense({
-        description: expDescription.trim(),
+        title: expDescription.trim(),
         category: expCategory,
         amount: parseFloat(expAmount),
         payment_method: expMethod,
@@ -231,11 +242,12 @@ export default function FinanceView({ initialTab = 'overview' }) {
                   <th className="py-3 px-4 text-start">סכום</th>
                   <th className="py-3 px-4 text-start">אמצעי תשלום</th>
                   <th className="py-3 px-4 text-start">סטטוס</th>
+                  <th className="py-3 px-4 text-center">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {payments.length === 0 ? (
-                  <tr><td colSpan={5} className="py-8 text-center text-slate-500">אין תשלומים רשומים.</td></tr>
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">אין תשלומים רשומים.</td></tr>
                 ) : (
                   payments.map(p => {
                     const pat = patients.find(patient => patient.id === p.patient_id || patient.person_id === p.person_id);
@@ -246,9 +258,38 @@ export default function FinanceView({ initialTab = 'overview' }) {
                         <td className="py-3 px-4 font-bold text-emerald-400">₪{p.amount}</td>
                         <td className="py-3 px-4 text-slate-500">{p.payment_method === 'PayBox' ? 'PayBox' : p.payment_method === 'Credit Card' ? 'אשראי' : 'תשלום במקום'}</td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-                            {p.status === 'paid' ? 'שולם' : 'ממתין'}
-                          </span>
+                          <select
+                            value={p.status}
+                            onChange={async e => {
+                              try {
+                                await updatePaymentStatus(p.id, e.target.value);
+                                showToast('סטטוס התשלום עודכן');
+                              } catch (err) {
+                                showToast(err.message || 'לא ניתן לעדכן את התשלום', 'error');
+                              }
+                            }}
+                            className={`px-2 py-1 rounded text-[10px] font-bold outline-none border ${p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}
+                          >
+                            <option value="paid">שולם</option>
+                            <option value="pending">ממתין</option>
+                          </select>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!window.confirm('להעביר את התשלום לאשפה?')) return;
+                              try {
+                                await deletePayment(p.id);
+                                showToast('התשלום הועבר לאשפה');
+                              } catch (err) {
+                                showToast(err.message || 'לא ניתן למחוק את התשלום', 'error');
+                              }
+                            }}
+                            className="text-[11px] font-bold text-rose-700 hover:underline"
+                          >
+                            מחיקה
+                          </button>
                         </td>
                       </tr>
                     );
@@ -283,19 +324,37 @@ export default function FinanceView({ initialTab = 'overview' }) {
                   <th className="py-3 px-4 text-start">תאריך</th>
                   <th className="py-3 px-4 text-start">סכום</th>
                   <th className="py-3 px-4 text-start">אמצעי תשלום</th>
+                  <th className="py-3 px-4 text-center">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {expenses.length === 0 ? (
-                  <tr><td colSpan={5} className="py-8 text-center text-slate-500">אין הוצאות רשומות.</td></tr>
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">אין הוצאות רשומות.</td></tr>
                 ) : (
                   expenses.map(e => (
                     <tr key={e.id} className="hover:bg-slate-100">
-                      <td className="py-3 px-4 font-bold text-slate-900">{e.description}</td>
+                      <td className="py-3 px-4 font-bold text-slate-900">{e.title || e.description || '-'}</td>
                       <td className="py-3 px-4 text-slate-700">{e.category || '-'}</td>
                       <td className="py-3 px-4 text-slate-700 font-mono">{e.expense_date || '-'}</td>
                       <td className="py-3 px-4 font-bold text-rose-400">₪{e.amount}</td>
                       <td className="py-3 px-4 text-slate-500">{e.payment_method || '-'}</td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm('להעביר את ההוצאה לאשפה?')) return;
+                            try {
+                              await deleteExpense(e.id);
+                              showToast('ההוצאה הועברה לאשפה');
+                            } catch (err) {
+                              showToast(err.message || 'לא ניתן למחוק את ההוצאה', 'error');
+                            }
+                          }}
+                          className="text-[11px] font-bold text-rose-700 hover:underline"
+                        >
+                          מחיקה
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
