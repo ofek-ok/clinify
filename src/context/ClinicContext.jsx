@@ -864,6 +864,10 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
+  const deleteLead = async (leadId) => softDeleteRecord('leads', leadId);
+  const deletePatient = async (patientId) => softDeleteRecord('patients', patientId);
+  const deletePerson = async (personId) => softDeleteRecord('people', personId);
+
   // Central Execution Engine: Tasks & Projects (Block 2)
   const addWorkOption = async (option) => {
     const normalizedValue = (option.value || option.label || '')
@@ -1610,8 +1614,8 @@ export const ClinicProvider = ({ children }) => {
       patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
       tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks, workOptions,
 
-      addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, updateService, deleteService, addAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus, addLead,
+      addPatient, updatePatient, deletePatient, deletePerson, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
+      addService, updateService, deleteService, addAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus, addLead, deleteLead,
       addWorkOption, updateWorkOption,
       addProject, updateProject, deleteProject,
       addTask, updateTask, updateTaskStatus, deleteTask,
