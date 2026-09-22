@@ -68,7 +68,7 @@ export default function TaskManagement() {
     { id: 'todo', label: 'לביצוע', color: '#64748b' },
     { id: 'in_progress', label: 'בתהליך', color: '#3b82f6' },
     { id: 'blocked', label: 'חסום', color: '#f43f5e' },
-    { id: 'done', label: 'הושלם', color: '#10b981' }
+    { id: 'done', label: 'הושלם', color: '#8b5cf6' }
   ]);
 
   const priorityOptions = configuredOptions('priority', [
@@ -81,7 +81,7 @@ export default function TaskManagement() {
   const areaOptions = configuredOptions('area', [
     { id: 'operations', label: 'תפעול', color: '#64748b' },
     { id: 'business', label: 'עסקי', color: '#8b5cf6' },
-    { id: 'clinical', label: 'קליני', color: '#10b981' }
+    { id: 'clinical', label: 'קליני', color: '#8b5cf6' }
   ]);
 
   const managedLabels = configuredOptions('label', []);
@@ -245,7 +245,7 @@ export default function TaskManagement() {
                 placeholder="חיפוש משימה..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pr-9 pl-3 text-xs text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pr-9 pl-3 text-xs text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-500/10"
               />
             </div>
 
@@ -265,12 +265,12 @@ export default function TaskManagement() {
             <button
               type="button"
               onClick={() => setShowAdvancedFilters(prev => !prev)}
-              className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition ${showAdvancedFilters || activeAdvancedFilterCount ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition ${showAdvancedFilters || activeAdvancedFilterCount ? 'border-violet-200 bg-violet-50 text-violet-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
             >
               <SlidersHorizontal className="h-4 w-4" />
               סינון
               {activeAdvancedFilterCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] text-white">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] text-white">
                   {activeAdvancedFilterCount}
                 </span>
               )}
@@ -280,7 +280,7 @@ export default function TaskManagement() {
           <button
             type="button"
             onClick={() => setIsAddDrawerOpen(true)}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-md"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-violet-600 hover:shadow-md"
           >
             <Plus className="h-4 w-4" />
             משימה חדשה
@@ -333,7 +333,7 @@ export default function TaskManagement() {
             <p className="mt-0.5 text-[10px] text-slate-400">עריכה ישירה מתוך הטבלה</p>
           </div>
           <div className="hidden items-center gap-2 text-[10px] text-slate-400 sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="h-2 w-2 rounded-full bg-violet-500" />
             השינויים נשמרים אוטומטית
           </div>
         </div>
@@ -414,7 +414,7 @@ export default function TaskManagement() {
                         <select
                           value={task.project_id || ''}
                           onChange={e => updateTask(task.id, { project_id: e.target.value || null })}
-                          className="h-8 max-w-[190px] rounded-lg border border-transparent bg-transparent px-2 text-[11px] font-medium text-slate-600 outline-none transition hover:border-slate-200 hover:bg-white focus:border-emerald-300"
+                          className="h-8 max-w-[190px] rounded-lg border border-transparent bg-transparent px-2 text-[11px] font-medium text-slate-600 outline-none transition hover:border-slate-200 hover:bg-white focus:border-violet-300"
                         >
                           <option value="">ללא פרויקט</option>
                           {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
@@ -496,7 +496,7 @@ export default function TaskManagement() {
               type="button"
               onClick={handleCreateTask}
               disabled={isSubmitting}
-              className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600 disabled:opacity-50"
+              className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-violet-600 disabled:opacity-50"
             >
               {isSubmitting ? 'שומר...' : 'צור משימה'}
             </button>
@@ -612,7 +612,7 @@ export default function TaskManagement() {
             <button
               type="button"
               onClick={() => setSelectedTask(null)}
-              className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600"
+              className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-violet-600"
             >
               סגור
             </button>
@@ -768,7 +768,7 @@ function FilterSelect({ label, value, onChange, children }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
+        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10"
       >
         {children}
       </select>
@@ -788,7 +788,7 @@ function ChipSelect({ value, options, onChange }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-8 min-w-[96px] appearance-none rounded-lg border border-slate-200 bg-white pr-6 pl-6 text-[10px] font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-emerald-400"
+        className="h-8 min-w-[96px] appearance-none rounded-lg border border-slate-200 bg-white pr-6 pl-6 text-[10px] font-bold text-slate-700 outline-none transition hover:border-slate-300 focus:border-violet-400"
       >
         {options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
       </select>
