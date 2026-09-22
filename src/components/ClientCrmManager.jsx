@@ -33,7 +33,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
             onClick={() => setActiveTab('leads')}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'leads'
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-violet-600 text-white shadow-xs'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -43,7 +43,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
             onClick={() => setActiveTab('clients')}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'clients'
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-violet-600 text-white shadow-xs'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
