@@ -114,7 +114,7 @@ export default function CalendarView({ initialTab = 'week' }) {
   };
 
   const getAppointmentStatusClasses = (appointmentStatus) => {
-    if (appointmentStatus === 'completed') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+    if (appointmentStatus === 'completed') return 'bg-violet-50 border-violet-200 text-violet-800';
     if (appointmentStatus === 'cancelled') return 'bg-rose-50 border-rose-200 text-rose-700';
     if (appointmentStatus === 'confirmed') return 'bg-sky-50 border-sky-200 text-sky-800';
     if (appointmentStatus === 'no_show') return 'bg-violet-50 border-violet-200 text-violet-800';
@@ -357,7 +357,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                 key={id}
                 type="button"
                 onClick={() => setViewMode(id)}
-                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === id ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === id ? 'bg-violet-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {label}
               </button>
@@ -376,7 +376,7 @@ export default function CalendarView({ initialTab = 'week' }) {
               <button
                 type="button"
                 onClick={() => setFocusDate(dateFromKey(getIsraelDateKey()))}
-                className="mr-1 px-2 py-1 rounded-lg text-[11px] font-bold text-emerald-700 hover:bg-emerald-50"
+                className="mr-1 px-2 py-1 rounded-lg text-[11px] font-bold text-violet-700 hover:bg-violet-50"
               >
                 היום
               </button>
@@ -387,7 +387,7 @@ export default function CalendarView({ initialTab = 'week' }) {
         <button
           type="button"
           onClick={() => openCreateForDate(getIsraelDateKey(focusDate))}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+          className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>תור חדש</span>
@@ -401,7 +401,7 @@ export default function CalendarView({ initialTab = 'week' }) {
               <p className="text-sm font-bold text-slate-900">{periodLabel}</p>
               <p className="text-[11px] text-slate-500">תצוגה יומית מלאה של תורים וזמנים תפוסים</p>
             </div>
-            <button type="button" onClick={() => openCreateForDate(getIsraelDateKey(focusDate))} className="text-xs font-bold text-emerald-700 hover:underline">
+            <button type="button" onClick={() => openCreateForDate(getIsraelDateKey(focusDate))} className="text-xs font-bold text-violet-700 hover:underline">
               + תור ביום הזה
             </button>
           </div>
@@ -422,7 +422,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                       <button
                         type="button"
                         onClick={() => openCreateForDate(dateKey)}
-                        className="h-full min-h-14 w-full rounded-lg text-[11px] text-slate-300 hover:text-emerald-600 hover:bg-emerald-50/40"
+                        className="h-full min-h-14 w-full rounded-lg text-[11px] text-slate-300 hover:text-violet-600 hover:bg-violet-50/40"
                       >
                         פנוי
                       </button>
@@ -443,10 +443,10 @@ export default function CalendarView({ initialTab = 'week' }) {
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <th className="py-2.5 px-3 border-l border-slate-200 w-20 text-center">שעה</th>
                   {weekDays.map(day => (
-                    <th key={day.isoStr} className={`py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%] ${day.isoStr === getIsraelDateKey() ? 'bg-emerald-50/70' : ''}`}>
+                    <th key={day.isoStr} className={`py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%] ${day.isoStr === getIsraelDateKey() ? 'bg-violet-50/70' : ''}`}>
                       <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="w-full">
-                        <div className={day.isoStr === getIsraelDateKey() ? 'text-emerald-700' : ''}>{day.dayName}</div>
-                        <div className={`text-[10px] font-normal ${day.isoStr === getIsraelDateKey() ? 'text-emerald-600' : 'text-slate-500'}`}>{day.dayStr}</div>
+                        <div className={day.isoStr === getIsraelDateKey() ? 'text-violet-700' : ''}>{day.dayName}</div>
+                        <div className={`text-[10px] font-normal ${day.isoStr === getIsraelDateKey() ? 'text-violet-600' : 'text-slate-500'}`}>{day.dayStr}</div>
                       </button>
                     </th>
                   ))}
@@ -496,7 +496,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                   <button
                     type="button"
                     onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }}
-                    className={`mb-1 h-6 w-6 rounded-full text-[11px] font-bold ${isToday ? 'bg-emerald-600 text-white' : day.inMonth ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-300'}`}
+                    className={`mb-1 h-6 w-6 rounded-full text-[11px] font-bold ${isToday ? 'bg-violet-600 text-white' : day.inMonth ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-300'}`}
                   >
                     {day.dateObj.getDate()}
                   </button>
@@ -504,7 +504,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                     {dayBlocks.slice(0, 1).map(block => renderBusyCard(block, true))}
                     {dayAppts.slice(0, 3).map(appt => renderEventCard(appt, true))}
                     {dayAppts.length + dayBlocks.length > 4 && (
-                      <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="text-[10px] font-bold text-slate-500 hover:text-emerald-700">
+                      <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="text-[10px] font-bold text-slate-500 hover:text-violet-700">
                         +{dayAppts.length + dayBlocks.length - 4} נוספים
                       </button>
                     )}
@@ -527,7 +527,7 @@ export default function CalendarView({ initialTab = 'week' }) {
             <button type="button" onClick={() => setIsAddDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">
               ביטול
             </button>
-            <button type="button" onClick={handleCreateAppointment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">
+            <button type="button" onClick={handleCreateAppointment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50">
               {isSubmitting ? 'שומר...' : 'קבע תור'}
             </button>
           </>
@@ -613,7 +613,7 @@ export default function CalendarView({ initialTab = 'week' }) {
               type="button"
               onClick={handleUpdateAppointment}
               disabled={isEditingAppointment}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
               {isEditingAppointment ? 'שומר...' : 'שמור שינויים'}
             </button>
