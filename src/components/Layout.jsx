@@ -8,6 +8,7 @@ import ContentManager from './ContentManager';
 import BusinessSettings from './BusinessSettings';
 import FormManager from './FormManager';
 import FormBuilder from './FormBuilder';
+import TrashView from './TrashView';
 import ClientDetailDrawer from './ClientDetailDrawer';
 import { LanguageContext } from '../context/LanguageContext';
 import {
@@ -19,6 +20,7 @@ import {
   Video,
   FileText,
   Settings,
+  Trash2,
   Languages,
   Menu
 } from 'lucide-react';
@@ -40,6 +42,7 @@ const Layout = () => {
     { id: 'content', name: t('Content', 'תוכן'), icon: Video },
     { id: 'forms', name: t('Forms', 'טפסים'), icon: FileText },
     { id: 'settings', name: t('Settings', 'הגדרות'), icon: Settings },
+    { id: 'trash', name: t('Trash', 'אשפה'), icon: Trash2 },
   ];
 
   const renderModule = () => {
@@ -76,6 +79,8 @@ const Layout = () => {
         return <BusinessSettings navigate={setActiveModule} activeFormSubTab="services" />;
       case 'settings':
         return <BusinessSettings navigate={setActiveModule} activeFormSubTab="hours" />;
+      case 'trash':
+        return <TrashView />;
       default:
         return <DashboardOverview navigate={setActiveModule} />;
     }
