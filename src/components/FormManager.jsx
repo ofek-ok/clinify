@@ -1,10 +1,10 @@
 import React, { useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { useToast } from './ui/Toast';
-import { Plus, Copy, ExternalLink, Edit } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Trash2 } from 'lucide-react';
 
 export default function FormManager({ navigate }) {
-  const { forms, formSubmissions } = useContext(ClinicContext);
+  const { forms, formSubmissions, updateForm, softDeleteRecord } = useContext(ClinicContext);
   const { showToast } = useToast();
 
   const copyToClipboard = (formId) => {
@@ -56,13 +56,23 @@ export default function FormManager({ navigate }) {
                         {form.title}
                       </td>
                       <td className="py-3.5 px-4 text-slate-700">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await updateForm(form.id, { is_public: form.is_public === false });
+                              showToast(form.is_public === false ? 'הטופס הוגדר כציבורי' : 'הטופס הוגדר כפנימי');
+                            } catch (err) {
+                              showToast(err.message || 'לא ניתן לעדכן את הטופס', 'error');
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           form.is_public !== false
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-slate-100 text-slate-500'
                         }`}>
                           {form.is_public !== false ? 'ציבורי' : 'פנימי'}
-                        </span>
+                        </button>
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 font-bold">
                         {subsCount}
@@ -88,6 +98,22 @@ export default function FormManager({ navigate }) {
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!window.confirm(`להעביר את הטופס "${form.title}" לאשפה?`)) return;
+                              try {
+                                await softDeleteRecord('forms', form.id);
+                                showToast('הטופס הועבר לאשפה');
+                              } catch (err) {
+                                showToast(err.message || 'לא ניתן למחוק את הטופס', 'error');
+                              }
+                            }}
+                            className="text-slate-500 hover:text-rose-600 p-1 rounded hover:bg-rose-50"
+                            title="מחיקה"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
