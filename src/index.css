@@ -75,3 +75,60 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+
+/* Clinify product UI */
+.clinify-workspace {
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --border-soft: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --accent: #059669;
+}
+
+.clinify-workspace .work-input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.75rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.clinify-workspace .work-input:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.clinify-workspace .work-input:focus {
+  border-color: #34d399;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.10);
+}
+
+.clinify-workspace select {
+  cursor: pointer;
+}
+
+.clinify-workspace button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clinify-workspace table thead th {
+  white-space: nowrap;
+}
+
+.clinify-workspace table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+@media (max-width: 1024px) {
+  .clinify-workspace {
+    font-size: 14px;
+  }
+}
