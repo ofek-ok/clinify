@@ -7,50 +7,51 @@ const AnalyticsView = () => {
   const { appointments, leads, services, getPaymentForAppointment } = useContext(ClinicContext);
   const { t, language } = useContext(LanguageContext);
 
-  const currentMonthRevenue = appointments.reduce((sum, appt) => {
-    const payment = getPaymentForAppointment(appt.id);
-    return sum + (payment ? payment.amount : 0);
-  }, 0);
-
-  const monthlyRevenueData = [
-    { name: t('Mar', 'מרץ'), revenue: 12500 },
-    { name: t('Apr', 'אפריל'), revenue: 15200 },
-    { name: t('May', 'מאי'), revenue: 14800 },
-    { name: t('Jun', 'יוני'), revenue: 18900 },
-    { name: t('Jul', 'יולי'), revenue: 22400 },
-    { name: t('Aug (Current)', 'אוגוסט (נוכחי)'), revenue: Math.max(8000, currentMonthRevenue) }, 
-  ];
+  const monthlyRevenueData = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const month = d.getMonth();
+      const year = d.getFullYear();
+      const revenue = appointments.reduce((sum, appt) => {
+        if (!appt?.appointment_date) return sum;
+        const apptDate = new Date(appt.appointment_date);
+        if (apptDate.getMonth() !== month || apptDate.getFullYear() !== year) return sum;
+        const payment = getPaymentForAppointment(appt.id);
+        return sum + (payment?.status === 'paid' ? Number(payment.amount || 0) : 0);
+      }, 0);
+      return { name: d.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'short' }), revenue };
+    });
+  }, [appointments, getPaymentForAppointment, language]);
 
   const leadSourcesData = useMemo(() => {
-    const counts = { 'Website': 0, 'Facebook': 0, 'WhatsApp': 0, 'Direct': 0 };
-    leads.forEach(l => {
-      if(counts[l.source] !== undefined) counts[l.source]++;
-    });
-    
-    if (leads.length < 5) {
-      counts['Facebook'] += 15;
-      counts['Website'] += 8;
-      counts['WhatsApp'] += 22;
-      counts['Direct'] += 5;
-    }
-
-    return [
-      { name: t('Facebook/IG', 'פייסבוק / אינסטגרם'), value: counts['Facebook'], color: '#3b82f6' },
-      { name: t('Website', 'אתר הבית'), value: counts['Website'], color: '#8b5cf6' },
-      { name: t('WhatsApp', 'ווטסאפ'), value: counts['WhatsApp'], color: '#14b8a6' },
-      { name: t('Direct/Referral', 'הפניות / ישיר'), value: counts['Direct'], color: '#8b5cf6' },
-    ].filter(item => item.value > 0);
+    const sourceLabels = {
+      Website: t('Website', 'אתר הבית'),
+      Facebook: t('Facebook/IG', 'פייסבוק / אינסטגרם'),
+      WhatsApp: t('WhatsApp', 'ווטסאפ'),
+      Direct: t('Direct/Referral', 'הפניות / ישיר')
+    };
+    const colors = { Website: '#06b6d4', Facebook: '#3b82f6', WhatsApp: '#14b8a6', Direct: '#8b5cf6' };
+    const counts = leads.reduce((acc, lead) => {
+      const source = lead?.source || 'Direct';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts).map(([source, value]) => ({
+      name: sourceLabels[source] || source,
+      value,
+      color: colors[source] || '#64748b'
+    }));
   }, [leads, t]);
 
   const funnelData = useMemo(() => {
-    const total = leads.length + 30; 
-    const contacted = leads.filter(l => l.status !== 'new').length + 20;
-    const converted = leads.filter(l => l.status === 'converted').length + 8;
-    
+    const total = leads.length;
+    const contacted = leads.filter(l => l?.status && l.status !== 'new').length;
+    const converted = leads.filter(l => ['won', 'converted'].includes(l?.status)).length;
     return [
       { name: t('Total Leads', 'סך הכל לידים'), value: total, fill: '#cbd5e1' },
-      { name: t('Contacted', 'נוצר קשר'), value: contacted, fill: '#94a3b8' },
-      { name: t('Converted', 'הומרו למטופלים'), value: converted, fill: '#0ea5e9' },
+      { name: t('Contacted', 'נוצר קשר'), value: contacted, fill: '#8b5cf6' },
+      { name: t('Converted', 'הומרו ללקוחות'), value: converted, fill: '#06b6d4' }
     ];
   }, [leads, t]);
 
