@@ -45,7 +45,7 @@ export default function WorkOptionsManager() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="premium-panel rounded-2xl p-4">
         <h3 className="text-sm font-bold text-slate-900">התאמה אישית של Work</h3>
         <p className="text-xs text-slate-500 mt-1">נהל את האפשרויות שיופיעו בכל המשימות והלוחות.</p>
       </div>
@@ -53,13 +53,13 @@ export default function WorkOptionsManager() {
       <div className="flex flex-wrap gap-2">
         {Object.entries(TYPE_META).map(([id,meta]) => (
           <button key={id} type="button" onClick={() => setActiveType(id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${activeType===id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${activeType===id ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
             {meta.label}
           </button>
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="premium-panel rounded-2xl overflow-hidden">
         <div className="p-3 border-b border-slate-200 bg-slate-50 grid grid-cols-[1fr_90px_100px_80px] gap-2 text-[11px] font-bold text-slate-500">
           <span>שם</span><span>צבע</span><span>סדר</span><span>פעיל</span>
         </div>
@@ -84,7 +84,7 @@ export default function WorkOptionsManager() {
                 className="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs"
               />
               <button type="button" onClick={() => updateWorkOption(option.id,{is_active:!option.is_active})}
-                className={`inline-flex items-center gap-1 text-xs font-bold ${option.is_active ? 'text-emerald-700' : 'text-slate-400'}`}>
+                className={`inline-flex items-center gap-1 text-xs font-bold ${option.is_active ? 'text-violet-700' : 'text-slate-400'}`}>
                 {option.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 {option.is_active ? 'פעיל' : 'מוסתר'}
               </button>
@@ -94,7 +94,7 @@ export default function WorkOptionsManager() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="premium-panel rounded-2xl p-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[220px]">
             <label className="block text-xs font-medium text-slate-700 mb-1">הוסף {TYPE_META[activeType].singular}</label>
@@ -106,7 +106,7 @@ export default function WorkOptionsManager() {
             <input type="color" value={newColor} onChange={e=>setNewColor(e.target.value)} className="w-12 h-9 rounded border border-slate-200 p-0" />
           </div>
           <button type="button" onClick={handleAdd} disabled={saving || !newLabel.trim()}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
+            className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
             <Plus className="w-4 h-4" /> הוסף
           </button>
         </div>
