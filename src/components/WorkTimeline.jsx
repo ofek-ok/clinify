@@ -8,13 +8,20 @@ const key=d=>d.toISOString().slice(0,10);
 export default function WorkTimeline() {
   const { tasks, projects } = useContext(ClinicContext);
   const [offset,setOffset]=useState(0);
+  const [projectFilter,setProjectFilter]=useState('');
+  const [statusFilter,setStatusFilter]=useState('');
 
   const days = useMemo(() => {
     const start = addDays(new Date(), offset * 14);
     return Array.from({length:14},(_,i)=>addDays(start,i));
   }, [offset]);
 
-  const datedTasks = useMemo(() => tasks.filter(t => t.start_date || t.due_date), [tasks]);
+  const datedTasks = useMemo(() => tasks.filter(t => {
+    if (!(t.start_date || t.due_date)) return false;
+    if (projectFilter && t.project_id !== projectFilter) return false;
+    if (statusFilter && t.status !== statusFilter) return false;
+    return true;
+  }), [tasks, projectFilter, statusFilter]);
 
   return (
     <div className="space-y-3">
@@ -23,7 +30,18 @@ export default function WorkTimeline() {
           <div className="text-xs font-bold text-slate-900">Timeline · 14 ימים</div>
           <div className="text-[11px] text-slate-500">תאריכי התחלה ויעד של המשימות</div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={projectFilter} onChange={e=>setProjectFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-[11px]">
+            <option value="">כל הפרויקטים</option>
+            {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-[11px]">
+            <option value="">כל הסטטוסים</option>
+            <option value="todo">לביצוע</option>
+            <option value="in_progress">בתהליך</option>
+            <option value="blocked">חסום</option>
+            <option value="done">הושלם</option>
+          </select>
           <button onClick={()=>setOffset(v=>v-1)} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronRight className="w-4 h-4"/></button>
           <button onClick={()=>setOffset(0)} className="px-2 py-1 text-[11px] font-bold text-emerald-700">היום</button>
           <button onClick={()=>setOffset(v=>v+1)} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronLeft className="w-4 h-4"/></button>
