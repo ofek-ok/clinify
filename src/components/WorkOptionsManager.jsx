@@ -1,0 +1,116 @@
+import React, { useContext, useMemo, useState } from 'react';
+import { ClinicContext } from '../context/ClinicContext';
+import { Plus, Eye, EyeOff } from 'lucide-react';
+import { useToast } from './ui/Toast';
+
+const TYPE_META = {
+  status: { label: 'סטטוסים', singular: 'סטטוס' },
+  priority: { label: 'עדיפויות', singular: 'עדיפות' },
+  area: { label: 'תחומים', singular: 'תחום' },
+  label: { label: 'תגיות', singular: 'תגית' }
+};
+
+export default function WorkOptionsManager() {
+  const { workOptions, addWorkOption, updateWorkOption } = useContext(ClinicContext);
+  const { showToast } = useToast();
+  const [activeType, setActiveType] = useState('status');
+  const [newLabel, setNewLabel] = useState('');
+  const [newColor, setNewColor] = useState('#64748b');
+  const [saving, setSaving] = useState(false);
+
+  const options = useMemo(() =>
+    workOptions.filter(o => o.option_type === activeType)
+      .sort((a,b) => a.sort_order - b.sort_order),
+    [workOptions, activeType]
+  );
+
+  const handleAdd = async () => {
+    if (!newLabel.trim()) return;
+    setSaving(true);
+    try {
+      await addWorkOption({
+        option_type: activeType,
+        label: newLabel,
+        color: newColor,
+        sort_order: options.length ? Math.max(...options.map(o => o.sort_order || 0)) + 10 : 10
+      });
+      setNewLabel('');
+      showToast(`${TYPE_META[activeType].singular} נוסף בהצלחה`);
+    } catch (err) {
+      showToast(err.message || 'לא ניתן להוסיף אפשרות', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <h3 className="text-sm font-bold text-slate-900">התאמה אישית של Work</h3>
+        <p className="text-xs text-slate-500 mt-1">נהל את האפשרויות שיופיעו בכל המשימות והלוחות.</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(TYPE_META).map(([id,meta]) => (
+          <button key={id} type="button" onClick={() => setActiveType(id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${activeType===id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
+            {meta.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="p-3 border-b border-slate-200 bg-slate-50 grid grid-cols-[1fr_90px_100px_80px] gap-2 text-[11px] font-bold text-slate-500">
+          <span>שם</span><span>צבע</span><span>סדר</span><span>פעיל</span>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {options.map(option => (
+            <div key={option.id} className="p-3 grid grid-cols-[1fr_90px_100px_80px] gap-2 items-center">
+              <input
+                value={option.label}
+                onChange={e => updateWorkOption(option.id,{label:e.target.value})}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs"
+              />
+              <input
+                type="color"
+                value={option.color || '#64748b'}
+                onChange={e => updateWorkOption(option.id,{color:e.target.value})}
+                className="w-10 h-8 rounded border border-slate-200 p-0"
+              />
+              <input
+                type="number"
+                value={option.sort_order || 0}
+                onChange={e => updateWorkOption(option.id,{sort_order:Number(e.target.value)})}
+                className="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs"
+              />
+              <button type="button" onClick={() => updateWorkOption(option.id,{is_active:!option.is_active})}
+                className={`inline-flex items-center gap-1 text-xs font-bold ${option.is_active ? 'text-emerald-700' : 'text-slate-400'}`}>
+                {option.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {option.is_active ? 'פעיל' : 'מוסתר'}
+              </button>
+            </div>
+          ))}
+          {options.length===0 && <div className="p-6 text-center text-xs text-slate-500">אין אפשרויות עדיין.</div>}
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-xs font-medium text-slate-700 mb-1">הוסף {TYPE_META[activeType].singular}</label>
+            <input value={newLabel} onChange={e=>setNewLabel(e.target.value)} placeholder="שם חדש..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">צבע</label>
+            <input type="color" value={newColor} onChange={e=>setNewColor(e.target.value)} className="w-12 h-9 rounded border border-slate-200 p-0" />
+          </div>
+          <button type="button" onClick={handleAdd} disabled={saving || !newLabel.trim()}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
+            <Plus className="w-4 h-4" /> הוסף
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
