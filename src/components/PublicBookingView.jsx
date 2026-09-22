@@ -234,12 +234,12 @@ const PublicBookingView = () => {
                     }}
                     className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex justify-between items-center group ${
                       selectedService?.id === svc.id 
-                        ? 'border-emerald-500 bg-emerald-50/30 shadow-sm' 
+                        ? 'border-violet-500 bg-violet-50/30 shadow-sm' 
                         : 'border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-white'
                     }`}
                   >
                     <div className="space-y-1">
-                      <h3 className="font-extrabold text-slate-800 text-base group-hover:text-emerald-700 transition-colors">{svc.name}</h3>
+                      <h3 className="font-extrabold text-slate-800 text-base group-hover:text-violet-700 transition-colors">{svc.name}</h3>
                       {svc.description && <p className="text-xs text-slate-500 line-clamp-1">{svc.description}</p>}
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 pt-1">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -266,7 +266,7 @@ const PublicBookingView = () => {
                 </button>
                 <div>
                   <h2 className="text-lg font-extrabold text-slate-800 tracking-tight">{t('Step 2: Select Date & Open Time Slot', 'שלב 2: בחר תאריך ושעה פנויה')}</h2>
-                  <p className="text-xs text-emerald-600 font-bold mt-0.5">{selectedService?.name} ({selectedService?.duration_minutes} דק')</p>
+                  <p className="text-xs text-violet-600 font-bold mt-0.5">{selectedService?.name} ({selectedService?.duration_minutes} דק')</p>
                 </div>
               </div>
               <span className="text-xs font-bold text-slate-400">2 / 3</span>
@@ -283,7 +283,7 @@ const PublicBookingView = () => {
                   setSelectedDate(e.target.value);
                   setSelectedSlot('');
                 }}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-violet-500/20 outline-none"
               />
             </div>
 
@@ -307,7 +307,7 @@ const PublicBookingView = () => {
                       onClick={() => setSelectedSlot(slot)}
                       className={`py-3 rounded-xl text-sm font-black transition-all border ${
                         selectedSlot === slot
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.03]'
+                          ? 'bg-violet-600 text-white border-violet-600 shadow-md scale-[1.03]'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                       }`}
                     >
@@ -321,7 +321,7 @@ const PublicBookingView = () => {
             {selectedSlot && (
               <button 
                 onClick={() => setStep(3)}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition-all text-sm mt-4"
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition-all text-sm mt-4"
               >
                 {t('Continue to Confirmation', 'המשך להזנת פרטים')}
               </button>
@@ -353,7 +353,7 @@ const PublicBookingView = () => {
             {/* Selected Summary Card */}
             <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-800 flex justify-between items-center">
               <div>
-                <p className="text-xs text-emerald-400 font-bold">{selectedService?.name}</p>
+                <p className="text-xs text-violet-400 font-bold">{selectedService?.name}</p>
                 <p className="text-sm font-black text-white mt-0.5">{selectedDate} ({selectedSlot})</p>
               </div>
               <span className="text-lg font-black text-white" dir="ltr">
@@ -371,7 +371,7 @@ const PublicBookingView = () => {
                   placeholder="050-0000000"
                   value={patientInfo.phone}
                   onChange={e => setPatientInfo({ ...patientInfo, phone: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-violet-500/20 outline-none"
                 />
               </div>
 
@@ -382,7 +382,7 @@ const PublicBookingView = () => {
                   required
                   value={patientInfo.fullName}
                   onChange={e => setPatientInfo({ ...patientInfo, fullName: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-violet-500/20 outline-none"
                 />
               </div>
 
@@ -392,7 +392,7 @@ const PublicBookingView = () => {
                   type="email"
                   value={patientInfo.email}
                   onChange={e => setPatientInfo({ ...patientInfo, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-violet-500/20 outline-none"
                 />
               </div>
 
@@ -402,7 +402,7 @@ const PublicBookingView = () => {
                   rows="2"
                   value={patientInfo.notes}
                   onChange={e => setPatientInfo({ ...patientInfo, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-violet-500/20 outline-none resize-none"
                 />
               </div>
 
@@ -414,7 +414,7 @@ const PublicBookingView = () => {
                     required
                     checked={patientInfo.acceptedTerms}
                     onChange={e => setPatientInfo({ ...patientInfo, acceptedTerms: e.target.checked })}
-                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 mt-0.5"
+                    className="w-4 h-4 text-violet-600 rounded border-slate-300 focus:ring-violet-500 mt-0.5"
                   />
                   <span className="text-xs text-slate-600 leading-relaxed font-medium">
                     {t('I agree to the cancellation policy: ', 'אני מאשר/ת את מדיניות הביטולים: ')} 
@@ -427,7 +427,7 @@ const PublicBookingView = () => {
             <button 
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -441,7 +441,7 @@ const PublicBookingView = () => {
         {/* STEP 4: Success & Export to Calendar */}
         {step === 4 && (
           <div className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-md text-center space-y-6 animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-16 h-16 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
             </div>
 
@@ -457,7 +457,7 @@ const PublicBookingView = () => {
               </div>
               <div className="flex justify-between border-b border-slate-200/60 pb-2">
                 <span className="text-slate-400 font-bold">{t('Date & Time', 'תאריך ושעה')}:</span>
-                <span className="font-black text-emerald-700">{selectedDate} ({selectedSlot})</span>
+                <span className="font-black text-violet-700">{selectedDate} ({selectedSlot})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold">{t('Patient', 'מטופל/ת')}:</span>
@@ -473,7 +473,7 @@ const PublicBookingView = () => {
                 rel="noreferrer"
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-2"
               >
-                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 {t('Add to Google Calendar', 'הוסף ליומן Google Calendar')}
               </a>
 
