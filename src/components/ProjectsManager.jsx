@@ -83,7 +83,7 @@ export default function ProjectsManager() {
 
         <button
           onClick={() => setIsAddDrawerOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+          className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>פרויקט חדש</span>
@@ -150,7 +150,7 @@ export default function ProjectsManager() {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center space-x-2 space-x-reverse min-w-[140px]">
                           <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                            <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
                           </div>
                           <span className="text-[11px] font-medium text-slate-700">
                             {completedTasksCount} / {projTasks.length} ({progressPct}%)
@@ -187,7 +187,7 @@ export default function ProjectsManager() {
             <button
               onClick={handleCreateProject}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
               {isSubmitting ? 'שומר...' : 'שמור פרויקט'}
             </button>
@@ -203,7 +203,7 @@ export default function ProjectsManager() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="שם הפרויקט..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -282,7 +282,7 @@ export default function ProjectsManager() {
             <div className="flex justify-end items-center w-full">
               <button
                 onClick={() => setSelectedProject(null)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
               >
                 סגור
               </button>
