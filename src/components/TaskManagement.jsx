@@ -23,6 +23,10 @@ export default function TaskManagement() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'today' | 'week' | 'overdue' | 'blocked'
+  const [projectFilter, setProjectFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [areaFilter, setAreaFilter] = useState('');
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [deleteModalTask, setDeleteModalTask] = useState(null);
@@ -77,6 +81,10 @@ export default function TaskManagement() {
     const matchesSearch = !searchTerm || (task.title && task.title.toLowerCase().includes(searchTerm.toLowerCase()));
     
     if (!matchesSearch) return false;
+    if (projectFilter && task.project_id !== projectFilter) return false;
+    if (statusFilter && task.status !== statusFilter) return false;
+    if (priorityFilter && task.priority !== priorityFilter) return false;
+    if (areaFilter && task.area !== areaFilter) return false;
 
     if (filterMode === 'today') return task.due_date === todayStr && task.status !== 'done';
     if (filterMode === 'overdue') return task.due_date < todayStr && task.status !== 'done';
@@ -206,6 +214,23 @@ export default function TaskManagement() {
             ))}
           </div>
 
+          <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+            <option value="">כל הפרויקטים</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+            <option value="">כל הסטטוסים</option>
+            {statusOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+            <option value="">כל העדיפויות</option>
+            {priorityOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+          <select value={areaFilter} onChange={e => setAreaFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+            <option value="">כל התחומים</option>
+            {areaOptions.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+          </select>
+
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
             <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
@@ -297,13 +322,16 @@ export default function TaskManagement() {
                       </td>
 
                       {/* Project */}
-                      <td className="py-3 px-4 text-slate-700 font-medium">
-                        {resolveProjectName(task.project_id)}
+                      <td className="py-3 px-4 text-slate-700 font-medium" onClick={e => e.stopPropagation()}>
+                        <select value={task.project_id || ''} onChange={e => updateTask(task.id,{project_id:e.target.value || null})} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs">
+                          <option value="">ללא פרויקט</option>
+                          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
                       </td>
 
                       {/* Due Date */}
-                      <td className={`py-3 px-4 font-mono ${isOverdue ? 'text-rose-400 font-bold' : 'text-slate-700'}`}>
-                        {task.due_date || '-'}
+                      <td className={`py-3 px-4 font-mono ${isOverdue ? 'text-rose-400 font-bold' : 'text-slate-700'}`} onClick={e => e.stopPropagation()}>
+                        <input type="date" value={task.due_date || ''} onChange={e => updateTask(task.id,{due_date:e.target.value})} className="bg-transparent text-xs"/>
                       </td>
 
                       {/* Related Entity */}
@@ -312,8 +340,10 @@ export default function TaskManagement() {
                       </td>
 
                       {/* Area */}
-                      <td className="py-3 px-4 text-slate-500">
-                        {task.area === 'clinical' ? 'קליני' : task.area === 'business' ? 'עסקי' : 'תפעול'}
+                      <td className="py-3 px-4 text-slate-500" onClick={e => e.stopPropagation()}>
+                        <select value={task.area || 'operations'} onChange={e => updateTask(task.id,{area:e.target.value})} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs">
+                          {areaOptions.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+                        </select>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1">
