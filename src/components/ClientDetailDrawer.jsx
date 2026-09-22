@@ -9,8 +9,8 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const { 
     people, patients, leads, appointments, payments, tasks,
     forms, formSubmissions, leadCommunications,
-    addPatient, updatePatient, addClinicalNote,
-    addLeadCommunication, updateLeadFollowUp, addTask, updateTaskStatus,
+    addPatient, updatePatient, deletePatient, deletePerson, addClinicalNote,
+    addLeadCommunication, updateLeadFollowUp, addTask, updateTaskStatus, deleteTask,
     getServiceName
   } = useContext(ClinicContext);
 
@@ -203,6 +203,23 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     await addLeadCommunication(targetLeadId, commType, commNote.trim());
     showToast('תיעוד תקשורת נשמר!');
     setCommNote('');
+  };
+
+  const handleDeleteClient = async () => {
+    const confirmed = window.confirm(`להעביר את ${person.full_name || 'הלקוח'} לאשפה? הרשומות המקושרות יישארו במערכת וניתן לשחזר את הלקוח מהאשפה.`);
+    if (!confirmed) return;
+    try {
+      if (patient?.id) await deletePatient(patient.id);
+      if (personId) await deletePerson(personId);
+      onClose?.();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteLinkedTask = async (task) => {
+    if (!window.confirm(`להעביר את המשימה "${task.title}" לאשפה?`)) return;
+    await deleteTask(task.id);
   };
 
   const handleAddTask = async (e) => {
@@ -597,7 +614,10 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           />
                           <span className={`font-semibold ${task.status === 'done' ? 'line-through text-slate-500' : 'text-slate-800'}`}>{task.title}</span>
                         </div>
-                        {task.due_date && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{task.due_date}</span>}
+                        <div className="flex items-center gap-2">
+                          {task.due_date && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{task.due_date}</span>}
+                          <button type="button" onClick={() => handleDeleteLinkedTask(task)} className="text-[10px] font-bold text-rose-600 hover:text-rose-700">אשפה</button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -690,6 +710,13 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 )}
               </div>
             )}
+
+            <div className="mt-6 border-t border-rose-100 pt-4">
+              <button type="button" onClick={handleDeleteClient}
+                className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50">
+                העבר לקוח לאשפה
+              </button>
+            </div>
 
             {/* TAB 7: CLINICAL PROFILE */}
             {activeTab === 'clinical' && (
