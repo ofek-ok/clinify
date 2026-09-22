@@ -418,7 +418,7 @@ const FinancialManager = () => {
         <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 flex items-center justify-between shadow-xs">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('Total Revenue', 'סך כל ההכנסות')}</p>
-            <p className="text-3xl font-black text-violet-600 tracking-tight" dir="ltr">
+            <p className="text-3xl font-black text-emerald-600 tracking-tight" dir="ltr">
               <span className="text-xl opacity-50 me-1">₪</span>{totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
           </div>
