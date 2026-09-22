@@ -651,9 +651,13 @@ export const ClinicProvider = ({ children }) => {
       throw new Error('המועד שנבחר מתנגש עם תור קיים');
     }
 
+    const appointmentStart = new Date(appt.appointment_date);
+    const appointmentEnd = new Date(appointmentStart.getTime() + durationMinutes * 60000);
+
     const payload = {
       ...appt,
-      person_id: personId
+      person_id: personId,
+      end_date: appointmentEnd.toISOString()
     };
 
     const { data, error } = await supabase.from('appointments').insert([payload]).select();
@@ -689,6 +693,60 @@ export const ClinicProvider = ({ children }) => {
       }
 
       return createdAppointment;
+    }
+    return null;
+  };
+
+  const updateAppointment = async (apptId, updates) => {
+    const existing = appointments.find(a => a.id === apptId);
+    if (!existing) throw new Error('התור לא נמצא');
+
+    const nextServiceId = updates.service_id ?? existing.service_id;
+    const nextStart = updates.appointment_date ?? existing.appointment_date;
+    const nextStatus = updates.status ?? existing.status;
+    const service = services.find(s => String(s.id) === String(nextServiceId));
+    const durationMinutes = Number(service?.duration_minutes || 30);
+
+    if (!['cancelled', 'rescheduled'].includes(nextStatus)) {
+      if (!isWithinBusinessHours(nextStart, durationMinutes)) {
+        throw new Error('התור נמצא מחוץ לשעות הפעילות');
+      }
+      if (!isTimeSlotAvailable(nextStart, durationMinutes, apptId)) {
+        throw new Error('המועד שנבחר מתנגש עם תור או זמן תפוס');
+      }
+    }
+
+    const startDate = new Date(nextStart);
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+    const nextPersonId = updates.person_id ?? existing.person_id;
+    const linkedPatient = patients.find(p => String(p.person_id) === String(nextPersonId));
+
+    const payload = {
+      ...updates,
+      person_id: nextPersonId,
+      patient_id: linkedPatient?.id || null,
+      appointment_date: startDate.toISOString(),
+      end_date: endDate.toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .update(payload)
+      .eq('id', apptId)
+      .select();
+
+    if (error) {
+      console.error("Error updating appointment:", error);
+      const message = String(error.message || '');
+      if (message.includes('appointments_no_overlap') || message.includes('exclusion')) {
+        throw new Error('המועד שנבחר כבר תפוס. בחר שעה אחרת.');
+      }
+      throw error;
+    }
+
+    if (data?.[0]) {
+      setAppointments(prev => prev.map(a => a.id === apptId ? data[0] : a));
+      return data[0];
     }
     return null;
   };
@@ -1497,7 +1555,7 @@ export const ClinicProvider = ({ children }) => {
       tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks,
 
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, updateService, deleteService, addAppointment, deleteAppointment, updateAppointmentStatus, addLead,
+      addService, updateService, deleteService, addAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus, addLead,
       addProject, updateProject, deleteProject,
       addTask, updateTask, updateTaskStatus, deleteTask,
       subscribePerformanceList,
