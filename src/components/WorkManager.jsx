@@ -3,6 +3,8 @@ import TaskManagement from './TaskManagement';
 import ProjectsManager from './ProjectsManager';
 import WorkDashboard from './WorkDashboard';
 import WorkOptionsManager from './WorkOptionsManager';
+import WorkKanban from './WorkKanban';
+import WorkTimeline from './WorkTimeline';
 
 export default function WorkManager({ initialTab = 'board' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -29,7 +31,19 @@ export default function WorkManager({ initialTab = 'board' }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            לוח
+            טבלה
+          </button>
+          <button
+            onClick={() => setActiveTab('kanban')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'kanban' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Kanban
+          </button>
+          <button
+            onClick={() => setActiveTab('timeline')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'timeline' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Timeline
           </button>
           <button
             onClick={() => setActiveTab('projects')}
@@ -54,6 +68,8 @@ export default function WorkManager({ initialTab = 'board' }) {
       <div>
         {activeTab === 'overview' && <WorkDashboard />}
         {activeTab === 'board' && <TaskManagement />}
+        {activeTab === 'kanban' && <WorkKanban />}
+        {activeTab === 'timeline' && <WorkTimeline />}
         {activeTab === 'projects' && <ProjectsManager />}
         {activeTab === 'customize' && <WorkOptionsManager />}
       </div>
