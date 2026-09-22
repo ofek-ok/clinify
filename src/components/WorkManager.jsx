@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TaskManagement from './TaskManagement';
 import ProjectsManager from './ProjectsManager';
 import WorkDashboard from './WorkDashboard';
+import WorkOptionsManager from './WorkOptionsManager';
 
 export default function WorkManager({ initialTab = 'board' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -40,6 +41,12 @@ export default function WorkManager({ initialTab = 'board' }) {
           >
             פרויקטים
           </button>
+          <button
+            onClick={() => setActiveTab('customize')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'customize' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            התאמה אישית
+          </button>
         </div>
       </div>
 
@@ -48,6 +55,7 @@ export default function WorkManager({ initialTab = 'board' }) {
         {activeTab === 'overview' && <WorkDashboard />}
         {activeTab === 'board' && <TaskManagement />}
         {activeTab === 'projects' && <ProjectsManager />}
+        {activeTab === 'customize' && <WorkOptionsManager />}
       </div>
     </div>
   );
