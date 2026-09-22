@@ -147,16 +147,36 @@ const PublicBookingView = () => {
     }
   };
 
-  // Google Calendar Export Link
+  // Google Calendar export link. Keep the appointment in the business timezone
+  // instead of relying on the visitor device timezone.
   const googleCalendarUrl = useMemo(() => {
     if (!selectedService || !selectedDate || !selectedSlot) return '#';
+
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const [hour, minute] = selectedSlot.split(':').map(Number);
+    const durationMinutes = Number(selectedService.duration_minutes || 30);
+    const startMinutes = hour * 60 + minute;
+    const endTotalMinutes = startMinutes + durationMinutes;
+    const dayOffset = Math.floor(endTotalMinutes / (24 * 60));
+    const endMinutesOfDay = endTotalMinutes % (24 * 60);
+
+    const endDate = new Date(Date.UTC(year, month - 1, day + dayOffset, 12));
+    const endDateKey = [
+      endDate.getUTCFullYear(),
+      String(endDate.getUTCMonth() + 1).padStart(2, '0'),
+      String(endDate.getUTCDate()).padStart(2, '0')
+    ].join('');
+
     const startStr = `${selectedDate.replace(/-/g, '')}T${selectedSlot.replace(':', '')}00`;
-    const dtEnd = new Date(new Date(`${selectedDate}T${selectedSlot}:00`).getTime() + (selectedService.duration_minutes || 30) * 60000);
-    const endStr = `${dtEnd.toISOString().split('T')[0].replace(/-/g, '')}T${dtEnd.toTimeString().substring(0, 5).replace(':', '')}00`;
-    
+    const endHour = String(Math.floor(endMinutesOfDay / 60)).padStart(2, '0');
+    const endMinute = String(endMinutesOfDay % 60).padStart(2, '0');
+    const endStr = `${endDateKey}T${endHour}${endMinute}00`;
+
     const title = encodeURIComponent(`${selectedService.name} - Okonski Performance`);
-    const details = encodeURIComponent(bookingSettings.clinic_address || 'Okonski Performance');
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${details}`;
+    const location = bookingSettings.clinic_address || 'Okonski Performance';
+    const details = encodeURIComponent(location);
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&ctz=Asia%2FJerusalem&details=${details}&location=${encodeURIComponent(location)}`;
   }, [selectedService, selectedDate, selectedSlot, bookingSettings]);
 
   if (isLoadingPublicData) {
