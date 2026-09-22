@@ -64,7 +64,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab.id
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-violet-600 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -106,7 +106,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
                           type="checkbox"
                           checked={hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { isOpen: e.target.checked })}
-                          className="w-4 h-4 text-emerald-500 bg-slate-50 border-slate-200 rounded focus:ring-emerald-500"
+                          className="w-4 h-4 text-violet-500 bg-slate-50 border-slate-200 rounded focus:ring-violet-500"
                         />
                       </td>
                       <td className="py-3 px-4">
@@ -144,7 +144,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
                 <p className="text-slate-500 text-xs font-mono dir-ltr text-right mt-0.5">{window.location.origin}/book</p>
               </div>
               <div className="flex space-x-2 space-x-reverse">
-                <button onClick={copyBookingLink} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 space-x-reverse">
+                <button onClick={copyBookingLink} className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 space-x-reverse">
                   <Copy className="w-3.5 h-3.5" />
                   <span>העתק קישור</span>
                 </button>
