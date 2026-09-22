@@ -280,7 +280,7 @@ const AppointmentManager = () => {
       cell: ({ row, getValue }) => {
         const status = getValue();
         let statusBadge = status === 'completed' 
-          ? "bg-emerald-100 text-emerald-800" 
+          ? "bg-violet-100 text-violet-800" 
           : status === 'cancelled' 
           ? "bg-rose-100 text-rose-800 font-bold" 
           : status === 'confirmed'
@@ -324,13 +324,13 @@ const AppointmentManager = () => {
             {!isDone && (
               <button 
                 onClick={() => openCompletionModal(appt)}
-                className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-all"
+                className="text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg border border-violet-200 transition-all"
               >
                 {t('Complete & Bill', 'סיים מפגש וגבה תשלום')}
               </button>
             )}
             {isDone && (
-              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <span className="text-[11px] font-bold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full border border-violet-200">
                 ✓ {t('Completed', 'מפגש הושלם')}
               </span>
             )}
@@ -377,7 +377,7 @@ const AppointmentManager = () => {
               </button>
             </div>
             <form onSubmit={handleCompleteSessionSubmit} className="p-6 space-y-4">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 font-medium">
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs text-violet-900 font-medium">
                 <b>{t('Automatic Customer Conversion', 'המרה אוטומטית ללקוח')}:</b> {t('Completing the session and recording payment will update the CRM relationship when eligible.', 'סיום המפגש ורישום תשלום יעדכנו את סטטוס ה-CRM כאשר תנאי ההמרה מתקיימים.')}
               </div>
 
@@ -566,7 +566,7 @@ const AppointmentManager = () => {
                   placeholder={t('Search appointments...', 'חיפוש חופשי בתורים...')} 
                   value={globalFilter ?? ''} 
                   onChange={e => setGlobalFilter(e.target.value)} 
-                  className="w-full ps-3 pe-8 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-400" 
+                  className="w-full ps-3 pe-8 py-1.5 premium-panel rounded-2xl text-xs outline-none focus:ring-2 focus:ring-slate-400" 
                 />
                 <svg className="w-3.5 h-3.5 text-slate-400 absolute end-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               </div>
