@@ -41,7 +41,8 @@ export default function CalendarView({ initialTab = 'grid' }) {
     patients,
     people,
     leads, 
-    businessHours, 
+    businessHours,
+    calendarBlocks,
     addAppointment,
     getPatientName,
     getPersonName,
@@ -289,8 +290,27 @@ export default function CalendarView({ initialTab = 'grid' }) {
                         return hourInIsrael === hour && getIsraelDateKey(d) === day.isoStr;
                       });
 
+                      const dayBlocks = (calendarBlocks || []).filter(block => {
+                        const d = new Date(block.starts_at);
+                        if (Number.isNaN(d.getTime())) return false;
+                        const hourInIsrael = Number(new Intl.DateTimeFormat('en-GB', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' }).format(d));
+                        return hourInIsrael === hour && getIsraelDateKey(d) === day.isoStr;
+                      });
+
                       return (
                         <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-200 p-1 relative hover:bg-slate-100/30 transition-colors">
+                          {dayBlocks.map(block => (
+                            <div
+                              key={`busy-${block.id}`}
+                              className="mb-1 p-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-600 text-[11px]"
+                              title="זמן תפוס מיומן חיצוני"
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-bold truncate">תפוס · Google</span>
+                                <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(block.starts_at)}</span>
+                              </div>
+                            </div>
+                          ))}
                           {dayAppts.map(appt => (
                             <div
                               key={appt.id}
