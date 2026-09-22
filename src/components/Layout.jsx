@@ -87,7 +87,7 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans text-start dir-rtl">
+    <div className="flex h-screen overflow-hidden bg-[#f6f7fb] text-slate-900 font-sans text-start dir-rtl">
       {isSidebarOpen && (
         <button
           type="button"
@@ -97,7 +97,7 @@ const Layout = () => {
         />
       )}
 
-      <aside className={`fixed inset-y-0 start-0 z-50 flex w-60 shrink-0 flex-col border-e border-slate-800 bg-slate-950 text-slate-300 transition-transform duration-200 lg:static lg:translate-x-0 ${
+      <aside className={`fixed inset-y-0 start-0 z-50 flex w-60 shrink-0 flex-col border-e border-white/10 bg-[radial-gradient(circle_at_top,#312e81_0%,#111827_34%,#020617_75%)] text-slate-300 shadow-2xl transition-transform duration-200 lg:static lg:translate-x-0 ${
         isSidebarOpen ? 'translate-x-0' : (language === 'he' ? 'translate-x-full' : '-translate-x-full')
       }`}>
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800 px-5">
@@ -130,7 +130,7 @@ const Layout = () => {
                 }}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-gradient-to-l from-violet-600 to-cyan-500 text-white shadow-lg shadow-violet-950/20'
                     : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
                 }`}
               >
@@ -156,7 +156,7 @@ const Layout = () => {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f6f7fb]">
         <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4 lg:hidden">
           <button
             type="button"
@@ -172,7 +172,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="clinify-workspace flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
+        <main className="clinify-workspace flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.07),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.06),transparent_30%),#f6f7fb] p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1440px]">
             {renderModule()}
           </div>
