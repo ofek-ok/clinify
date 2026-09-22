@@ -43,7 +43,7 @@ export default function WorkTimeline() {
             <option value="done">הושלם</option>
           </select>
           <button onClick={()=>setOffset(v=>v-1)} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronRight className="w-4 h-4"/></button>
-          <button onClick={()=>setOffset(0)} className="px-2 py-1 text-[11px] font-bold text-emerald-700">היום</button>
+          <button onClick={()=>setOffset(0)} className="px-2 py-1 text-[11px] font-bold text-violet-700">היום</button>
           <button onClick={()=>setOffset(v=>v+1)} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronLeft className="w-4 h-4"/></button>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function WorkTimeline() {
                   {days.map(d=>{
                     const k=key(d);
                     const active=k>=startKey && k<=endKey;
-                    return <div key={k} className="border-l border-slate-100 p-1">{active && <div className="h-full min-h-7 rounded-md bg-emerald-100 border border-emerald-200" title={task.title} />}</div>;
+                    return <div key={k} className="border-l border-slate-100 p-1">{active && <div className="h-full min-h-7 rounded-md bg-violet-100 border border-violet-200" title={task.title} />}</div>;
                   })}
                 </div>
               );
