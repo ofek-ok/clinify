@@ -18,7 +18,7 @@ export default function WorkKanban() {
       { value:'todo', label:'לביצוע', color:'#64748b' },
       { value:'in_progress', label:'בתהליך', color:'#3b82f6' },
       { value:'blocked', label:'חסום', color:'#f43f5e' },
-      { value:'done', label:'הושלם', color:'#10b981' }
+      { value:'done', label:'הושלם', color:'#8b5cf6' }
     ];
   }, [workOptions]);
 
