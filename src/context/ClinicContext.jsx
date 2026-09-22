@@ -869,7 +869,10 @@ export const ClinicProvider = ({ children }) => {
       start_date: proj.start_date || todayStr,
       due_date: proj.due_date || null,
       progress: proj.progress ? parseInt(proj.progress) : 0,
-      area: proj.area || 'business'
+      area: proj.area || 'business',
+      labels: Array.isArray(proj.labels) ? proj.labels : [],
+      color: proj.color || null,
+      notes: proj.notes || null
     };
     const { data, error } = await supabase.from('projects').insert([payload]).select();
     if (error) {
@@ -915,7 +918,12 @@ export const ClinicProvider = ({ children }) => {
       patient_id: task.patient_id || null,
       project_id: task.project_id || null,
       content_item_id: task.content_item_id || null,
-      dependency_task_id: task.dependency_task_id || null
+      dependency_task_id: task.dependency_task_id || null,
+      description: task.description || null,
+      start_date: task.start_date || null,
+      labels: Array.isArray(task.labels) ? task.labels : [],
+      estimated_minutes: task.estimated_minutes ? Number(task.estimated_minutes) : null,
+      sort_order: Number(task.sort_order || 0)
     };
 
     const { data, error } = await supabase.from('tasks').insert([payload]).select();
