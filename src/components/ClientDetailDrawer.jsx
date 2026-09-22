@@ -133,20 +133,34 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   if (!item || !person) return null;
 
   const name = person.full_name || 'לא צוין שם';
-  const phone = person.phone || '-';
-  const email = person.email || '-';
-  const source = person.source || 'Website';
+  const rawPhone = person.phone || '';
+  const rawEmail = person.email || '';
+  const phone = rawPhone || '-';
+  const email = rawEmail || '-';
+  const source = lead?.source || person.source || '-';
   const clientStatus = person.client_status || 'lead';
 
-  // Format phone for WhatsApp link
-  const cleanPhone = phone.replace(/\D/g, '');
-  const formattedWaPhone = cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1) : cleanPhone;
-  const whatsappUrl = `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, כאן אופק מ-Okonski Performance`)}`;
+  // Format phone for WhatsApp link only when a real phone exists.
+  const cleanPhone = rawPhone.replace(/\D/g, '');
+  const formattedWaPhone = cleanPhone.startsWith('972')
+    ? cleanPhone
+    : cleanPhone.startsWith('0')
+      ? '972' + cleanPhone.substring(1)
+      : cleanPhone;
+  const whatsappUrl = formattedWaPhone
+    ? `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, כאן אופק מ-Okonski Performance`)}`
+    : null;
 
   // Handlers
   const handleCreateClinicalProfile = async () => {
     try {
-      await addPatient({ full_name: name, phone, email, source, status: 'active' });
+      await addPatient({
+        full_name: name,
+        phone: rawPhone || null,
+        email: rawEmail || null,
+        source: source === '-' ? 'Direct' : source,
+        status: 'active'
+      });
       setActiveTab('clinical');
       showToast('תיק טיפולי נפתח בהצלחה!');
     } catch (err) {
