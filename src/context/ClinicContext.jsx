@@ -105,6 +105,7 @@ export const ClinicProvider = ({ children }) => {
   const [leadCommunications, setLeadCommunications] = useState([]);
   const [clinicalNotes, setClinicalNotes] = useState([]);
   const [patientDocuments, setPatientDocuments] = useState([]);
+  const [calendarBlocks, setCalendarBlocks] = useState([]);
 
   // Configurable Public Self-Booking Settings
   const [bookingSettings, setBookingSettings] = useState({
@@ -185,26 +186,27 @@ export const ClinicProvider = ({ children }) => {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
         tasksRes, projectsRes, contentItemsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes,
-        clinicalNotesRes, patientDocumentsRes
+        clinicalNotesRes, patientDocumentsRes, calendarBlocksRes
       ] = await Promise.all([
-        supabase.from('people').select('*'),
-        supabase.from('patients').select('*'),
-        supabase.from('services').select('*'),
-        supabase.from('appointments').select('*'),
-        supabase.from('leads').select('*'),
-        supabase.from('tasks').select('*'),
-        supabase.from('projects').select('*'),
-        supabase.from('content_items').select('*'),
-        supabase.from('payments').select('*'),
-        supabase.from('forms').select('*'),
-        supabase.from('form_submissions').select('*'),
-        supabase.from('expenses').select('*'),
+        supabase.from('people').select('*').is('deleted_at', null),
+        supabase.from('patients').select('*').is('deleted_at', null),
+        supabase.from('services').select('*').is('deleted_at', null),
+        supabase.from('appointments').select('*').is('deleted_at', null),
+        supabase.from('leads').select('*').is('deleted_at', null),
+        supabase.from('tasks').select('*').is('deleted_at', null),
+        supabase.from('projects').select('*').is('deleted_at', null),
+        supabase.from('content_items').select('*').is('deleted_at', null),
+        supabase.from('payments').select('*').is('deleted_at', null),
+        supabase.from('forms').select('*').is('deleted_at', null),
+        supabase.from('form_submissions').select('*').is('deleted_at', null),
+        supabase.from('expenses').select('*').is('deleted_at', null),
         supabase.from('booking_settings').select('*').maybeSingle(),
-        supabase.from('patient_packages').select('*'),
+        supabase.from('patient_packages').select('*').is('deleted_at', null),
         supabase.from('business_hours').select('*'),
-        supabase.from('lead_communications').select('*'),
-        supabase.from('patient_clinical_notes').select('*').order('created_at', { ascending: false }),
-        supabase.from('patient_documents').select('*').order('uploaded_at', { ascending: false })
+        supabase.from('lead_communications').select('*').is('deleted_at', null),
+        supabase.from('patient_clinical_notes').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.from('patient_documents').select('*').is('deleted_at', null).order('uploaded_at', { ascending: false }),
+        supabase.from('calendar_blocks').select('*').is('deleted_at', null).eq('busy', true)
       ]);
 
       if (peopleRes.data) setPeople(peopleRes.data);
@@ -223,6 +225,7 @@ export const ClinicProvider = ({ children }) => {
       if (leadCommsRes?.data) setLeadCommunications(leadCommsRes.data);
       if (clinicalNotesRes?.data) setClinicalNotes(clinicalNotesRes.data);
       if (patientDocumentsRes?.data) setPatientDocuments(patientDocumentsRes.data);
+      if (calendarBlocksRes?.data) setCalendarBlocks(calendarBlocksRes.data);
 
       if (bookingSetRes.data) {
         const mapped = mapBookingSettingsFromDb(bookingSetRes.data);
@@ -260,6 +263,62 @@ export const ClinicProvider = ({ children }) => {
     setLeadCommunications([]);
     setClinicalNotes([]);
     setPatientDocuments([]);
+    setCalendarBlocks([]);
+  };
+
+  const removeFromLocalState = (table, id) => {
+    const handlers = {
+      people: setPeople,
+      patients: setPatients,
+      services: setServices,
+      appointments: setAppointments,
+      leads: setLeads,
+      tasks: setTasks,
+      projects: setProjects,
+      content_items: setContentItems,
+      payments: setPayments,
+      expenses: setExpenses,
+      forms: setForms,
+      form_submissions: setFormSubmissions,
+      patient_packages: setPatientPackages,
+      lead_communications: setLeadCommunications,
+      patient_clinical_notes: setClinicalNotes,
+      patient_documents: setPatientDocuments,
+      calendar_blocks: setCalendarBlocks
+    };
+    const setter = handlers[table];
+    if (setter) setter(prev => prev.filter(item => item.id !== id));
+  };
+
+  const softDeleteRecord = async (table, id) => {
+    const allowedTables = new Set([
+      'people','patients','services','appointments','leads','tasks','projects',
+      'content_items','payments','expenses','forms','form_submissions',
+      'patient_packages','lead_communications','patient_clinical_notes',
+      'patient_documents','calendar_blocks'
+    ]);
+    if (!allowedTables.has(table)) throw new Error('סוג הרשומה אינו נתמך למחיקה');
+
+    const { error } = await supabase
+      .from(table)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+    removeFromLocalState(table, id);
+    return true;
+  };
+
+  const restoreRecord = async (table, id) => {
+    const { data, error } = await supabase
+      .from(table)
+      .update({ deleted_at: null })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    await fetchInitialData();
+    return data?.[0] || null;
   };
 
   // Customer Conversion Trigger (First Completed + Paid Session)
@@ -529,12 +588,7 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const deleteService = async (serviceId) => {
-    const { error } = await supabase.from('services').delete().eq('id', serviceId);
-    if (error) {
-      console.error("Error deleting service:", error);
-      throw error;
-    }
-    setServices(prev => prev.filter(s => s.id !== serviceId));
+    return softDeleteRecord('services', serviceId);
   };
 
   const issuePackageToPatient = async (patientId, catalogItem) => {
@@ -637,6 +691,10 @@ export const ClinicProvider = ({ children }) => {
       return createdAppointment;
     }
     return null;
+  };
+
+  const deleteAppointment = async (apptId) => {
+    return softDeleteRecord('appointments', apptId);
   };
 
   const updateAppointmentStatus = async (apptId, newStatus) => {
@@ -1275,7 +1333,7 @@ export const ClinicProvider = ({ children }) => {
     if (Number.isNaN(dt.getTime())) return false;
     const endTime = new Date(dt.getTime() + Number(durationMinutes || 30) * 60000);
 
-    return !appointments.some(appt => {
+    const conflictsWithAppointment = appointments.some(appt => {
       if (!appt || appt.id === excludeAppointmentId) return false;
       if (appt.status === 'cancelled' || appt.status === 'rescheduled') return false;
 
@@ -1291,6 +1349,18 @@ export const ClinicProvider = ({ children }) => {
 
       return dt < apptEnd && endTime > apptStart;
     });
+
+    if (conflictsWithAppointment) return false;
+
+    const conflictsWithExternalBusy = calendarBlocks.some(block => {
+      if (!block || block.deleted_at || block.busy === false) return false;
+      const blockStart = new Date(block.starts_at);
+      const blockEnd = new Date(block.ends_at);
+      if (Number.isNaN(blockStart.getTime()) || Number.isNaN(blockEnd.getTime())) return false;
+      return dt < blockEnd && endTime > blockStart;
+    });
+
+    return !conflictsWithExternalBusy;
   };
 
   const getAvailableSlotsForDate = (dateStr, durationMinutes = 30) => {
@@ -1459,10 +1529,10 @@ export const ClinicProvider = ({ children }) => {
       session, user, signOut, isLoading,
       people, upsertPerson, getPersonName,
       patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
-      tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages,
+      tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks,
 
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
-      addService, updateService, deleteService, addAppointment, updateAppointmentStatus, addLead,
+      addService, updateService, deleteService, addAppointment, deleteAppointment, updateAppointmentStatus, addLead,
       addProject, updateProject, deleteProject,
       addTask, updateTask, updateTaskStatus, deleteTask,
       subscribePerformanceList,
@@ -1474,7 +1544,8 @@ export const ClinicProvider = ({ children }) => {
       updateLeadStatus, updateBusinessHour, getAvailableSlotsForDate,
       getPatientName, getServiceName, getPaymentForAppointment, 
       isWithinBusinessHours, isTimeSlotAvailable,
-      tasksDueToday, revenueThisMonth, todayStr, setPatients, setLeads
+      tasksDueToday, revenueThisMonth, todayStr, setPatients, setLeads,
+      softDeleteRecord, restoreRecord, refreshData: fetchInitialData
     }}>
       {children}
     </ClinicContext.Provider>
