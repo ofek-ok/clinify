@@ -24,7 +24,7 @@ export default function WorkManager({ initialTab = 'board' }) {
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-4 px-5 pt-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-emerald-700">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-violet-700">
               WORK OS
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">עבודה</h1>
@@ -46,7 +46,7 @@ export default function WorkManager({ initialTab = 'board' }) {
                   onClick={() => setActiveTab(tab.id)}
                   className={`group relative inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition ${active ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
                 >
-                  <Icon className={`h-4 w-4 ${active ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <Icon className={`h-4 w-4 ${active ? 'text-violet-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
                   {tab.label}
                 </button>
               );
