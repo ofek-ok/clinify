@@ -206,7 +206,7 @@ export default function LeadsPipeline({ onSelectLead }) {
               placeholder="חיפוש לפי שם, טלפון או אימייל..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -234,7 +234,7 @@ export default function LeadsPipeline({ onSelectLead }) {
         {/* Primary CTA */}
         <button
           onClick={() => setIsAddDrawerOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+          className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>ליד חדש</span>
@@ -269,7 +269,7 @@ export default function LeadsPipeline({ onSelectLead }) {
                     className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
                   >
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-400 transition-colors">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-violet-400 transition-colors">
                         {lead.full_name}
                       </h4>
                     </div>
@@ -330,7 +330,7 @@ export default function LeadsPipeline({ onSelectLead }) {
             <button
               onClick={handleCreateLead}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
               {isSubmitting ? 'שומר...' : 'שמור ליד'}
             </button>
@@ -346,7 +346,7 @@ export default function LeadsPipeline({ onSelectLead }) {
               value={newLeadName}
               onChange={e => setNewLeadName(e.target.value)}
               placeholder="ישראל ישראלי"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -357,7 +357,7 @@ export default function LeadsPipeline({ onSelectLead }) {
               value={newLeadPhone}
               onChange={e => setNewLeadPhone(e.target.value)}
               placeholder="050-0000000"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -370,7 +370,7 @@ export default function LeadsPipeline({ onSelectLead }) {
               value={newLeadEmail}
               onChange={e => setNewLeadEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 dir-ltr text-left focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -397,7 +397,7 @@ export default function LeadsPipeline({ onSelectLead }) {
               value={newLeadCampaign}
               onChange={e => setNewLeadCampaign(e.target.value)}
               placeholder="שם קמפיין / Pre-Launch"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
         </form>
@@ -427,7 +427,7 @@ export default function LeadsPipeline({ onSelectLead }) {
                     href={`https://wa.me/${formatWhatsAppPhone(selectedLead.phone)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
+                    className="flex-1 bg-violet-700 hover:bg-violet-600 text-white text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>WhatsApp</span>
