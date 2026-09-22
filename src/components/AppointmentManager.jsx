@@ -45,6 +45,7 @@ const AppointmentManager = () => {
     appointments, 
     addAppointment, 
     updateAppointmentStatus,
+    deleteAppointment,
     addPayment, 
     addTask,
     getPatientName,
@@ -59,6 +60,7 @@ const AppointmentManager = () => {
   const { showToast } = useToast();
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState([]);
+  const [deletingAppointmentId, setDeletingAppointmentId] = useState(null);
 
   const [appointmentForm, setAppointmentForm] = useState({
     person_id: '',
@@ -231,6 +233,22 @@ const AppointmentManager = () => {
     return statusMap[status] || status;
   };
 
+  const handleDeleteAppointment = async (appt) => {
+    const clientName = getAppointmentPersonName(appt);
+    const confirmed = window.confirm(`להעביר את התור של ${clientName} לאשפה? ניתן יהיה לשחזר אותו בהמשך.`);
+    if (!confirmed) return;
+
+    setDeletingAppointmentId(appt.id);
+    try {
+      await deleteAppointment(appt.id);
+      showToast(t('Appointment moved to trash.', 'התור הועבר לאשפה'));
+    } catch (err) {
+      showToast(err.message || t('Could not delete appointment.', 'לא ניתן למחוק את התור.'), 'error');
+    } finally {
+      setDeletingAppointmentId(null);
+    }
+  };
+
   const columns = useMemo(() => [
     {
       accessorKey: 'appointment_date',
@@ -316,11 +334,19 @@ const AppointmentManager = () => {
                 ✓ {t('Completed', 'מפגש הושלם')}
               </span>
             )}
+            <button
+              type="button"
+              disabled={deletingAppointmentId === appt.id}
+              onClick={() => handleDeleteAppointment(appt)}
+              className="text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-200 transition-all disabled:opacity-50"
+            >
+              {deletingAppointmentId === appt.id ? t('Deleting...', 'מוחק...') : t('Delete', 'מחיקה')}
+            </button>
           </div>
         );
       },
     },
-  ], [getAppointmentPersonName, getServiceName, updateAppointmentStatus, showToast, t]);
+  ], [getAppointmentPersonName, getServiceName, updateAppointmentStatus, showToast, t, deletingAppointmentId, deleteAppointment]);
 
   const table = useReactTable({
     data: appointments,
