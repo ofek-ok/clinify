@@ -476,7 +476,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           {appt.notes && <p className="text-[11px] text-slate-500 italic mt-1">{appt.notes}</p>}
                         </div>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
-                          appt.status === 'completed' ? 'bg-violet-50 text-violet-700 border-violet-200' :
+                          appt.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                           appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                           'bg-indigo-50 text-indigo-700 border-indigo-200'
                         }`}>
