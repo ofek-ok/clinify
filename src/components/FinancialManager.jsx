@@ -242,7 +242,7 @@ const FinancialManager = () => {
   const handleDeletePayment = async (id) => {
     try {
       await deletePayment(id);
-      showToast(t('Payment deleted', 'התשלום נמחק'));
+      showToast(t('Payment moved to trash', 'התשלום הועבר לאשפה'));
     } catch (err) {
       showToast(err.message || 'שגיאה במחיקת תשלום', 'error');
     }
@@ -304,7 +304,7 @@ const FinancialManager = () => {
   const handleDeleteExpense = async (id) => {
     try {
       await deleteExpense(id);
-      showToast(t('Expense deleted', 'ההוצאה נמחקה'));
+      showToast(t('Expense moved to trash', 'ההוצאה הועברה לאשפה'));
     } catch (err) {
       showToast(err.message || 'שגיאה במחיקת הוצאה', 'error');
     }
