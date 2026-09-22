@@ -3,7 +3,7 @@ import { ClinicContext } from '../context/ClinicContext';
 import AppointmentManager from './AppointmentManager';
 import Drawer from './ui/Drawer';
 import { useToast } from './ui/Toast';
-import { ChevronRight, ChevronLeft, Plus } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Plus, CalendarDays } from 'lucide-react';
 
 const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
 
@@ -13,8 +13,10 @@ const getIsraelDateKey = (value = new Date()) => {
     year: 'numeric', month: '2-digit', day: '2-digit'
   }).formatToParts(value instanceof Date ? value : new Date(value));
   const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
-  return map.year + '-' + map.month + '-' + map.day;
+  return `${map.year}-${map.month}-${map.day}`;
 };
+
+const dateFromKey = (key) => new Date(`${key}T12:00:00`);
 
 const getIsraelOffsetString = (dateStr) => {
   const probe = new Date(dateStr + 'T12:00:00Z');
@@ -24,38 +26,55 @@ const getIsraelOffsetString = (dateStr) => {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
   }).formatToParts(probe);
   const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
-  const asUtc = Date.UTC(Number(map.year), Number(map.month)-1, Number(map.day), Number(map.hour), Number(map.minute), Number(map.second));
+  const asUtc = Date.UTC(Number(map.year), Number(map.month) - 1, Number(map.day), Number(map.hour), Number(map.minute), Number(map.second));
   const offsetMinutes = Math.round((asUtc - probe.getTime()) / 60000);
   const sign = offsetMinutes >= 0 ? '+' : '-';
   const absolute = Math.abs(offsetMinutes);
-  return sign + String(Math.floor(absolute / 60)).padStart(2,'0') + ':' + String(absolute % 60).padStart(2,'0');
+  return sign + String(Math.floor(absolute / 60)).padStart(2, '0') + ':' + String(absolute % 60).padStart(2, '0');
 };
 
-const buildIsraelIsoTimestamp = (dateStr, timeStr) => dateStr + 'T' + timeStr + ':00' + getIsraelOffsetString(dateStr);
+const buildIsraelIsoTimestamp = (dateStr, timeStr) =>
+  dateStr + 'T' + timeStr + ':00' + getIsraelOffsetString(dateStr);
 
-export default function CalendarView({ initialTab = 'grid' }) {
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const { 
-    appointments, 
-    services, 
+const addDays = (date, amount) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+};
+
+const eventHourInIsrael = (value) => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return -1;
+  return Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    hour: '2-digit',
+    hourCycle: 'h23'
+  }).format(d));
+};
+
+export default function CalendarView({ initialTab = 'week' }) {
+  const initialMode = initialTab === 'list' ? 'list' : initialTab === 'grid' ? 'week' : initialTab;
+  const [viewMode, setViewMode] = useState(initialMode || 'week');
+  const [focusDate, setFocusDate] = useState(dateFromKey(getIsraelDateKey()));
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+
+  const {
+    appointments,
+    services,
     patients,
     people,
-    leads, 
+    leads,
     businessHours,
     calendarBlocks,
     addAppointment,
     getPatientName,
     getPersonName,
     getServiceName,
-    getAvailableSlotsForDate 
+    getAvailableSlotsForDate
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
 
-  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
-  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-
-  // New Appointment Form State
   const [personId, setPersonId] = useState('');
   const [serviceId, setServiceId] = useState('');
   const [apptDate, setApptDate] = useState(getIsraelDateKey());
@@ -65,6 +84,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedService = services.find(s => String(s.id) === String(serviceId));
+
   const getAppointmentPersonName = (appt) =>
     getPersonName(appt?.person_id) ||
     getPatientName(appt?.patient_id) ||
@@ -81,12 +101,12 @@ export default function CalendarView({ initialTab = 'grid' }) {
     });
   };
 
-  const getAppointmentStatusClasses = (status) => {
-    if (status === 'completed') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-    if (status === 'cancelled') return 'bg-rose-50 border-rose-200 text-rose-700';
-    if (status === 'confirmed') return 'bg-sky-50 border-sky-200 text-sky-800';
-    if (status === 'no_show') return 'bg-violet-50 border-violet-200 text-violet-800';
-    if (status === 'rescheduled') return 'bg-amber-50 border-amber-200 text-amber-800';
+  const getAppointmentStatusClasses = (appointmentStatus) => {
+    if (appointmentStatus === 'completed') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+    if (appointmentStatus === 'cancelled') return 'bg-rose-50 border-rose-200 text-rose-700';
+    if (appointmentStatus === 'confirmed') return 'bg-sky-50 border-sky-200 text-sky-800';
+    if (appointmentStatus === 'no_show') return 'bg-violet-50 border-violet-200 text-violet-800';
+    if (appointmentStatus === 'rescheduled') return 'bg-amber-50 border-amber-200 text-amber-800';
     return 'bg-slate-100 border-slate-300 text-slate-900';
   };
 
@@ -99,6 +119,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
       })
       .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'he'));
   }, [people, leads]);
+
   const availableSlots = useMemo(() => {
     if (!apptDate || !selectedService) return [];
     return getAvailableSlotsForDate(apptDate, Number(selectedService.duration_minutes || 30));
@@ -114,50 +135,110 @@ export default function CalendarView({ initialTab = 'grid' }) {
     }
   }, [availableSlots, apptTime]);
 
-  // Calculate Week Days starting from Sunday
-  const weekDays = useMemo(() => {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 is Sunday
-    const sunday = new Date(today);
-    sunday.setDate(today.getDate() - currentDay + (currentWeekOffset * 7));
-
-    const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(sunday);
-      d.setDate(sunday.getDate() + i);
-      const dayStr = new Intl.DateTimeFormat('he-IL', { timeZone: BUSINESS_TIME_ZONE, day: 'numeric', month: 'numeric' }).format(d);
-      const isoStr = getIsraelDateKey(d);
-      return {
-        dayName: dayNames[i],
-        dayStr,
-        isoStr,
-        dateObj: d,
-        dayIndex: i
-      };
-    });
-  }, [currentWeekOffset]);
-
-  // Derive operating hours from businessHours context
   const operatingHours = useMemo(() => {
     const openHours = businessHours.filter(h => h.isOpen);
     let start = 9;
     let end = 18;
-
     if (openHours.length > 0) {
-      const startTimes = openHours.map(h => parseInt(h.startTime.split(':')[0], 10));
-      const endTimes = openHours.map(h => parseInt(h.endTime.split(':')[0], 10));
-      start = Math.min(...startTimes);
-      end = Math.max(...endTimes);
+      start = Math.min(...openHours.map(h => parseInt(h.startTime.split(':')[0], 10)));
+      end = Math.max(...openHours.map(h => parseInt(h.endTime.split(':')[0], 10)));
     }
     return Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i);
   }, [businessHours]);
 
-  const weekRangeLabel = useMemo(() => {
-    if (weekDays.length < 7) return '';
-    const startStr = `${weekDays[0].dateObj.getDate()} ב${weekDays[0].dateObj.toLocaleString('he-IL', { month: 'long' })}`;
-    const endStr = `${weekDays[6].dateObj.getDate()} ב${weekDays[6].dateObj.toLocaleString('he-IL', { month: 'long' })}`;
-    return `${startStr} – ${endStr}`;
-  }, [weekDays]);
+  const weekDays = useMemo(() => {
+    const currentDay = focusDate.getDay();
+    const sunday = addDays(focusDate, -currentDay);
+    const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(sunday, i);
+      return {
+        dayName: dayNames[i],
+        dayStr: new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric' }).format(d),
+        isoStr: getIsraelDateKey(d),
+        dateObj: d
+      };
+    });
+  }, [focusDate]);
+
+  const monthDays = useMemo(() => {
+    const first = new Date(focusDate.getFullYear(), focusDate.getMonth(), 1, 12, 0, 0);
+    const gridStart = addDays(first, -first.getDay());
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = addDays(gridStart, i);
+      return {
+        dateObj: d,
+        isoStr: getIsraelDateKey(d),
+        inMonth: d.getMonth() === focusDate.getMonth()
+      };
+    });
+  }, [focusDate]);
+
+  const periodLabel = useMemo(() => {
+    if (viewMode === 'day') {
+      return focusDate.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    if (viewMode === 'month') {
+      return focusDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    }
+    if (viewMode === 'week') {
+      const start = weekDays[0]?.dateObj;
+      const end = weekDays[6]?.dateObj;
+      if (!start || !end) return '';
+      return `${start.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    }
+    return 'כל התורים';
+  }, [viewMode, focusDate, weekDays]);
+
+  const movePeriod = (direction) => {
+    if (viewMode === 'day') setFocusDate(prev => addDays(prev, direction));
+    if (viewMode === 'week') setFocusDate(prev => addDays(prev, direction * 7));
+    if (viewMode === 'month') {
+      setFocusDate(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1, 12, 0, 0));
+    }
+  };
+
+  const openCreateForDate = (dateKey) => {
+    setApptDate(dateKey);
+    setIsAddDrawerOpen(true);
+  };
+
+  const appointmentsForDate = (dateKey) =>
+    appointments
+      .filter(a => getIsraelDateKey(a.appointment_date) === dateKey)
+      .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+
+  const blocksForDate = (dateKey) =>
+    (calendarBlocks || [])
+      .filter(block => getIsraelDateKey(block.starts_at) === dateKey)
+      .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+
+  const renderEventCard = (appt, compact = false) => (
+    <div
+      key={appt.id}
+      className={`${compact ? 'px-1.5 py-1' : 'p-2'} rounded-lg border text-[11px] space-y-0.5 ${getAppointmentStatusClasses(appt.status)}`}
+      title={`${getAppointmentTime(appt.appointment_date)} · ${getAppointmentPersonName(appt)} · ${getServiceName(appt.service_id)}`}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-bold truncate">{getAppointmentPersonName(appt)}</span>
+        <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(appt.appointment_date)}</span>
+      </div>
+      {!compact && <div className="text-[10px] opacity-75 truncate">{getServiceName(appt.service_id)}</div>}
+    </div>
+  );
+
+  const renderBusyCard = (block, compact = false) => (
+    <div
+      key={`busy-${block.id}`}
+      className={`${compact ? 'px-1.5 py-1' : 'p-2'} rounded-lg border border-slate-300 bg-slate-100 text-slate-600 text-[11px]`}
+      title="זמן תפוס מיומן חיצוני"
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-bold truncate">תפוס · Google</span>
+        <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(block.starts_at)}</span>
+      </div>
+    </div>
+  );
 
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
@@ -165,12 +246,13 @@ export default function CalendarView({ initialTab = 'grid' }) {
       showToast('אנא בחר לקוח או ליד ושירות', 'error');
       return;
     }
+    if (!apptTime) {
+      showToast('אין שעה פנויה בתאריך שנבחר', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (!apptTime) {
-        showToast('אין שעה פנויה בתאריך שנבחר', 'error');
-        return;
-      }
       const fullDateTime = buildIsraelIsoTimestamp(apptDate, apptTime);
       const linkedPatient = patients.find(patient => patient.person_id === personId);
       await addAppointment({
@@ -184,6 +266,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
       showToast('התור נקבע בהצלחה');
       setIsAddDrawerOpen(false);
       setNotes('');
+      setFocusDate(dateFromKey(apptDate));
     } catch (err) {
       showToast(err.message || 'שגיאה בקביעת תור', 'error');
     } finally {
@@ -193,86 +276,110 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
   return (
     <div className="space-y-4 dir-rtl text-start font-sans">
-      {/* Top Header & Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
-        <div className="flex items-center space-x-3 space-x-reverse">
-          {/* Tabs */}
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
-            <button
-              onClick={() => setActiveTab('grid')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'grid'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              יומן
-            </button>
-            <button
-              onClick={() => setActiveTab('list')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'list'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              רשימת תורים
-            </button>
+            {[
+              ['day', 'יום'],
+              ['week', 'שבוע'],
+              ['month', 'חודש'],
+              ['list', 'רשימה']
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setViewMode(id)}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === id ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Week Navigation */}
-          {activeTab === 'grid' && (
-            <div className="flex items-center space-x-2 space-x-reverse bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-900 font-medium">
-              <button
-                onClick={() => setCurrentWeekOffset(prev => prev - 1)}
-                className="p-1 text-slate-500 hover:text-slate-900"
-              >
+          {viewMode !== 'list' && (
+            <div className="flex items-center gap-1 bg-slate-50 px-2 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-900">
+              <button type="button" onClick={() => movePeriod(-1)} className="p-1 text-slate-500 hover:text-slate-900">
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <span className="px-2 font-bold">{weekRangeLabel}</span>
-              <button
-                onClick={() => setCurrentWeekOffset(prev => prev + 1)}
-                className="p-1 text-slate-500 hover:text-slate-900"
-              >
+              <span className="min-w-[150px] text-center px-2 font-bold">{periodLabel}</span>
+              <button type="button" onClick={() => movePeriod(1)} className="p-1 text-slate-500 hover:text-slate-900">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              {currentWeekOffset !== 0 && (
-                <button
-                  onClick={() => setCurrentWeekOffset(0)}
-                  className="mr-2 text-[11px] text-emerald-400 hover:underline font-bold"
-                >
-                  היום
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setFocusDate(dateFromKey(getIsraelDateKey()))}
+                className="mr-1 px-2 py-1 rounded-lg text-[11px] font-bold text-emerald-700 hover:bg-emerald-50"
+              >
+                היום
+              </button>
             </div>
           )}
         </div>
 
-        {/* Primary Action Button */}
         <button
-          onClick={() => setIsAddDrawerOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+          type="button"
+          onClick={() => openCreateForDate(getIsraelDateKey(focusDate))}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>תור חדש</span>
         </button>
       </div>
 
-      {/* Grid or List View */}
-      {activeTab === 'grid' ? (
+      {viewMode === 'day' && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <div>
+              <p className="text-sm font-bold text-slate-900">{periodLabel}</p>
+              <p className="text-[11px] text-slate-500">תצוגה יומית מלאה של תורים וזמנים תפוסים</p>
+            </div>
+            <button type="button" onClick={() => openCreateForDate(getIsraelDateKey(focusDate))} className="text-xs font-bold text-emerald-700 hover:underline">
+              + תור ביום הזה
+            </button>
+          </div>
+          <div className="divide-y divide-slate-200">
+            {operatingHours.map(hour => {
+              const dateKey = getIsraelDateKey(focusDate);
+              const hourAppts = appointmentsForDate(dateKey).filter(a => eventHourInIsrael(a.appointment_date) === hour);
+              const hourBlocks = blocksForDate(dateKey).filter(b => eventHourInIsrael(b.starts_at) === hour);
+              return (
+                <div key={hour} className="grid grid-cols-[72px_1fr] min-h-20">
+                  <div className="bg-slate-50 border-l border-slate-200 p-3 text-center font-mono text-[11px] text-slate-500">
+                    {String(hour).padStart(2, '0')}:00
+                  </div>
+                  <div className="p-2 space-y-1 hover:bg-slate-50/60">
+                    {hourBlocks.map(block => renderBusyCard(block))}
+                    {hourAppts.map(appt => renderEventCard(appt))}
+                    {hourBlocks.length === 0 && hourAppts.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => openCreateForDate(dateKey)}
+                        className="h-full min-h-14 w-full rounded-lg text-[11px] text-slate-300 hover:text-emerald-600 hover:bg-emerald-50/40"
+                      >
+                        פנוי
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'week' && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[750px] border-collapse text-start">
+            <table className="w-full min-w-[850px] border-collapse text-start">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <th className="py-2.5 px-3 border-l border-slate-200 w-20 text-center">שעה</th>
                   {weekDays.map(day => (
-                    <th
-                      key={day.isoStr}
-                      className={`py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%] ${day.isoStr === getIsraelDateKey() ? 'bg-emerald-50/70' : ''}`}
-                    >
-                      <div className={day.isoStr === getIsraelDateKey() ? 'text-emerald-700' : ''}>{day.dayName}</div>
-                      <div className={`text-[10px] font-normal ${day.isoStr === getIsraelDateKey() ? 'text-emerald-600' : 'text-slate-500'}`}>{day.dayStr}</div>
+                    <th key={day.isoStr} className={`py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%] ${day.isoStr === getIsraelDateKey() ? 'bg-emerald-50/70' : ''}`}>
+                      <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="w-full">
+                        <div className={day.isoStr === getIsraelDateKey() ? 'text-emerald-700' : ''}>{day.dayName}</div>
+                        <div className={`text-[10px] font-normal ${day.isoStr === getIsraelDateKey() ? 'text-emerald-600' : 'text-slate-500'}`}>{day.dayStr}</div>
+                      </button>
                     </th>
                   ))}
                 </tr>
@@ -281,49 +388,17 @@ export default function CalendarView({ initialTab = 'grid' }) {
                 {operatingHours.map(hour => (
                   <tr key={hour} className="h-16">
                     <td className="py-2 px-2 border-l border-slate-200 text-center text-slate-500 font-mono text-[11px] bg-slate-50">
-                      {hour < 10 ? `0${hour}:00` : `${hour}:00`}
+                      {String(hour).padStart(2, '0')}:00
                     </td>
                     {weekDays.map(day => {
-                      const dayAppts = appointments.filter(a => {
-                        const d = new Date(a.appointment_date);
-                        const hourInIsrael = Number(new Intl.DateTimeFormat('en-GB', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' }).format(d));
-                        return hourInIsrael === hour && getIsraelDateKey(d) === day.isoStr;
-                      });
-
-                      const dayBlocks = (calendarBlocks || []).filter(block => {
-                        const d = new Date(block.starts_at);
-                        if (Number.isNaN(d.getTime())) return false;
-                        const hourInIsrael = Number(new Intl.DateTimeFormat('en-GB', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' }).format(d));
-                        return hourInIsrael === hour && getIsraelDateKey(d) === day.isoStr;
-                      });
-
+                      const dayAppts = appointmentsForDate(day.isoStr).filter(a => eventHourInIsrael(a.appointment_date) === hour);
+                      const dayBlocks = blocksForDate(day.isoStr).filter(b => eventHourInIsrael(b.starts_at) === hour);
                       return (
-                        <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-200 p-1 relative hover:bg-slate-100/30 transition-colors">
-                          {dayBlocks.map(block => (
-                            <div
-                              key={`busy-${block.id}`}
-                              className="mb-1 p-1.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-600 text-[11px]"
-                              title="זמן תפוס מיומן חיצוני"
-                            >
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="font-bold truncate">תפוס · Google</span>
-                                <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(block.starts_at)}</span>
-                              </div>
-                            </div>
-                          ))}
-                          {dayAppts.map(appt => (
-                            <div
-                              key={appt.id}
-                              className={`p-1.5 rounded-lg border text-[11px] space-y-0.5 ${getAppointmentStatusClasses(appt.status)}`}
-                              title={`${getAppointmentTime(appt.appointment_date)} · ${getAppointmentPersonName(appt)} · ${getServiceName(appt.service_id)}`}
-                            >
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="font-bold truncate">{getAppointmentPersonName(appt)}</span>
-                                <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(appt.appointment_date)}</span>
-                              </div>
-                              <div className="text-[10px] opacity-75 truncate">{getServiceName(appt.service_id)}</div>
-                            </div>
-                          ))}
+                        <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-200 p-1 align-top hover:bg-slate-50/50">
+                          <div className="space-y-1">
+                            {dayBlocks.map(block => renderBusyCard(block, true))}
+                            {dayAppts.map(appt => renderEventCard(appt, true))}
+                          </div>
                         </td>
                       );
                     })}
@@ -333,28 +408,58 @@ export default function CalendarView({ initialTab = 'grid' }) {
             </table>
           </div>
         </div>
-      ) : (
-        <AppointmentManager />
       )}
 
-      {/* Add Appointment Drawer */}
+      {viewMode === 'month' && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+          <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 text-center">
+            {['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'].map(day => <div key={day} className="py-2.5 border-l border-slate-200">{day}</div>)}
+          </div>
+          <div className="grid grid-cols-7">
+            {monthDays.map(day => {
+              const dayAppts = appointmentsForDate(day.isoStr);
+              const dayBlocks = blocksForDate(day.isoStr);
+              const isToday = day.isoStr === getIsraelDateKey();
+              return (
+                <div
+                  key={day.isoStr}
+                  className={`min-h-28 border-l border-b border-slate-200 p-1.5 ${day.inMonth ? 'bg-white' : 'bg-slate-50/70'}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }}
+                    className={`mb-1 h-6 w-6 rounded-full text-[11px] font-bold ${isToday ? 'bg-emerald-600 text-white' : day.inMonth ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-300'}`}
+                  >
+                    {day.dateObj.getDate()}
+                  </button>
+                  <div className="space-y-1">
+                    {dayBlocks.slice(0, 1).map(block => renderBusyCard(block, true))}
+                    {dayAppts.slice(0, 3).map(appt => renderEventCard(appt, true))}
+                    {dayAppts.length + dayBlocks.length > 4 && (
+                      <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="text-[10px] font-bold text-slate-500 hover:text-emerald-700">
+                        +{dayAppts.length + dayBlocks.length - 4} נוספים
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'list' && <AppointmentManager />}
+
       <Drawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
         title="קביעת תור חדש"
         footer={
           <>
-            <button
-              onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
-            >
+            <button type="button" onClick={() => setIsAddDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">
               ביטול
             </button>
-            <button
-              onClick={handleCreateAppointment}
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
-            >
+            <button type="button" onClick={handleCreateAppointment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">
               {isSubmitting ? 'שומר...' : 'קבע תור'}
             </button>
           </>
@@ -363,12 +468,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">לקוח / ליד *</label>
-            <select
-              required
-              value={personId}
-              onChange={e => setPersonId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            >
+            <select required value={personId} onChange={e => setPersonId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="">בחר לקוח או ליד...</option>
               {bookablePeople.map(person => {
                 const lead = leads.find(item => item.person_id === person.id);
@@ -380,12 +480,7 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">שירות *</label>
-            <select
-              required
-              value={serviceId}
-              onChange={e => setServiceId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            >
+            <select required value={serviceId} onChange={e => setServiceId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="">בחר שירות...</option>
               {services.map(s => <option key={s.id} value={s.id}>{s.name} (₪{s.default_price || 0})</option>)}
             </select>
@@ -394,53 +489,32 @@ export default function CalendarView({ initialTab = 'grid' }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
-              <input
-                type="date"
-                value={apptDate}
-                onChange={e => setApptDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              />
+              <input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
             </div>
-
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">שעה פנויה</label>
-              <select
-                value={apptTime}
-                onChange={e => setApptTime(e.target.value)}
-                disabled={!serviceId || !apptDate || availableSlots.length === 0}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none disabled:opacity-60"
-              >
-                {availableSlots.length === 0 ? (
-                  <option value="">אין שעות פנויות</option>
-                ) : (
-                  availableSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)
-                )}
+              <select value={apptTime} onChange={e => setApptTime(e.target.value)} disabled={!serviceId || !apptDate || availableSlots.length === 0} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none disabled:opacity-60">
+                {availableSlots.length === 0 ? <option value="">אין שעות פנויות</option> : availableSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
               </select>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס תור</label>
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            >
+            <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="scheduled">מתוכנן</option>
               <option value="confirmed">מאושר</option>
-              <option value="cancelled">מבוטל</option>
             </select>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">הערות</label>
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="הערות לתור..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            />
+            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="הערות לתור..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500 flex items-start gap-2">
+            <CalendarDays className="w-4 h-4 mt-0.5 shrink-0" />
+            זמינות השעות מתחשבת בשעות הפעילות, בתורים קיימים ובזמנים תפוסים שיסונכרנו מ-Google Calendar.
           </div>
         </form>
       </Drawer>
