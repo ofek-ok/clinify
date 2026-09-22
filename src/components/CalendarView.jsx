@@ -43,7 +43,8 @@ export default function CalendarView({ initialTab = 'grid' }) {
     leads, 
     businessHours, 
     addAppointment,
-    getPatientName, 
+    getPatientName,
+    getPersonName,
     getServiceName,
     getAvailableSlotsForDate 
   } = useContext(ClinicContext);
@@ -63,6 +64,31 @@ export default function CalendarView({ initialTab = 'grid' }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedService = services.find(s => String(s.id) === String(serviceId));
+  const getAppointmentPersonName = (appt) =>
+    getPersonName(appt?.person_id) ||
+    getPatientName(appt?.patient_id) ||
+    'לקוח';
+
+  const getAppointmentTime = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('he-IL', {
+      timeZone: BUSINESS_TIME_ZONE,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getAppointmentStatusClasses = (status) => {
+    if (status === 'completed') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+    if (status === 'cancelled') return 'bg-rose-50 border-rose-200 text-rose-700';
+    if (status === 'confirmed') return 'bg-sky-50 border-sky-200 text-sky-800';
+    if (status === 'no_show') return 'bg-violet-50 border-violet-200 text-violet-800';
+    if (status === 'rescheduled') return 'bg-amber-50 border-amber-200 text-amber-800';
+    return 'bg-slate-100 border-slate-300 text-slate-900';
+  };
+
   const bookablePeople = useMemo(() => {
     return people
       .filter(person => {
@@ -240,9 +266,12 @@ export default function CalendarView({ initialTab = 'grid' }) {
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <th className="py-2.5 px-3 border-l border-slate-200 w-20 text-center">שעה</th>
                   {weekDays.map(day => (
-                    <th key={day.isoStr} className="py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%]">
-                      <div>{day.dayName}</div>
-                      <div className="text-[10px] font-normal text-slate-500">{day.dayStr}</div>
+                    <th
+                      key={day.isoStr}
+                      className={`py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%] ${day.isoStr === getIsraelDateKey() ? 'bg-emerald-50/70' : ''}`}
+                    >
+                      <div className={day.isoStr === getIsraelDateKey() ? 'text-emerald-700' : ''}>{day.dayName}</div>
+                      <div className={`text-[10px] font-normal ${day.isoStr === getIsraelDateKey() ? 'text-emerald-600' : 'text-slate-500'}`}>{day.dayStr}</div>
                     </th>
                   ))}
                 </tr>
@@ -262,24 +291,19 @@ export default function CalendarView({ initialTab = 'grid' }) {
 
                       return (
                         <td key={`${hour}-${day.isoStr}`} className="border-l border-slate-200 p-1 relative hover:bg-slate-100/30 transition-colors">
-                          {dayAppts.map(appt => {
-                            const isCompleted = appt.status === 'completed';
-                            return (
-                              <div
-                                key={appt.id}
-                                className={`p-1.5 rounded-lg border text-[11px] space-y-0.5 ${
-                                  isCompleted
-                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                    : appt.status === 'cancelled'
-                                    ? 'bg-rose-50 border-rose-200 text-rose-700'
-                                    : 'bg-slate-100 border-slate-300 text-slate-900'
-                                }`}
-                              >
-                                <div className="font-bold truncate">{getPatientName(appt.patient_id)}</div>
-                                <div className="text-[10px] text-slate-500 truncate">{getServiceName(appt.service_id)}</div>
+                          {dayAppts.map(appt => (
+                            <div
+                              key={appt.id}
+                              className={`p-1.5 rounded-lg border text-[11px] space-y-0.5 ${getAppointmentStatusClasses(appt.status)}`}
+                              title={`${getAppointmentTime(appt.appointment_date)} · ${getAppointmentPersonName(appt)} · ${getServiceName(appt.service_id)}`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-bold truncate">{getAppointmentPersonName(appt)}</span>
+                                <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(appt.appointment_date)}</span>
                               </div>
-                            );
-                          })}
+                              <div className="text-[10px] opacity-75 truncate">{getServiceName(appt.service_id)}</div>
+                            </div>
+                          ))}
                         </td>
                       );
                     })}
