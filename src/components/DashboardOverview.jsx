@@ -1,7 +1,8 @@
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { AreaChart, Area, BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ArrowLeft, CalendarDays, Mountain, Sparkles } from 'lucide-react';
 
 const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
 const OPEN_LEAD_STATUSES = new Set(['new', 'contacted', 'qualified', 'scheduled']);
@@ -56,6 +57,33 @@ const formatMoney = (value) =>
     maximumFractionDigits: 0
   }).format(Number(value || 0));
 
+const HERO_SCENES = [
+  {
+    image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=82',
+    eyebrow: 'DRIVE',
+    title: 'Keep moving toward the next peak.',
+    subtitle: 'Clarity on what matters. Momentum on what comes next.'
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=82',
+    eyebrow: 'CALM',
+    title: 'Create space for better decisions.',
+    subtitle: 'A clear system gives you room to focus.'
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1800&q=82',
+    eyebrow: 'FOCUS',
+    title: 'One direction. Fewer distractions.',
+    subtitle: 'Turn the noise into a clear next action.'
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1800&q=82',
+    eyebrow: 'PROGRESS',
+    title: 'Build momentum, one move at a time.',
+    subtitle: 'See the business clearly and keep moving.'
+  }
+];
+
 const DashboardOverview = ({ navigate }) => {
   const {
     patients = [],
@@ -71,6 +99,16 @@ const DashboardOverview = ({ navigate }) => {
   } = useContext(ClinicContext) || {};
 
   const { t } = useContext(LanguageContext);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroIndex(current => (current + 1) % HERO_SCENES.length);
+    }, 9000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const hero = HERO_SCENES[heroIndex];
 
   const todayKey = useMemo(() => getDateKey(), []);
   const currentMonthKey = useMemo(() => getMonthKey(), []);
@@ -284,20 +322,68 @@ const DashboardOverview = ({ navigate }) => {
 
   return (
     <div className="space-y-6 text-start font-sans">
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-800">
-            {getGreeting(t)}
-          </h2>
-          <p className="mt-1 text-xs text-slate-500">
-            {currentDateFormatted}
-          </p>
-        </div>
+      <section className="group relative min-h-[280px] overflow-hidden rounded-[28px] bg-slate-950 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+        {HERO_SCENES.map((scene, index) => (
+          <img
+            key={scene.image}
+            src={scene.image}
+            alt=""
+            aria-hidden="true"
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-1000 ${index === heroIndex ? 'scale-100 opacity-100' : 'scale-105 opacity-0'}`}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-l from-slate-950/88 via-slate-950/48 to-slate-950/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
 
-        <div className="text-xs text-slate-500">
-          {t('Operational overview', 'סקירה תפעולית')}
+        <div className="relative z-10 flex min-h-[280px] flex-col justify-between p-6 text-white sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold tracking-[0.16em] text-white backdrop-blur-md">
+              <Mountain className="h-3.5 w-3.5 text-cyan-300" />
+              {hero.eyebrow}
+            </div>
+            <div className="flex items-center gap-1.5">
+              {HERO_SCENES.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  aria-label={`Hero ${index + 1}`}
+                  onClick={() => setHeroIndex(index)}
+                  className={`h-1.5 rounded-full transition-all ${index === heroIndex ? 'w-7 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="max-w-2xl">
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white/75">
+              <CalendarDays className="h-4 w-4" />
+              {currentDateFormatted}
+            </div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{getGreeting(t)}</h2>
+            <p className="mt-3 text-lg font-bold leading-tight text-white sm:text-xl">{hero.title}</p>
+            <p className="mt-2 max-w-xl text-xs leading-5 text-white/70">{hero.subtitle}</p>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('work')}
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-cyan-50"
+              >
+                {t('Open work', 'פתח עבודה')}
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('calendar')}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-white/20"
+              >
+                <Sparkles className="h-4 w-4 text-violet-300" />
+                {t('View today', 'היום שלי')}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricCards.map(card => (
@@ -305,7 +391,7 @@ const DashboardOverview = ({ navigate }) => {
             key={card.label}
             type="button"
             onClick={card.onClick}
-            className="rounded-xl border border-slate-200 bg-white p-4 text-start shadow-2xs transition-colors hover:border-slate-300 hover:bg-slate-50"
+            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-start shadow-[0_10px_35px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_16px_40px_rgba(79,70,229,0.10)]"
           >
             <p className="text-xs font-medium text-slate-500">{card.label}</p>
             <h3 className="mt-1 text-2xl font-bold text-slate-800" dir={String(card.value).startsWith('₪') ? 'ltr' : undefined}>
