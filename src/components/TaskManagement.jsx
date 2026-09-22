@@ -15,6 +15,7 @@ export default function TaskManagement() {
     updateTask,
     updateTaskStatus, 
     deleteTask,
+    workOptions,
     todayStr 
   } = useContext(ClinicContext);
 
@@ -42,21 +43,35 @@ export default function TaskManagement() {
   const [dependencyTaskId, setDependencyTaskId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Status mapping
-  const statusOptions = [
-    { id: 'todo', label: 'לביצוע', color: 'bg-slate-100 text-slate-700' },
-    { id: 'in_progress', label: 'בתהליך', color: 'bg-blue-50 text-blue-700 border border-blue-200' },
-    { id: 'blocked', label: 'חסום', color: 'bg-rose-50 text-rose-700 border border-rose-200' },
-    { id: 'done', label: 'הושלם', color: 'bg-emerald-50 text-emerald-700 border border-emerald-200' }
-  ];
+  const configuredOptions = (type, fallback) => {
+    const values = (workOptions || [])
+      .filter(option => option.option_type === type && option.is_active)
+      .sort((a,b) => a.sort_order - b.sort_order)
+      .map(option => ({ id: option.value, label: option.label, color: option.color }));
+    return values.length ? values : fallback;
+  };
 
-  // Priority mapping
-  const priorityOptions = [
-    { id: 'critical', label: 'קריטי', color: 'text-rose-400 font-bold' },
-    { id: 'high', label: 'גבוה', color: 'text-amber-400 font-bold' },
-    { id: 'medium', label: 'בינוני', color: 'text-blue-400' },
-    { id: 'low', label: 'נמוך', color: 'text-slate-500' }
-  ];
+  const statusOptions = configuredOptions('status', [
+    { id: 'todo', label: 'לביצוע' },
+    { id: 'in_progress', label: 'בתהליך' },
+    { id: 'blocked', label: 'חסום' },
+    { id: 'done', label: 'הושלם' }
+  ]);
+
+  const priorityOptions = configuredOptions('priority', [
+    { id: 'critical', label: 'קריטי' },
+    { id: 'high', label: 'גבוה' },
+    { id: 'medium', label: 'בינוני' },
+    { id: 'low', label: 'נמוך' }
+  ]);
+
+  const areaOptions = configuredOptions('area', [
+    { id: 'operations', label: 'תפעול' },
+    { id: 'business', label: 'עסקי' },
+    { id: 'clinical', label: 'קליני' }
+  ]);
+
+  const managedLabels = configuredOptions('label', []);
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = !searchTerm || (task.title && task.title.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -405,7 +420,10 @@ export default function TaskManagement() {
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">תגיות</label>
-              <input value={labels} onChange={e => setLabels(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="שיווק, דחוף, אתר" />
+              <input list="managed-work-labels" value={labels} onChange={e => setLabels(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="שיווק, דחוף, אתר" />
+              <datalist id="managed-work-labels">
+                {managedLabels.map(option => <option key={option.id} value={option.label} />)}
+              </datalist>
             </div>
           </div>
 
@@ -531,7 +549,10 @@ export default function TaskManagement() {
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">תגיות</label>
-                <input value={(selectedTask.labels || []).join(', ')} onChange={e => { const val=e.target.value.split(',').map(v=>v.trim()).filter(Boolean); setSelectedTask(prev=>({...prev,labels:val})); updateTask(selectedTask.id,{labels:val}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+                <input list="managed-work-labels-edit" value={(selectedTask.labels || []).join(', ')} onChange={e => { const val=e.target.value.split(',').map(v=>v.trim()).filter(Boolean); setSelectedTask(prev=>({...prev,labels:val})); updateTask(selectedTask.id,{labels:val}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+                <datalist id="managed-work-labels-edit">
+                  {managedLabels.map(option => <option key={option.id} value={option.label} />)}
+                </datalist>
               </div>
             </div>
           </div>
