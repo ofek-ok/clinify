@@ -180,7 +180,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
               <span className="text-slate-500 text-xs font-medium">הכנסות החודש</span>
-              <p className="text-xl font-bold text-violet-400">₪{currentMonthMetrics.incomeMonth.toLocaleString()}</p>
+              <p className="text-xl font-bold text-emerald-600">₪{currentMonthMetrics.incomeMonth.toLocaleString()}</p>
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
@@ -190,7 +190,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
               <span className="text-slate-500 text-xs font-medium">רווח החודש</span>
-              <p className={`text-xl font-bold ${currentMonthMetrics.profitMonth >= 0 ? 'text-violet-400' : 'text-rose-400'}`}>
+              <p className={`text-xl font-bold ${currentMonthMetrics.profitMonth >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                 ₪{currentMonthMetrics.profitMonth.toLocaleString()}
               </p>
             </div>
@@ -210,7 +210,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
                   <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
                   <YAxis stroke="#64748b" fontSize={11} />
                   <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="הכנסות" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} />
+                  <Area type="monotone" dataKey="הכנסות" stroke="#059669" fill="#10b981" fillOpacity={0.15} />
                   <Area type="monotone" dataKey="הוצאות" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.15} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -255,7 +255,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
                       <tr key={p.id} className="hover:bg-slate-100">
                         <td className="py-3 px-4 font-bold text-slate-900">{pat ? pat.full_name : 'לקוח כללי'}</td>
                         <td className="py-3 px-4 text-slate-700 font-mono">{p.payment_date || '-'}</td>
-                        <td className="py-3 px-4 font-bold text-violet-400">₪{p.amount}</td>
+                        <td className="py-3 px-4 font-bold text-emerald-600">₪{p.amount}</td>
                         <td className="py-3 px-4 text-slate-500">{p.payment_method === 'PayBox' ? 'PayBox' : p.payment_method === 'Credit Card' ? 'אשראי' : 'תשלום במקום'}</td>
                         <td className="py-3 px-4">
                           <select
@@ -268,7 +268,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
                                 showToast(err.message || 'לא ניתן לעדכן את התשלום', 'error');
                               }
                             }}
-                            className={`px-2 py-1 rounded text-[10px] font-bold outline-none border ${p.status === 'paid' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}
+                            className={`px-2 py-1 rounded text-[10px] font-bold outline-none border ${p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}
                           >
                             <option value="paid">שולם</option>
                             <option value="pending">ממתין</option>
