@@ -1441,8 +1441,10 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const updateLeadFollowUp = async (leadId, followUpDate, lostReason = null) => {
-    const updates = { follow_up_date: followUpDate };
-    if (lostReason) updates.lost_reason = lostReason;
+    const updates = {
+      follow_up_date: followUpDate || null,
+      lost_reason: lostReason || null
+    };
     
     const { error } = await supabase.from('leads').update(updates).eq('id', leadId);
     if (error) {
