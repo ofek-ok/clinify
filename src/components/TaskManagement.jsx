@@ -35,6 +35,11 @@ export default function TaskManagement() {
   const [projectId, setProjectId] = useState('');
   const [patientId, setPatientId] = useState('');
   const [contentItemId, setContentItemId] = useState('');
+  const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [labels, setLabels] = useState('');
+  const [estimatedMinutes, setEstimatedMinutes] = useState('');
+  const [dependencyTaskId, setDependencyTaskId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Status mapping
@@ -86,11 +91,20 @@ export default function TaskManagement() {
         area,
         project_id: projectId || null,
         patient_id: patientId || null,
-        content_item_id: contentItemId || null
+        content_item_id: contentItemId || null,
+        description: description.trim() || null,
+        start_date: startDate || null,
+        labels: labels.split(',').map(v => v.trim()).filter(Boolean),
+        estimated_minutes: estimatedMinutes ? Number(estimatedMinutes) : null,
+        dependency_task_id: dependencyTaskId || null
       });
       showToast('המשימה נוצרה בהצלחה');
       setIsAddDrawerOpen(false);
       setTitle('');
+      setDescription('');
+      setLabels('');
+      setEstimatedMinutes('');
+      setDependencyTaskId('');
     } catch (err) {
       showToast(err.message || 'שגיאה ביצירת המשימה', 'error');
     } finally {
@@ -213,12 +227,13 @@ export default function TaskManagement() {
                 <th className="py-3 px-4 text-start">תאריך יעד</th>
                 <th className="py-3 px-4 text-start">קשור ל-</th>
                 <th className="py-3 px-4 text-start">תחום</th>
+                <th className="py-3 px-4 text-start">תגיות</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
+                  <td colSpan={8} className="py-8 text-center text-slate-500">
                     אין משימות להצגה.
                   </td>
                 </tr>
@@ -284,6 +299,11 @@ export default function TaskManagement() {
                       {/* Area */}
                       <td className="py-3 px-4 text-slate-500">
                         {task.area === 'clinical' ? 'קליני' : task.area === 'business' ? 'עסקי' : 'תפעול'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(task.labels || []).slice(0,3).map(label => <span key={label} className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600">{label}</span>)}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -354,7 +374,16 @@ export default function TaskManagement() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">תיאור</label>
+            <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="פרטים, תוצאה רצויה, הערות..." />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך התחלה</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+            </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">תאריך יעד</label>
               <input
@@ -379,6 +408,17 @@ export default function TaskManagement() {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">הערכת זמן בדקות</label>
+              <input type="number" min="0" value={estimatedMinutes} onChange={e => setEstimatedMinutes(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="60" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">תגיות</label>
+              <input value={labels} onChange={e => setLabels(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" placeholder="שיווק, דחוף, אתר" />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">שיוך לפרויקט</label>
             <select
@@ -388,6 +428,14 @@ export default function TaskManagement() {
             >
               <option value="">ללא פרויקט</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">תלויה במשימה</label>
+            <select value={dependencyTaskId} onChange={e => setDependencyTaskId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900">
+              <option value="">ללא תלות</option>
+              {tasks.filter(t => t.status !== 'done').map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
             </select>
           </div>
 
@@ -462,6 +510,16 @@ export default function TaskManagement() {
             </div>
 
             <div>
+              <label className="block text-xs text-slate-500 mb-1">תיאור</label>
+              <textarea rows={3} value={selectedTask.description || ''} onChange={e => { const val=e.target.value; setSelectedTask(prev=>({...prev,description:val})); updateTask(selectedTask.id,{description:val||null}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">תאריך התחלה</label>
+                <input type="date" value={selectedTask.start_date || ''} onChange={e => { const val=e.target.value; setSelectedTask(prev=>({...prev,start_date:val})); updateTask(selectedTask.id,{start_date:val||null}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+              </div>
+              <div>
               <label className="block text-xs text-slate-500 mb-1">תאריך יעד</label>
               <input
                 type="date"
@@ -473,6 +531,18 @@ export default function TaskManagement() {
                 }}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
               />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">הערכת זמן</label>
+                <input type="number" min="0" value={selectedTask.estimated_minutes || ''} onChange={e => { const val=e.target.value; setSelectedTask(prev=>({...prev,estimated_minutes:val})); updateTask(selectedTask.id,{estimated_minutes:val ? Number(val) : null}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">תגיות</label>
+                <input value={(selectedTask.labels || []).join(', ')} onChange={e => { const val=e.target.value.split(',').map(v=>v.trim()).filter(Boolean); setSelectedTask(prev=>({...prev,labels:val})); updateTask(selectedTask.id,{labels:val}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900" />
+              </div>
             </div>
           </div>
         </Drawer>
