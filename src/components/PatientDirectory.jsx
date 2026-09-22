@@ -1,98 +1,161 @@
-import React, { useContext, useState, useMemo } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import ClientDetailDrawer from './ClientDetailDrawer';
 import { Search } from 'lucide-react';
 
+const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
+
+const formatDateTime = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleString('he-IL', {
+    timeZone: BUSINESS_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const formatDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleDateString('he-IL', {
+    timeZone: BUSINESS_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 export default function PatientDirectory() {
-  const { patients, appointments, payments } = useContext(ClinicContext);
+  const { people = [], patients = [], leads = [], appointments = [], payments = [] } = useContext(ClinicContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
 
   const clientsData = useMemo(() => {
-    return patients
-      .filter(p => p.client_status === 'customer')
-      .map(p => {
-      // Find appointments for client
-      const clientAppts = appointments.filter(a => a.patient_id === p.id || a.person_id === p.person_id);
-      const now = new Date();
+    const patientByPerson = new Map(patients.map(patient => [patient.person_id, patient]));
+    const leadByPerson = new Map(leads.map(lead => [lead.person_id, lead]));
+    const now = new Date();
 
-      const futureAppts = clientAppts
-        .filter(a => new Date(a.appointment_date) > now && a.status !== 'cancelled')
-        .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
-      
-      const pastAppts = clientAppts
-        .filter(a => new Date(a.appointment_date) <= now || a.status === 'completed')
-        .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+    return people
+      .filter(person => person?.client_status === 'customer')
+      .map(person => {
+        const patient = patientByPerson.get(person.id) || null;
+        const lead = leadByPerson.get(person.id) || null;
+        const clientAppointments = appointments.filter(
+          appointment =>
+            appointment?.person_id === person.id ||
+            (patient?.id && appointment?.patient_id === patient.id)
+        );
 
-      const nextAppt = futureAppts[0];
-      const lastAppt = pastAppts[0];
+        const futureAppointments = clientAppointments
+          .filter(appointment => {
+            const appointmentDate = new Date(appointment.appointment_date);
+            return (
+              !Number.isNaN(appointmentDate.getTime()) &&
+              appointmentDate > now &&
+              !['cancelled', 'rescheduled', 'completed'].includes(appointment.status)
+            );
+          })
+          .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
-      // Calculate total paid
-      const clientPayments = payments.filter(pay => (pay.patient_id === p.id || pay.person_id === p.person_id) && pay.status === 'paid');
-      const totalPaid = clientPayments.reduce((sum, pay) => sum + Number(pay.amount || 0), 0);
+        const completedAppointments = clientAppointments
+          .filter(appointment => appointment?.status === 'completed')
+          .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
-      return {
-        ...p,
-        nextApptDate: nextAppt ? new Date(nextAppt.appointment_date).toLocaleDateString('he-IL') : '-',
-        lastApptDate: lastAppt ? new Date(lastAppt.appointment_date).toLocaleDateString('he-IL') : '-',
-        totalPaid
-      };
+        const clientPayments = payments.filter(
+          payment =>
+            payment?.status === 'paid' &&
+            (payment.person_id === person.id || (patient?.id && payment.patient_id === patient.id))
+        );
+
+        const totalPaid = clientPayments.reduce(
+          (sum, payment) => sum + Number(payment.amount || 0),
+          0
+        );
+
+        return {
+          ...person,
+          source: lead?.source || person.source || null,
+          campaign: lead?.campaign || null,
+          patient,
+          nextAppointment: futureAppointments[0] || null,
+          lastCompletedAppointment: completedAppointments[0] || null,
+          totalPaid
+        };
+      })
+      .sort((a, b) => {
+        const aDate = a.customer_since ? new Date(a.customer_since).getTime() : 0;
+        const bDate = b.customer_since ? new Date(b.customer_since).getTime() : 0;
+        return bDate - aDate;
       });
-  }, [patients, appointments, payments]);
+  }, [people, patients, leads, appointments, payments]);
 
   const filteredClients = useMemo(() => {
-    if (!searchTerm) return clientsData;
-    const term = searchTerm.toLowerCase();
-    return clientsData.filter(c =>
-      (c.full_name && c.full_name.toLowerCase().includes(term)) ||
-      (c.phone && c.phone.includes(term)) ||
-      (c.email && c.email.toLowerCase().includes(term))
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return clientsData;
+
+    return clientsData.filter(client =>
+      client.full_name?.toLowerCase().includes(term) ||
+      client.phone?.includes(searchTerm.trim()) ||
+      client.email?.toLowerCase().includes(term)
     );
   }, [clientsData, searchTerm]);
 
   return (
-    <div className="space-y-4 dir-rtl text-start font-sans">
-      {/* Search Toolbar */}
-      <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
+    <div className="space-y-4 text-start font-sans" dir="rtl">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
-            type="text"
-            placeholder="חיפוש לקוח לפי שם, טלפון..."
+            type="search"
+            placeholder="חיפוש לפי שם, טלפון או אימייל..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            onChange={event => setSearchTerm(event.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-9 pl-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none"
           />
         </div>
-        <div className="text-xs text-slate-500 font-medium">
+
+        <div className="text-xs font-medium text-slate-500">
           {searchTerm ? (
-            <>מוצגים: <span className="text-slate-900 font-bold">{filteredClients.length}</span> מתוך {clientsData.length}</>
+            <>
+              מוצגים: <span className="font-bold text-slate-900">{filteredClients.length}</span> מתוך {clientsData.length}
+            </>
           ) : (
-            <>סה״כ לקוחות: <span className="text-slate-900 font-bold">{clientsData.length}</span></>
+            <>
+              סה״כ לקוחות: <span className="font-bold text-slate-900">{clientsData.length}</span>
+            </>
           )}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-start border-collapse">
+          <table className="w-full min-w-[980px] border-collapse text-start">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
-                <th className="py-3 px-4 text-start">שם</th>
-                <th className="py-3 px-4 text-start">טלפון</th>
-                <th className="py-3 px-4 text-start">סטטוס</th>
-                <th className="py-3 px-4 text-start">תור הבא</th>
-                <th className="py-3 px-4 text-start">מפגש אחרון</th>
-                <th className="py-3 px-4 text-start">סה"כ ששולם</th>
-                <th className="py-3 px-4 text-end">פעולה</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500">
+                <th className="px-4 py-3 text-start">לקוח</th>
+                <th className="px-4 py-3 text-start">קשר</th>
+                <th className="px-4 py-3 text-start">לקוח מאז</th>
+                <th className="px-4 py-3 text-start">תיק טיפולי</th>
+                <th className="px-4 py-3 text-start">תור הבא</th>
+                <th className="px-4 py-3 text-start">טיפול אחרון</th>
+                <th className="px-4 py-3 text-start">סה״כ שולם</th>
+                <th className="px-4 py-3 text-end">פעולה</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-xs">
+
+            <tbody className="divide-y divide-slate-100 text-xs">
               {filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    אין עדיין לקוחות להצגה.
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
+                    {searchTerm ? 'לא נמצאו לקוחות התואמים לחיפוש.' : 'אין עדיין לקוחות להצגה.'}
                   </td>
                 </tr>
               ) : (
@@ -100,39 +163,62 @@ export default function PatientDirectory() {
                   <tr
                     key={client.id}
                     onClick={() => setSelectedClient(client)}
-                    className="hover:bg-slate-100/50 transition-colors cursor-pointer"
+                    className="cursor-pointer transition-colors hover:bg-slate-50"
                   >
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {client.full_name}
+                    <td className="px-4 py-3.5">
+                      <div className="font-bold text-slate-900">{client.full_name}</div>
+                      <div className="mt-0.5 text-[10px] text-slate-400">
+                        {client.source || 'ללא מקור'}
+                      </div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-700 dir-ltr text-right">
-                      {client.phone || '-'}
+
+                    <td className="px-4 py-3.5">
+                      <div className="font-mono text-slate-700" dir="ltr">
+                        {client.phone || '-'}
+                      </div>
+                      {client.email && (
+                        <div className="mt-0.5 max-w-[210px] truncate text-[10px] text-slate-500" dir="ltr">
+                          {client.email}
+                        </div>
+                      )}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                        (client.status || 'active') === 'active'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {(client.status || 'active') === 'active' ? 'פעיל' : 'לא פעיל'}
-                      </span>
+
+                    <td className="px-4 py-3.5 text-slate-600">
+                      {formatDate(client.customer_since)}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 font-medium">
-                      {client.nextApptDate}
+
+                    <td className="px-4 py-3.5">
+                      {client.patient ? (
+                        <span className="inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          קיים
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                          טרם נפתח
+                        </span>
+                      )}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500">
-                      {client.lastApptDate}
+
+                    <td className="px-4 py-3.5 font-medium text-slate-700">
+                      {formatDateTime(client.nextAppointment?.appointment_date)}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-emerald-400">
-                      ₪{client.totalPaid.toLocaleString()}
+
+                    <td className="px-4 py-3.5 text-slate-500">
+                      {formatDateTime(client.lastCompletedAppointment?.appointment_date)}
                     </td>
-                    <td className="py-3.5 px-4 text-end">
+
+                    <td className="px-4 py-3.5 font-bold text-emerald-600" dir="ltr">
+                      ₪{client.totalPaid.toLocaleString('he-IL')}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-end">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        type="button"
+                        onClick={event => {
+                          event.stopPropagation();
                           setSelectedClient(client);
                         }}
-                        className="text-[11px] font-medium text-emerald-400 hover:text-emerald-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors"
+                        className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-slate-200"
                       >
                         פרטים
                       </button>
@@ -145,11 +231,10 @@ export default function PatientDirectory() {
         </div>
       </div>
 
-      {/* Client Detail Drawer */}
       {selectedClient && (
         <ClientDetailDrawer
           item={selectedClient}
-          type="patient"
+          type="person"
           onClose={() => setSelectedClient(null)}
         />
       )}

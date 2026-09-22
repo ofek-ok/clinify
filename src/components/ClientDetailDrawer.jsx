@@ -7,11 +7,11 @@ import { ClipboardList, Mail, MessageSquare, Phone } from 'lucide-react';
 const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const { showToast } = useToast();
   const { 
-    people, patients, leads, appointments, payments, tasks, 
-    forms, formSubmissions, leadCommunications, services, patientPackages,
-    addPatient, updatePatient, addClinicalNote, addPatientDocument, 
-    addLeadCommunication, updateLeadFollowUp, updateLeadStatus, addTask, updateTaskStatus,
-    getServiceName, issuePackageToPatient
+    people, patients, leads, appointments, payments, tasks,
+    forms, formSubmissions, leadCommunications,
+    addPatient, updatePatient, addClinicalNote,
+    addLeadCommunication, updateLeadFollowUp, addTask, updateTaskStatus,
+    getServiceName
   } = useContext(ClinicContext);
 
   const { t } = useContext(LanguageContext);
@@ -66,11 +66,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const clientSubmissions = useMemo(() => {
     return formSubmissions.filter(s => s.person_id === personId || (patient && s.patient_id === patient.id) || (lead && s.lead_id === lead.id));
   }, [formSubmissions, personId, patient, lead]);
-
-  const activePkgs = useMemo(() => {
-    if (!patient?.id && !personId) return [];
-    return patientPackages.filter(p => p.patient_id === patient?.id || p.person_id === personId);
-  }, [patientPackages, patient, personId]);
 
   // Derived V1 Summary Cards
   const totalPaidRevenue = useMemo(() => {
@@ -128,7 +123,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const [noteMode, setNoteMode] = useState('soap');
   const [simpleNoteText, setSimpleNoteText] = useState('');
   const [soapForm, setSoapForm] = useState({ subjective: '', objective: '', assessment: '', plan: '' });
-  const [newDocName, setNewDocName] = useState('');
   const [commType, setCommType] = useState('call');
   const [commNote, setCommNote] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -139,20 +133,34 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   if (!item || !person) return null;
 
   const name = person.full_name || 'לא צוין שם';
-  const phone = person.phone || '-';
-  const email = person.email || '-';
-  const source = person.source || 'Website';
+  const rawPhone = person.phone || '';
+  const rawEmail = person.email || '';
+  const phone = rawPhone || '-';
+  const email = rawEmail || '-';
+  const source = lead?.source || person.source || '-';
   const clientStatus = person.client_status || 'lead';
 
-  // Format phone for WhatsApp link
-  const cleanPhone = phone.replace(/\D/g, '');
-  const formattedWaPhone = cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1) : cleanPhone;
-  const whatsappUrl = `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, כאן אופק מ-Okonski Performance`)}`;
+  // Format phone for WhatsApp link only when a real phone exists.
+  const cleanPhone = rawPhone.replace(/\D/g, '');
+  const formattedWaPhone = cleanPhone.startsWith('972')
+    ? cleanPhone
+    : cleanPhone.startsWith('0')
+      ? '972' + cleanPhone.substring(1)
+      : cleanPhone;
+  const whatsappUrl = formattedWaPhone
+    ? `https://wa.me/${formattedWaPhone}?text=${encodeURIComponent(`שלום ${name}, כאן אופק מ-Okonski Performance`)}`
+    : null;
 
   // Handlers
   const handleCreateClinicalProfile = async () => {
     try {
-      await addPatient({ full_name: name, phone, email, source, status: 'active' });
+      await addPatient({
+        full_name: name,
+        phone: rawPhone || null,
+        email: rawEmail || null,
+        source: source === '-' ? 'Direct' : source,
+        status: 'active'
+      });
       setActiveTab('clinical');
       showToast('תיק טיפולי נפתח בהצלחה!');
     } catch (err) {
@@ -188,14 +196,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     setSoapForm({ subjective: '', objective: '', assessment: '', plan: '' });
   };
 
-  const handleAddDoc = async (e) => {
-    e.preventDefault();
-    if (!patient || !newDocName.trim()) return;
-    await addPatientDocument(patient.id, newDocName.trim());
-    showToast('מסמך נוסף בהצלחה!');
-    setNewDocName('');
-  };
-
   const handleAddComm = async (e) => {
     e.preventDefault();
     if (!commNote.trim()) return;
@@ -226,17 +226,6 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
       await updateLeadFollowUp(lead.id, followUpDateInput || null, lostReasonInput || null);
       showToast('פרטי מעקב עודכנו בהצלחה!');
     }
-  };
-
-  const handleQuickIssuePackage = () => {
-    if (!patient) return;
-    const packageItems = services.filter(s => s.type === 'package');
-    if (packageItems.length === 0) {
-      showToast('אין כרטיסיות מוגדרות בקטלוג.', 'error');
-      return;
-    }
-    issuePackageToPatient(patient.id, packageItems[0]);
-    showToast('הכרטיסייה הונפקה בהצלחה!');
   };
 
   const getLeadStatusLabel = (status) => {
@@ -325,14 +314,14 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                       clientStatus === 'customer' 
-                        ? 'bg-emerald-500/20 text-emerald-700 border-emerald-500/30' 
-                        : 'bg-amber-500/20 text-amber-700 border-amber-500/30'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
                       {clientStatus === 'customer' ? t('Customer', 'לקוח משלם') : t('Lead', 'ליד / פוטנציאלי')}
                     </span>
 
                     {lead?.status && (
-                      <span className="text-xs font-semibold text-violet-300 bg-violet-500/20 px-2.5 py-0.5 rounded-full border border-violet-500/30 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200">
                         {t('Stage', 'שלב')}: {getLeadStatusLabel(lead.status)}
                       </span>
                     )}
@@ -355,7 +344,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   href={whatsappUrl} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="text-xs font-bold text-emerald-400 hover:text-emerald-700 flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 transition-colors"
+                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition-colors"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   WhatsApp
@@ -505,33 +494,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-extrabold text-sm text-slate-800">{t('Payment Ledger', 'יומן תשלומים והכנסות')}</h4>
-                  {patient && (
-                    <button 
-                      onClick={handleQuickIssuePackage}
-                      className="text-xs font-extrabold text-violet-600 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-xl border border-violet-200 transition-colors"
-                    >
-                      + {t('Issue Punch-Card Package', 'הנפק כרטיסיית טיפולים')}
-                    </button>
-                  )}
                 </div>
-
-                {/* Packages List */}
-                {activePkgs.length > 0 && (
-                  <div className="p-4 bg-violet-50/60 border border-violet-200 rounded-2xl space-y-2 mb-4">
-                    <h5 className="font-bold text-xs text-violet-900">{t('Active Packages', 'כרטיסיות טיפול פעילות')}</h5>
-                    {activePkgs.map(pkg => (
-                      <div key={pkg.id} className="flex justify-between items-center text-xs bg-white p-3 rounded-xl border border-violet-100">
-                        <div>
-                          <p className="font-bold text-slate-800">{pkg.name}</p>
-                          <p className="text-[10px] text-slate-500">{t('Purchased', 'נרכשה ב-')}: {pkg.purchased_date}</p>
-                        </div>
-                        <span className="font-extrabold text-violet-700 bg-violet-100 px-2.5 py-1 rounded-lg">
-                          {pkg.remaining_sessions} / {pkg.total_sessions} {t('sessions left', 'טיפולים נותרו')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 {clientPayments.length === 0 ? (
                   <div className="p-8 text-center text-slate-500 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
@@ -825,32 +788,33 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       )}
                     </div>
 
-                    {/* Documents Upload Section */}
-                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-                      <h4 className="font-extrabold text-xs text-slate-800">{t('Treatment Documents & Attachments', 'מסמכי טיפול וקבצים מצורפים')}</h4>
-                      <form onSubmit={handleAddDoc} className="flex gap-2">
-                        <input 
-                          type="text"
-                          required
-                          placeholder={t('Document title / filename...', 'שם הקובץ/מסמך...')}
-                          value={newDocName}
-                          onChange={e => setNewDocName(e.target.value)}
-                          className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
-                        />
-                        <button type="submit" className="px-4 py-2 bg-slate-100 hover:bg-white text-slate-900 font-extrabold text-xs rounded-xl cursor-pointer">
-                          + {t('Add Doc', 'הוסף קובץ')}
-                        </button>
-                      </form>
-
-                      <div className="space-y-2">
-                        {(patient.documents || []).map(doc => (
-                          <div key={doc.id} className="p-3 bg-white border border-slate-200/80 rounded-xl flex justify-between items-center text-xs">
-                            <span className="font-bold text-slate-800">📄 {doc.name}</span>
-                            <span className="text-[10px] text-slate-500">{doc.uploaded_at}</span>
-                          </div>
-                        ))}
+                    {(patient.documents || []).length > 0 && (
+                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                        <h4 className="font-bold text-xs text-slate-800">{t('Treatment Documents', 'מסמכי טיפול')}</h4>
+                        <div className="space-y-2">
+                          {patient.documents.map(doc => {
+                            const hasRealLink = doc.file_url && doc.file_url !== '#';
+                            return hasRealLink ? (
+                              <a
+                                key={doc.id}
+                                href={doc.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs transition-colors hover:bg-slate-50"
+                              >
+                                <span className="font-bold text-slate-800">{doc.name}</span>
+                                <span className="text-[10px] text-emerald-700">{t('Open', 'פתח')}</span>
+                              </a>
+                            ) : (
+                              <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs">
+                                <span className="font-bold text-slate-800">{doc.name}</span>
+                                <span className="text-[10px] text-slate-400">{doc.uploaded_at || ''}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>

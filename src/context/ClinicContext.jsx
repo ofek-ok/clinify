@@ -65,6 +65,23 @@ const getIsraelOffsetString = (dateStr) => {
 const buildIsraelIsoTimestamp = (dateStr, timeStr) =>
   `${dateStr}T${timeStr}:00${getIsraelOffsetString(dateStr)}`;
 
+
+const normalizeContactPhone = (value) => {
+  if (!value) return null;
+  let digits = String(value).replace(/\D/g, '');
+  if (!digits) return null;
+
+  if (digits.startsWith('00972')) {
+    digits = `972${digits.slice(5)}`;
+  } else if (digits.startsWith('9720')) {
+    digits = `972${digits.slice(4)}`;
+  } else if (digits.startsWith('0') && digits.length >= 9 && digits.length <= 10) {
+    digits = `972${digits.slice(1)}`;
+  }
+
+  return digits;
+};
+
 export const ClinicProvider = ({ children }) => {
   const todayStr = getIsraelDateKey();
 
@@ -86,6 +103,8 @@ export const ClinicProvider = ({ children }) => {
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
   const [leadCommunications, setLeadCommunications] = useState([]);
+  const [clinicalNotes, setClinicalNotes] = useState([]);
+  const [patientDocuments, setPatientDocuments] = useState([]);
 
   // Configurable Public Self-Booking Settings
   const [bookingSettings, setBookingSettings] = useState({
@@ -165,7 +184,8 @@ export const ClinicProvider = ({ children }) => {
     try {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, projectsRes, contentItemsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes
+        tasksRes, projectsRes, contentItemsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes,
+        clinicalNotesRes, patientDocumentsRes
       ] = await Promise.all([
         supabase.from('people').select('*'),
         supabase.from('patients').select('*'),
@@ -182,7 +202,9 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('booking_settings').select('*').maybeSingle(),
         supabase.from('patient_packages').select('*'),
         supabase.from('business_hours').select('*'),
-        supabase.from('lead_communications').select('*')
+        supabase.from('lead_communications').select('*'),
+        supabase.from('patient_clinical_notes').select('*').order('created_at', { ascending: false }),
+        supabase.from('patient_documents').select('*').order('uploaded_at', { ascending: false })
       ]);
 
       if (peopleRes.data) setPeople(peopleRes.data);
@@ -199,6 +221,8 @@ export const ClinicProvider = ({ children }) => {
       if (expensesRes.data) setExpenses(expensesRes.data);
       if (packagesRes.data) setPatientPackages(packagesRes.data);
       if (leadCommsRes?.data) setLeadCommunications(leadCommsRes.data);
+      if (clinicalNotesRes?.data) setClinicalNotes(clinicalNotesRes.data);
+      if (patientDocumentsRes?.data) setPatientDocuments(patientDocumentsRes.data);
 
       if (bookingSetRes.data) {
         const mapped = mapBookingSettingsFromDb(bookingSetRes.data);
@@ -233,30 +257,62 @@ export const ClinicProvider = ({ children }) => {
     setContentItems([]);
     setPayments([]);
     setExpenses([]);
+    setLeadCommunications([]);
+    setClinicalNotes([]);
+    setPatientDocuments([]);
   };
 
   // Customer Conversion Trigger (First Completed + Paid Session)
   const triggerCustomerConversionIfEligible = async (personId) => {
-    if (!personId) return;
+    if (!personId) return false;
     const person = people.find(p => p.id === personId);
-    if (!person || person.client_status === 'customer') return;
+    if (!person || person.client_status === 'customer') return true;
+
+    const nowIso = new Date().toISOString();
 
     try {
-      const { error } = await supabase.rpc('convert_lead_to_customer', { p_person_id: personId });
-      if (error) {
-        console.warn("RPC convert_lead_to_customer fallback to manual update:", error.message);
-        await supabase.from('people').update({
-          client_status: 'customer',
-          customer_since: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }).eq('id', personId);
-        await supabase.from('leads').update({ status: 'won' }).eq('person_id', personId);
+      let convertedByRpc = false;
+
+      if (user) {
+        const { error: rpcError } = await supabase.rpc('convert_lead_to_customer', { p_person_id: personId });
+        convertedByRpc = !rpcError;
       }
-      const nowIso = new Date().toISOString();
-      setPeople(prev => prev.map(p => p.id === personId ? { ...p, client_status: 'customer', customer_since: nowIso } : p));
-      setLeads(prev => prev.map(l => l.person_id === personId ? { ...l, status: 'won' } : l));
+
+      if (!convertedByRpc) {
+        const { error: personError } = await supabase
+          .from('people')
+          .update({
+            client_status: 'customer',
+            customer_since: person.customer_since || nowIso,
+            updated_at: nowIso
+          })
+          .eq('id', personId);
+
+        if (personError) throw personError;
+
+        const { error: leadError } = await supabase
+          .from('leads')
+          .update({ status: 'won', follow_up_date: null })
+          .eq('person_id', personId);
+
+        if (leadError) throw leadError;
+      }
+
+      setPeople(prev => prev.map(p =>
+        p.id === personId
+          ? { ...p, client_status: 'customer', customer_since: p.customer_since || nowIso }
+          : p
+      ));
+      setLeads(prev => prev.map(l =>
+        l.person_id === personId
+          ? { ...l, status: 'won', follow_up_date: null }
+          : l
+      ));
+
+      return true;
     } catch (err) {
       console.error("Customer conversion error:", err);
+      return false;
     }
   };
 
@@ -297,7 +353,7 @@ export const ClinicProvider = ({ children }) => {
     const nameVal = (full_name || fullName || '').trim();
     const phoneVal = phone ? String(phone).trim() : '';
     const emailVal = email ? String(email).trim() : null;
-    const cleanPhone = phoneVal ? phoneVal.replace(/\D/g, '') : null;
+    const cleanPhone = normalizeContactPhone(phoneVal);
     const cleanEmail = emailVal ? emailVal.toLowerCase() : null;
 
     if (!nameVal) {
@@ -597,8 +653,14 @@ export const ClinicProvider = ({ children }) => {
 
     if (newStatus === 'completed' && appt) {
       const payment = payments.find(p => p.appointment_id === apptId && p.status === 'paid');
-      if (payment && appt.person_id) {
-        await triggerCustomerConversionIfEligible(appt.person_id);
+      let appointmentPersonId = appt.person_id || payment?.person_id || null;
+
+      if (!appointmentPersonId && appt.patient_id) {
+        appointmentPersonId = patients.find(patient => patient.id === appt.patient_id)?.person_id || null;
+      }
+
+      if (payment && appointmentPersonId) {
+        await triggerCustomerConversionIfEligible(appointmentPersonId);
       }
 
       if (appt.patient_id) {
@@ -888,9 +950,35 @@ export const ClinicProvider = ({ children }) => {
       setPayments(prev => [...prev, createdPayment]);
 
       if (createdPayment.status === 'paid' && createdPayment.appointment_id) {
-        const appt = appointments.find(a => a.id === createdPayment.appointment_id);
-        if (appt && appt.status === 'completed' && appt.person_id) {
-          await triggerCustomerConversionIfEligible(appt.person_id);
+        let appt = appointments.find(a => a.id === createdPayment.appointment_id) || null;
+
+        // Completing a session and recording its payment happen back-to-back in the UI.
+        // React state may still contain the pre-completion appointment status, so verify
+        // the source of truth before deciding whether customer conversion is eligible.
+        if (!appt || appt.status !== 'completed') {
+          const { data: dbAppointment, error: appointmentLookupError } = await supabase
+            .from('appointments')
+            .select('id, status, person_id, patient_id')
+            .eq('id', createdPayment.appointment_id)
+            .maybeSingle();
+
+          if (appointmentLookupError) {
+            console.error("Error checking appointment after payment:", appointmentLookupError);
+          } else if (dbAppointment) {
+            appt = dbAppointment;
+          }
+        }
+
+        if (appt?.status === 'completed') {
+          let conversionPersonId = createdPayment.person_id || appt.person_id || null;
+
+          if (!conversionPersonId && appt.patient_id) {
+            conversionPersonId = patients.find(patient => patient.id === appt.patient_id)?.person_id || null;
+          }
+
+          if (conversionPersonId) {
+            await triggerCustomerConversionIfEligible(conversionPersonId);
+          }
         }
       }
 
@@ -1091,6 +1179,23 @@ export const ClinicProvider = ({ children }) => {
 
   const enrichedPatients = useMemo(() => {
     const peopleMap = new Map(people.map(p => [p.id, p]));
+    const notesByPatient = new Map();
+    const documentsByPatient = new Map();
+
+    clinicalNotes.forEach(note => {
+      if (!note?.patient_id) return;
+      const current = notesByPatient.get(note.patient_id) || [];
+      current.push(note);
+      notesByPatient.set(note.patient_id, current);
+    });
+
+    patientDocuments.forEach(document => {
+      if (!document?.patient_id) return;
+      const current = documentsByPatient.get(document.patient_id) || [];
+      current.push(document);
+      documentsByPatient.set(document.patient_id, current);
+    });
+
     return patients.map(pt => {
       const person = peopleMap.get(pt.person_id) || {};
       return {
@@ -1101,10 +1206,12 @@ export const ClinicProvider = ({ children }) => {
         email: person.email || '',
         normalized_email: person.normalized_email || '',
         client_status: person.client_status || 'lead',
-        customer_since: person.customer_since
+        customer_since: person.customer_since,
+        clinical_notes: notesByPatient.get(pt.id) || [],
+        documents: documentsByPatient.get(pt.id) || []
       };
     });
-  }, [patients, people]);
+  }, [patients, people, clinicalNotes, patientDocuments]);
 
   const enrichedLeads = useMemo(() => {
     const peopleMap = new Map(people.map(p => [p.id, p]));
@@ -1259,29 +1366,26 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     if (data && data[0]) {
-      setPatients(prev => prev.map(p => {
-        if (p.id === patientId) {
-          const notes = p.clinical_notes || [];
-          return { ...p, clinical_notes: [data[0], ...notes] };
-        }
-        return p;
-      }));
+      setClinicalNotes(prev => [data[0], ...prev]);
       return data[0];
     }
     return null;
   };
 
-  const addPatientDocument = async (patientId, docName, docUrl = '#') => {
+  const addPatientDocument = async (patientId, docName, docUrl) => {
     const patient = patients.find(p => p.id === patientId);
-    const personId = patient ? patient.person_id : null;
+    if (!patient) throw new Error('לא נמצא תיק טיפולי תקין');
+    if (!docName?.trim()) throw new Error('שם המסמך נדרש');
+    if (!docUrl || docUrl === '#') {
+      throw new Error('יש לצרף קישור או קובץ אמיתי לפני שמירת מסמך');
+    }
 
     const newDoc = {
-      person_id: personId,
+      person_id: patient.person_id || null,
       patient_id: patientId,
-      name: docName,
+      name: docName.trim(),
       file_url: docUrl,
-      file_size: '1.2 MB',
-      uploaded_at: new Date().toISOString().split('T')[0]
+      uploaded_at: todayStr
     };
     const { data, error } = await supabase.from('patient_documents').insert([newDoc]).select();
     if (error) {
@@ -1289,26 +1393,26 @@ export const ClinicProvider = ({ children }) => {
       throw error;
     }
     if (data && data[0]) {
-      setPatients(prev => prev.map(p => {
-        if (p.id === patientId) {
-          const docs = p.documents || [];
-          return { ...p, documents: [data[0], ...docs] };
-        }
-        return p;
-      }));
+      setPatientDocuments(prev => [data[0], ...prev]);
       return data[0];
     }
     return null;
   };
 
-  const addLeadCommunication = async (leadId, type, note) => {
-    let targetLead = leads.find(l => l.id === leadId || l.person_id === leadId);
-    if (!targetLead) {
-      throw new Error('לא נמצא ליד תקין לשיוך תקשורת');
+  const addLeadCommunication = async (leadOrPersonId, type, note) => {
+    const targetLead = leads.find(l => l.id === leadOrPersonId || l.person_id === leadOrPersonId) || null;
+    const targetPersonId =
+      targetLead?.person_id ||
+      people.find(person => person.id === leadOrPersonId)?.id ||
+      null;
+
+    if (!targetLead && !targetPersonId) {
+      throw new Error('לא נמצא איש קשר תקין לשיוך התקשורת');
     }
 
     const newComm = {
-      lead_id: targetLead.id,
+      lead_id: targetLead?.id || null,
+      person_id: targetPersonId,
       type,
       note,
       created_at: new Date().toISOString()
@@ -1322,21 +1426,25 @@ export const ClinicProvider = ({ children }) => {
     if (data && data[0]) {
       const createdComm = data[0];
       setLeadCommunications(prev => [createdComm, ...prev]);
-      setLeads(prev => prev.map(l => {
-        if (l.id === targetLead.id) {
-          const comms = l.communication_log || [];
-          return { ...l, communication_log: [createdComm, ...comms] };
-        }
-        return l;
-      }));
+      if (targetLead) {
+        setLeads(prev => prev.map(l => {
+          if (l.id === targetLead.id) {
+            const comms = l.communication_log || [];
+            return { ...l, communication_log: [createdComm, ...comms] };
+          }
+          return l;
+        }));
+      }
       return createdComm;
     }
     return null;
   };
 
   const updateLeadFollowUp = async (leadId, followUpDate, lostReason = null) => {
-    const updates = { follow_up_date: followUpDate };
-    if (lostReason) updates.lost_reason = lostReason;
+    const updates = {
+      follow_up_date: followUpDate || null,
+      lost_reason: lostReason || null
+    };
     
     const { error } = await supabase.from('leads').update(updates).eq('id', leadId);
     if (error) {
