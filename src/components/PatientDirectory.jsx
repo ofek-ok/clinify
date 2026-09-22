@@ -34,18 +34,20 @@ const formatDate = (value) => {
 };
 
 export default function PatientDirectory() {
-  const { people = [], patients = [], appointments = [], payments = [] } = useContext(ClinicContext);
+  const { people = [], patients = [], leads = [], appointments = [], payments = [] } = useContext(ClinicContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
 
   const clientsData = useMemo(() => {
     const patientByPerson = new Map(patients.map(patient => [patient.person_id, patient]));
+    const leadByPerson = new Map(leads.map(lead => [lead.person_id, lead]));
     const now = new Date();
 
     return people
       .filter(person => person?.client_status === 'customer')
       .map(person => {
         const patient = patientByPerson.get(person.id) || null;
+        const lead = leadByPerson.get(person.id) || null;
         const clientAppointments = appointments.filter(
           appointment =>
             appointment?.person_id === person.id ||
@@ -80,6 +82,8 @@ export default function PatientDirectory() {
 
         return {
           ...person,
+          source: lead?.source || person.source || null,
+          campaign: lead?.campaign || null,
           patient,
           nextAppointment: futureAppointments[0] || null,
           lastCompletedAppointment: completedAppointments[0] || null,
@@ -91,7 +95,7 @@ export default function PatientDirectory() {
         const bDate = b.customer_since ? new Date(b.customer_since).getTime() : 0;
         return bDate - aDate;
       });
-  }, [people, patients, appointments, payments]);
+  }, [people, patients, leads, appointments, payments]);
 
   const filteredClients = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
