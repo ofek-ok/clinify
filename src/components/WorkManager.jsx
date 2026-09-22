@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import TaskManagement from './TaskManagement';
 import ProjectsManager from './ProjectsManager';
+import WorkDashboard from './WorkDashboard';
 
 export default function WorkManager({ initialTab = 'board' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -13,6 +14,12 @@ export default function WorkManager({ initialTab = 'board' }) {
         
         {/* Tabs: Board | Projects */}
         <div className="flex bg-white p-1 rounded-xl border border-slate-200">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'overview' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            סקירה
+          </button>
           <button
             onClick={() => setActiveTab('board')}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -38,6 +45,7 @@ export default function WorkManager({ initialTab = 'board' }) {
 
       {/* Tab View */}
       <div>
+        {activeTab === 'overview' && <WorkDashboard />}
         {activeTab === 'board' && <TaskManagement />}
         {activeTab === 'projects' && <ProjectsManager />}
       </div>
