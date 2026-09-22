@@ -36,7 +36,7 @@ const AnalyticsView = () => {
 
     return [
       { name: t('Facebook/IG', 'פייסבוק / אינסטגרם'), value: counts['Facebook'], color: '#3b82f6' },
-      { name: t('Website', 'אתר הבית'), value: counts['Website'], color: '#10b981' },
+      { name: t('Website', 'אתר הבית'), value: counts['Website'], color: '#8b5cf6' },
       { name: t('WhatsApp', 'ווטסאפ'), value: counts['WhatsApp'], color: '#14b8a6' },
       { name: t('Direct/Referral', 'הפניות / ישיר'), value: counts['Direct'], color: '#8b5cf6' },
     ].filter(item => item.value > 0);
@@ -62,7 +62,7 @@ const AnalyticsView = () => {
         <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm transition-all hover:bg-white/90">
           <div className="mb-4">
             <h3 className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="w-2 h-2 rounded-full bg-violet-500"></span>
               {t('Monthly Revenue (₪)', 'הכנסות חודשיות (₪)')}
             </h3>
           </div>
@@ -71,8 +71,8 @@ const AnalyticsView = () => {
               <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -83,7 +83,7 @@ const AnalyticsView = () => {
                   itemStyle={{ color: '#0f172a', fontWeight: 'bold' }}
                   formatter={(value) => [`₪${value}`, t('Revenue', 'הכנסה')]}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
