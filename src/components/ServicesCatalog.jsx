@@ -112,7 +112,7 @@ const ServicesCatalog = () => {
       case 'subscription':
         return 'bg-purple-50 text-purple-700 border-purple-200';
       default:
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-violet-50 text-violet-700 border-violet-200';
     }
   };
 
@@ -132,7 +132,7 @@ const ServicesCatalog = () => {
           </button>
           <button 
             onClick={() => setActiveTypeFilter('service')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'service' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTypeFilter === 'service' ? 'bg-white text-violet-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
           >
             {t('Treatments', 'טיפולים בודדים')}
           </button>
@@ -158,7 +158,7 @@ const ServicesCatalog = () => {
 
         <button 
           onClick={openCreateModal}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors flex items-center gap-2 text-xs self-start sm:self-auto"
+          className="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors flex items-center gap-2 text-xs self-start sm:self-auto"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
           {t('Add New Item / Service', 'הוסף מוצר / שירות / חבילה')}
@@ -190,7 +190,7 @@ const ServicesCatalog = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-extrabold text-slate-800 text-base group-hover:text-emerald-600 transition-colors">{item.name || 'ללא שם'}</h3>
+                    <h3 className="font-extrabold text-slate-800 text-base group-hover:text-violet-600 transition-colors">{item.name || 'ללא שם'}</h3>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description || '-'}</p>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ const ServicesCatalog = () => {
                 <select 
                   value={formData.type} 
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-violet-500/20 outline-none"
                 >
                   <option value="service"> {t('Single Treatment', 'טיפול / שירות בודד')}</option>
                   <option value="package"> {t('Punch Card / Package', 'כרטיסייה / חבילת טיפולים')}</option>
@@ -263,7 +263,7 @@ const ServicesCatalog = () => {
                   placeholder={t('e.g. 10-Session Therapy Package', 'למשל: כרטיסיית 10 טיפולים, משחת שיקום')}
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-violet-500/20 outline-none"
                 />
               </div>
 
@@ -278,7 +278,7 @@ const ServicesCatalog = () => {
                     placeholder="0.00"
                     value={formData.default_price}
                     onChange={e => setFormData({ ...formData, default_price: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-violet-500/20 outline-none"
                   />
                 </div>
 
@@ -290,7 +290,7 @@ const ServicesCatalog = () => {
                       min="1"
                       value={formData.session_count}
                       onChange={e => setFormData({ ...formData, session_count: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-violet-500/20 outline-none"
                     />
                   </div>
                 ) : (
@@ -313,7 +313,7 @@ const ServicesCatalog = () => {
                   rows="2"
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-violet-500/20 resize-none"
                 />
               </div>
 
@@ -327,7 +327,7 @@ const ServicesCatalog = () => {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition-colors text-xs"
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition-colors text-xs"
                 >
                   {editingItemId ? t('Update Item', 'עדכן פריט') : t('Save Item', 'שמור פריט לקטלוג')}
                 </button>
