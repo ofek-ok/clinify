@@ -266,7 +266,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
             )}
             {parsed.objective && (
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
-                <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 me-2">O - Objective</span>
+                <span className="text-[10px] font-bold uppercase text-violet-600 bg-violet-50 px-2 py-0.5 rounded border border-violet-100 me-2">O - Objective</span>
                 <p className="text-xs text-slate-700 font-medium mt-1">{parsed.objective}</p>
               </div>
             )}
@@ -302,7 +302,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
           
           {/* Header */}
           <div className="p-6 bg-white text-slate-900 relative overflow-hidden shrink-0">
-            <div className="absolute top-0 end-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute top-0 end-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -314,7 +314,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                       clientStatus === 'customer' 
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        ? 'bg-violet-50 text-violet-700 border-violet-200' 
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
                       {clientStatus === 'customer' ? t('Customer', 'לקוח משלם') : t('Lead', 'ליד / פוטנציאלי')}
@@ -344,7 +344,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   href={whatsappUrl} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition-colors"
+                  className="text-xs font-bold text-violet-700 hover:text-violet-800 flex items-center gap-1 bg-violet-50 px-3 py-1.5 rounded-xl border border-violet-200 transition-colors"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   WhatsApp
@@ -366,7 +366,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
           <div className="p-4 bg-slate-50 border-b border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
             <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-2xs">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('Paid Revenue', 'סה"כ הכנסות')}</p>
-              <p className="text-base font-extrabold text-emerald-600 mt-0.5">₪{totalPaidRevenue.toLocaleString()}</p>
+              <p className="text-base font-extrabold text-violet-600 mt-0.5">₪{totalPaidRevenue.toLocaleString()}</p>
             </div>
 
             <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-2xs">
@@ -408,7 +408,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3 px-3 border-b-2 font-bold text-xs whitespace-nowrap transition-colors cursor-pointer ${
                   activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600'
+                    ? 'border-violet-500 text-violet-600'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
@@ -425,7 +425,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               <div className="space-y-6">
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
                   <h4 className="font-extrabold text-sm text-slate-800 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                     {t('Identity & Relationship Overview', 'פרטי זהות וסטטוס קשר')}
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-xs">
@@ -433,20 +433,20 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     <div><span className="text-slate-500 font-semibold">{t('Phone', 'טלפון')}:</span> <p className="font-bold text-slate-800" dir="ltr">{phone}</p></div>
                     <div><span className="text-slate-500 font-semibold">{t('Email', 'אימייל')}:</span> <p className="font-bold text-slate-800" dir="ltr">{email}</p></div>
                     <div><span className="text-slate-500 font-semibold">{t('Source', 'מקור הגעה')}:</span> <p className="font-bold text-slate-800">{source}</p></div>
-                    <div><span className="text-slate-500 font-semibold">{t('Relationship Status', 'סטטוס קשר')}:</span> <p className="font-bold text-emerald-600">{clientStatus}</p></div>
+                    <div><span className="text-slate-500 font-semibold">{t('Relationship Status', 'סטטוס קשר')}:</span> <p className="font-bold text-violet-600">{clientStatus}</p></div>
                     <div><span className="text-slate-500 font-semibold">{t('Treatment Profile', 'תיק טיפולי')}:</span> <p className="font-bold text-slate-800">{patient ? t('Active Profile', 'קיים במערכת') : t('None', 'טרם נפתח')}</p></div>
                   </div>
                 </div>
 
                 {!patient && (
-                  <div className="p-5 bg-emerald-50/60 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="p-5 bg-violet-50/60 border border-violet-200 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h4 className="font-extrabold text-sm text-emerald-900">{t('No Treatment Profile Found', 'טרם נפתח תיק טיפולי')}</h4>
-                      <p className="text-xs text-emerald-700 font-medium mt-0.5">{t('Open a treatment profile to manage SOAP notes and treatment documents without changing the CRM relationship status.', 'פתח תיק טיפולי כדי לנהל תרשומות SOAP ומסמכי טיפול, בלי לשנות את סטטוס הקשר ב-CRM.')}</p>
+                      <h4 className="font-extrabold text-sm text-violet-900">{t('No Treatment Profile Found', 'טרם נפתח תיק טיפולי')}</h4>
+                      <p className="text-xs text-violet-700 font-medium mt-0.5">{t('Open a treatment profile to manage SOAP notes and treatment documents without changing the CRM relationship status.', 'פתח תיק טיפולי כדי לנהל תרשומות SOAP ומסמכי טיפול, בלי לשנות את סטטוס הקשר ב-CRM.')}</p>
                     </div>
                     <button 
                       onClick={handleCreateClinicalProfile}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
+                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
                     >
                       + {t('Create Treatment Profile', 'פתח תיק טיפולי')}
                     </button>
@@ -476,7 +476,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           {appt.notes && <p className="text-[11px] text-slate-500 italic mt-1">{appt.notes}</p>}
                         </div>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
-                          appt.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          appt.status === 'completed' ? 'bg-violet-50 text-violet-700 border-violet-200' :
                           appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                           'bg-indigo-50 text-indigo-700 border-indigo-200'
                         }`}>
@@ -509,7 +509,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           <p className="text-[11px] text-slate-500 mt-0.5">{new Date(p.payment_date).toLocaleDateString()} • {p.payment_method}</p>
                         </div>
                         <div className="text-end">
-                          <p className="font-extrabold text-sm text-emerald-600">₪{parseFloat(p.amount).toLocaleString()}</p>
+                          <p className="font-extrabold text-sm text-violet-600">₪{parseFloat(p.amount).toLocaleString()}</p>
                           <span className="text-[10px] font-bold text-slate-500 uppercase">{p.status}</span>
                         </div>
                       </div>
@@ -533,7 +533,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           type="date"
                           value={followUpDateInput}
                           onChange={(e) => setFollowUpDateInput(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none"
+                          className="w-full px-3 py-2 premium-panel rounded-2xl outline-none"
                         />
                       </div>
                       <div>
@@ -543,7 +543,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           placeholder={t('Price, location, changed mind...', 'מחיר, מיקום, חוסר מענה...')}
                           value={lostReasonInput}
                           onChange={(e) => setLostReasonInput(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none"
+                          className="w-full px-3 py-2 premium-panel rounded-2xl outline-none"
                         />
                       </div>
                     </div>
@@ -566,13 +566,13 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       placeholder={t('Task description...', 'תיאור המשימה...')}
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="sm:col-span-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
+                      className="sm:col-span-2 px-3 py-2 premium-panel rounded-2xl text-xs outline-none"
                     />
                     <input 
                       type="date"
                       value={newTaskDueDate}
                       onChange={(e) => setNewTaskDueDate(e.target.value)}
-                      className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
+                      className="px-3 py-2 premium-panel rounded-2xl text-xs outline-none"
                     />
                   </div>
                   <button type="submit" className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
@@ -593,7 +593,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                             type="checkbox" 
                             checked={task.status === 'done'}
                             onChange={(e) => updateTaskStatus(task.id, e.target.checked ? 'done' : 'todo')}
-                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 cursor-pointer"
                           />
                           <span className={`font-semibold ${task.status === 'done' ? 'line-through text-slate-500' : 'text-slate-800'}`}>{task.title}</span>
                         </div>
@@ -615,7 +615,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     <select 
                       value={commType} 
                       onChange={(e) => setCommType(e.target.value)}
-                      className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
+                      className="px-3 py-2 premium-panel rounded-2xl text-xs outline-none"
                     >
                       <option value="call">{t('Phone Call', 'שיחת טלפון')}</option>
                       <option value="whatsapp">WhatsApp</option>
@@ -627,10 +627,10 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                       placeholder={t('Notes/Summary of conversation...', 'סיכום הדברים שנאמרו...')}
                       value={commNote}
                       onChange={(e) => setCommNote(e.target.value)}
-                      className="sm:col-span-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"
+                      className="sm:col-span-2 px-3 py-2 premium-panel rounded-2xl text-xs outline-none"
                     />
                   </div>
-                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
+                  <button type="submit" className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
                     {t('Save Entry', 'שמור תיעוד')}
                   </button>
                 </form>
@@ -696,7 +696,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
               <div className="space-y-6">
                 {!patient ? (
                   <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <div className="w-12 h-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mx-auto">
                       <ClipboardList className="w-5 h-5" />
                     </div>
                     <div>
@@ -707,7 +707,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                     </div>
                     <button 
                       onClick={handleCreateClinicalProfile}
-                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                      className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                     >
                       + {t('Create Treatment Profile Now', 'פתח תיק טיפולי כעת')}
                     </button>
@@ -739,19 +739,19 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                             <div>
                               <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">S - Subjective (תלונה/תיאור)</label>
-                              <textarea rows={2} value={soapForm.subjective} onChange={e => setSoapForm({...soapForm, subjective: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-xl outline-none" />
+                              <textarea rows={2} value={soapForm.subjective} onChange={e => setSoapForm({...soapForm, subjective: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-emerald-600 uppercase mb-1">O - Objective (ממצאים/בדיקה)</label>
-                              <textarea rows={2} value={soapForm.objective} onChange={e => setSoapForm({...soapForm, objective: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-xl outline-none" />
+                              <label className="block text-[10px] font-bold text-violet-600 uppercase mb-1">O - Objective (ממצאים/בדיקה)</label>
+                              <textarea rows={2} value={soapForm.objective} onChange={e => setSoapForm({...soapForm, objective: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">A - Assessment (אבחון/הערכה)</label>
-                              <textarea rows={2} value={soapForm.assessment} onChange={e => setSoapForm({...soapForm, assessment: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-xl outline-none" />
+                              <textarea rows={2} value={soapForm.assessment} onChange={e => setSoapForm({...soapForm, assessment: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">P - Plan (תוכנית המשך)</label>
-                              <textarea rows={2} value={soapForm.plan} onChange={e => setSoapForm({...soapForm, plan: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-xl outline-none" />
+                              <textarea rows={2} value={soapForm.plan} onChange={e => setSoapForm({...soapForm, plan: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                           </div>
                         ) : (
@@ -760,11 +760,11 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                             placeholder={t('Enter note content...', 'הזן את תרשומת הטיפול...')} 
                             value={simpleNoteText} 
                             onChange={e => setSimpleNoteText(e.target.value)} 
-                            className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs outline-none" 
+                            className="w-full p-3 premium-panel rounded-2xl text-xs outline-none" 
                           />
                         )}
 
-                        <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
+                        <button type="submit" className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
                           {t('Save Note', 'שמור תרשומת')}
                         </button>
                       </form>
@@ -803,7 +803,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                                 className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs transition-colors hover:bg-slate-50"
                               >
                                 <span className="font-bold text-slate-800">{doc.name}</span>
-                                <span className="text-[10px] text-emerald-700">{t('Open', 'פתח')}</span>
+                                <span className="text-[10px] text-violet-700">{t('Open', 'פתח')}</span>
                               </a>
                             ) : (
                               <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs">
