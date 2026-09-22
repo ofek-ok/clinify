@@ -20,7 +20,7 @@
   }
 
   *:focus-visible {
-    outline: 2px solid #059669;
+    outline: 2px solid #7c3aed;
     outline-offset: 2px;
   }
 }
@@ -84,7 +84,7 @@
   --border-soft: #e2e8f0;
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --accent: #059669;
+  --accent: #7c3aed;
 }
 
 .clinify-workspace .work-input {
@@ -106,9 +106,9 @@
 }
 
 .clinify-workspace .work-input:focus {
-  border-color: #34d399;
+  border-color: #a78bfa;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.10);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.10);
 }
 
 .clinify-workspace select {
@@ -139,7 +139,7 @@
   --accent-violet: #7c3aed;
   --accent-indigo: #4f46e5;
   --accent-cyan: #06b6d4;
-  --accent-emerald: #10b981;
+  --accent-violet-soft: #8b5cf6;
   --accent-amber: #f59e0b;
 }
 
