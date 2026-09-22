@@ -102,7 +102,7 @@ export default function ContentManager() {
               placeholder="חיפוש תוכן..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -130,7 +130,7 @@ export default function ContentManager() {
         {/* Primary CTA */}
         <button
           onClick={() => setIsAddDrawerOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
+          className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>תוכן חדש</span>
@@ -167,13 +167,13 @@ export default function ContentManager() {
                         </span>
                       </div>
 
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-400 transition-colors leading-snug">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-violet-400 transition-colors leading-snug">
                         {item.title}
                       </h4>
 
                       <div className="text-[11px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-200">
                         {item.publish_date && <div>פרסום: {item.publish_date}</div>}
-                        {item.campaign && <div className="text-emerald-400">{item.campaign}</div>}
+                        {item.campaign && <div className="text-violet-400">{item.campaign}</div>}
                       </div>
                     </div>
                   ))}
@@ -206,7 +206,7 @@ export default function ContentManager() {
             <button
               onClick={handleCreateContent}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
               {isSubmitting ? 'שומר...' : 'שמור תוכן'}
             </button>
@@ -222,7 +222,7 @@ export default function ContentManager() {
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="כותרת התוכן..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -317,7 +317,7 @@ export default function ContentManager() {
             <div className="flex justify-end items-center w-full">
               <button
                 onClick={() => setSelectedItem(null)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
               >
                 סגור
               </button>
