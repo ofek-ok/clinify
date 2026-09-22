@@ -67,7 +67,7 @@ export default function WorkDashboard() {
               const pct = pt.length ? Math.round(done / pt.length * 100) : Number(p.progress || 0);
               return <div key={p.id}>
                 <div className="flex justify-between text-xs mb-1"><span className="font-bold">{p.name}</span><span>{pct}%</span></div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{width:`${pct}%`}} /></div>
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-violet-500" style={{width:`${pct}%`}} /></div>
               </div>;
             })}
             {projects.filter(p => p.status !== 'completed').length === 0 && <p className="text-xs text-slate-500 py-5 text-center">אין פרויקטים פעילים.</p>}
