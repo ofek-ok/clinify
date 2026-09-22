@@ -106,6 +106,7 @@ export const ClinicProvider = ({ children }) => {
   const [clinicalNotes, setClinicalNotes] = useState([]);
   const [patientDocuments, setPatientDocuments] = useState([]);
   const [calendarBlocks, setCalendarBlocks] = useState([]);
+  const [workOptions, setWorkOptions] = useState([]);
 
   // Configurable Public Self-Booking Settings
   const [bookingSettings, setBookingSettings] = useState({
@@ -186,7 +187,7 @@ export const ClinicProvider = ({ children }) => {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
         tasksRes, projectsRes, contentItemsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes,
-        clinicalNotesRes, patientDocumentsRes, calendarBlocksRes
+        clinicalNotesRes, patientDocumentsRes, calendarBlocksRes, workOptionsRes
       ] = await Promise.all([
         supabase.from('people').select('*').is('deleted_at', null),
         supabase.from('patients').select('*').is('deleted_at', null),
@@ -206,7 +207,8 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('lead_communications').select('*').is('deleted_at', null),
         supabase.from('patient_clinical_notes').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
         supabase.from('patient_documents').select('*').is('deleted_at', null).order('uploaded_at', { ascending: false }),
-        supabase.from('calendar_blocks').select('*').is('deleted_at', null).eq('busy', true)
+        supabase.from('calendar_blocks').select('*').is('deleted_at', null).eq('busy', true),
+        supabase.from('work_options').select('*').order('option_type').order('sort_order')
       ]);
 
       if (peopleRes.data) setPeople(peopleRes.data);
@@ -226,6 +228,7 @@ export const ClinicProvider = ({ children }) => {
       if (clinicalNotesRes?.data) setClinicalNotes(clinicalNotesRes.data);
       if (patientDocumentsRes?.data) setPatientDocuments(patientDocumentsRes.data);
       if (calendarBlocksRes?.data) setCalendarBlocks(calendarBlocksRes.data);
+      if (workOptionsRes?.data) setWorkOptions(workOptionsRes.data);
 
       if (bookingSetRes.data) {
         const mapped = mapBookingSettingsFromDb(bookingSetRes.data);
@@ -264,6 +267,7 @@ export const ClinicProvider = ({ children }) => {
     setClinicalNotes([]);
     setPatientDocuments([]);
     setCalendarBlocks([]);
+    setWorkOptions([]);
   };
 
   const removeFromLocalState = (table, id) => {
@@ -861,6 +865,50 @@ export const ClinicProvider = ({ children }) => {
   };
 
   // Central Execution Engine: Tasks & Projects (Block 2)
+  const addWorkOption = async (option) => {
+    const normalizedValue = (option.value || option.label || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_\u0590-\u05ff-]/g, '');
+
+    if (!normalizedValue || !option.label?.trim()) throw new Error('יש להזין שם לאפשרות');
+
+    const payload = {
+      option_type: option.option_type,
+      value: normalizedValue,
+      label: option.label.trim(),
+      color: option.color || '#64748b',
+      sort_order: Number(option.sort_order || 0),
+      is_active: option.is_active !== false
+    };
+
+    const { data, error } = await supabase.from('work_options').insert([payload]).select();
+    if (error) throw error;
+    if (data?.[0]) {
+      setWorkOptions(prev => [...prev, data[0]].sort((a,b) =>
+        a.option_type.localeCompare(b.option_type) || a.sort_order - b.sort_order
+      ));
+      return data[0];
+    }
+    return null;
+  };
+
+  const updateWorkOption = async (optionId, updates) => {
+    const { data, error } = await supabase
+      .from('work_options')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', optionId)
+      .select();
+
+    if (error) throw error;
+    if (data?.[0]) {
+      setWorkOptions(prev => prev.map(item => item.id === optionId ? data[0] : item));
+      return data[0];
+    }
+    return null;
+  };
+
   const addProject = async (proj) => {
     const payload = {
       name: proj.name,
@@ -1560,10 +1608,11 @@ export const ClinicProvider = ({ children }) => {
       session, user, signOut, isLoading,
       people, upsertPerson, getPersonName,
       patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
-      tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks,
+      tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks, workOptions,
 
       addPatient, updatePatient, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, updateService, deleteService, addAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus, addLead,
+      addWorkOption, updateWorkOption,
       addProject, updateProject, deleteProject,
       addTask, updateTask, updateTaskStatus, deleteTask,
       subscribePerformanceList,
