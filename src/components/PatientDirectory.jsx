@@ -118,7 +118,7 @@ export default function PatientDirectory() {
             placeholder="חיפוש לפי שם, טלפון או אימייל..."
             value={searchTerm}
             onChange={event => setSearchTerm(event.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-9 pl-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-9 pl-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none"
           />
         </div>
 
@@ -189,7 +189,7 @@ export default function PatientDirectory() {
 
                     <td className="px-4 py-3.5">
                       {client.patient ? (
-                        <span className="inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <span className="inline-flex rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
                           קיים
                         </span>
                       ) : (
@@ -207,7 +207,7 @@ export default function PatientDirectory() {
                       {formatDateTime(client.lastCompletedAppointment?.appointment_date)}
                     </td>
 
-                    <td className="px-4 py-3.5 font-bold text-emerald-600" dir="ltr">
+                    <td className="px-4 py-3.5 font-bold text-violet-600" dir="ltr">
                       ₪{client.totalPaid.toLocaleString('he-IL')}
                     </td>
 
@@ -218,7 +218,7 @@ export default function PatientDirectory() {
                           event.stopPropagation();
                           setSelectedClient(client);
                         }}
-                        className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-slate-200"
+                        className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-violet-700 transition-colors hover:bg-slate-200"
                       >
                         פרטים
                       </button>
