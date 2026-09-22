@@ -54,7 +54,7 @@ const ServicesCatalog = () => {
   const handleDeleteItem = async (id) => {
     try {
       await deleteService(id);
-      showToast(t('Item deleted successfully', 'הפריט נמחק בהצלחה'));
+      showToast(t('Item moved to trash', 'הפריט הועבר לאשפה'));
     } catch (err) {
       showToast(err.message || 'שגיאה במחיקת פריט', 'error');
     }
