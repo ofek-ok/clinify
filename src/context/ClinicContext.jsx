@@ -838,14 +838,7 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
-  const deleteProject = async (projectId) => {
-    const { error } = await supabase.from('projects').delete().eq('id', projectId);
-    if (error) {
-      console.error("Error deleting project:", error);
-      throw error;
-    }
-    setProjects(prev => prev.filter(p => p.id !== projectId));
-  };
+  const deleteProject = async (projectId) => softDeleteRecord('projects', projectId);
 
   const addTask = async (task) => {
     let personId = task.person_id;
@@ -890,14 +883,7 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const deleteTask = async (taskId) => {
-    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
-    if (error) {
-      console.error("Error deleting task:", error);
-      throw error;
-    }
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-  };
+  const deleteTask = async (taskId) => softDeleteRecord('tasks', taskId);
 
   const updateTaskStatus = async (taskId, newStatus) => {
     await updateTask(taskId, { status: newStatus });
@@ -962,14 +948,7 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const deleteContentItem = async (itemId) => {
-    const { error } = await supabase.from('content_items').delete().eq('id', itemId);
-    if (error) {
-      console.error("Error deleting content item:", error);
-      throw error;
-    }
-    setContentItems(prev => prev.filter(c => c.id !== itemId));
-  };
+  const deleteContentItem = async (itemId) => softDeleteRecord('content_items', itemId);
 
   const addPayment = async (payment) => {
     let personId = payment.person_id;
@@ -1075,14 +1054,7 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const deletePayment = async (paymentId) => {
-    const { error } = await supabase.from('payments').delete().eq('id', paymentId);
-    if (error) {
-      console.error("Error deleting payment:", error);
-      throw error;
-    }
-    setPayments(prev => prev.filter(p => p.id !== paymentId));
-  };
+  const deletePayment = async (paymentId) => softDeleteRecord('payments', paymentId);
 
   const updatePaymentStatus = async (paymentId, newStatus) => {
     const existingPayment = payments.find(p => p.id === paymentId);
@@ -1146,14 +1118,7 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const deleteExpense = async (expenseId) => {
-    const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
-    if (error) {
-      console.error("Error deleting expense:", error);
-      throw error;
-    }
-    setExpenses(prev => prev.filter(e => e.id !== expenseId));
-  };
+  const deleteExpense = async (expenseId) => softDeleteRecord('expenses', expenseId);
 
   const addForm = async (form) => {
     const { data, error } = await supabase.from('forms').insert([form]).select();
