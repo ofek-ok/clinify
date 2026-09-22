@@ -279,7 +279,7 @@ const DashboardOverview = ({ navigate }) => {
 
   const getStatusClasses = (status) => {
     if (status === 'completed') {
-      return 'bg-violet-50 text-violet-700 border-violet-200';
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     }
 
     if (status === 'cancelled' || status === 'no_show') {
@@ -512,7 +512,7 @@ const DashboardOverview = ({ navigate }) => {
                     fontSize: '12px'
                   }}
                 />
-                <Area type="monotone" dataKey="income" stroke="#7c3aed" fill="#8b5cf6" fillOpacity={0.12} strokeWidth={2} />
+                <Area type="monotone" dataKey="income" stroke="#059669" fill="#10b981" fillOpacity={0.12} strokeWidth={2} />
                 <Area type="monotone" dataKey="expenses" stroke="#e11d48" fill="#fb7185" fillOpacity={0.08} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -635,7 +635,7 @@ const DashboardOverview = ({ navigate }) => {
               <span className="text-xs text-slate-500">
                 {t('Revenue This Month', 'הכנסות החודש')}
               </span>
-              <span className="text-sm font-bold text-violet-600" dir="ltr">
+              <span className="text-sm font-bold text-emerald-600" dir="ltr">
                 ₪{formatMoney(revenueThisMonth)}
               </span>
             </div>
