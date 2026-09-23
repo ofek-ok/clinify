@@ -30,7 +30,17 @@ export default function TaskManagement() {
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
+
+  const systemOptionLabel = (type, value, fallback) => {
+    if (language === 'he') return fallback;
+    const map = {
+      status: { todo: 'To Do', in_progress: 'In Progress', blocked: 'Blocked', done: 'Done' },
+      priority: { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' },
+      area: { operations: 'Operations', business: 'Business', clinical: 'Clinical' }
+    };
+    return map[type]?.[value] || fallback;
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('all');
@@ -62,7 +72,7 @@ export default function TaskManagement() {
     const values = (workOptions || [])
       .filter(option => option.option_type === type && option.is_active)
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map(option => ({ id: option.value, label: option.label, color: option.color || '#64748b' }));
+      .map(option => ({ id: option.value, label: systemOptionLabel(type, option.value, option.label), color: option.color || '#64748b' }));
     return values.length ? values : fallback;
   };
 
