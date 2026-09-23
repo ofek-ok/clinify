@@ -1,5 +1,6 @@
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import AppointmentManager from './AppointmentManager';
 import Drawer from './ui/Drawer';
 import { useToast } from './ui/Toast';
@@ -88,6 +89,7 @@ export default function CalendarView({ initialTab = 'week' }) {
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
+  const { t, language } = useContext(LanguageContext);
 
   const [personId, setPersonId] = useState('');
   const [serviceId, setServiceId] = useState('');
@@ -102,7 +104,7 @@ export default function CalendarView({ initialTab = 'week' }) {
   const getAppointmentPersonName = (appt) =>
     getPersonName(appt?.person_id) ||
     getPatientName(appt?.patient_id) ||
-    'לקוח';
+    t('Client','לקוח');
 
   const getAppointmentTime = (value) => {
     if (!value) return '';
@@ -163,7 +165,7 @@ export default function CalendarView({ initialTab = 'week' }) {
   const weekDays = useMemo(() => {
     const currentDay = focusDate.getDay();
     const sunday = addDays(focusDate, -currentDay);
-    const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+    const dayNames = language === 'he' ? ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     return Array.from({ length: 7 }, (_, i) => {
       const d = addDays(sunday, i);
       return {
@@ -190,18 +192,18 @@ export default function CalendarView({ initialTab = 'week' }) {
 
   const periodLabel = useMemo(() => {
     if (viewMode === 'day') {
-      return focusDate.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      return focusDate.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
     if (viewMode === 'month') {
-      return focusDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+      return focusDate.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' });
     }
     if (viewMode === 'week') {
       const start = weekDays[0]?.dateObj;
       const end = weekDays[6]?.dateObj;
       if (!start || !end) return '';
-      return `${start.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      return `${start.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`;
     }
-    return 'כל התורים';
+    return t('All appointments','כל התורים');
   }, [viewMode, focusDate, weekDays]);
 
   const movePeriod = (direction) => {
@@ -259,10 +261,10 @@ export default function CalendarView({ initialTab = 'week' }) {
     <div
       key={`busy-${block.id}`}
       className={`${compact ? 'px-1.5 py-1' : 'p-2'} rounded-lg border border-slate-300 bg-slate-100 text-slate-600 text-[11px]`}
-      title="זמן תפוס מיומן חיצוני"
+      title={t("Busy time from external calendar","זמן תפוס מיומן חיצוני")}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className="font-bold truncate">תפוס · Google</span>
+        <span className="font-bold truncate">{t('Busy · Google','תפוס · Google')}</span>
         <span className="text-[10px] font-mono shrink-0">{getAppointmentTime(block.starts_at)}</span>
       </div>
     </div>
@@ -307,7 +309,7 @@ export default function CalendarView({ initialTab = 'week' }) {
 
   const handleDeleteSelectedAppointment = async () => {
     if (!selectedAppointment) return;
-    const confirmed = window.confirm(`להעביר את התור של ${getAppointmentPersonName(selectedAppointment)} לאשפה?`);
+    const confirmed = window.confirm(t(`Move the appointment for ${getAppointmentPersonName(selectedAppointment)} to Trash?`, `להעביר את התור של ${getAppointmentPersonName(selectedAppointment)} לאשפה?`));
     if (!confirmed) return;
 
     setIsEditingAppointment(true);
@@ -362,10 +364,10 @@ export default function CalendarView({ initialTab = 'week' }) {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
             {[
-              ['day', 'יום'],
-              ['week', 'שבוע'],
-              ['month', 'חודש'],
-              ['list', 'רשימה']
+              ['day', t('Day','יום')],
+              ['week', t('Week','שבוע')],
+              ['month', t('Month','חודש')],
+              ['list', t('List','רשימה')]
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -392,7 +394,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                 onClick={() => setFocusDate(dateFromKey(getIsraelDateKey()))}
                 className="mr-1 px-2 py-1 rounded-lg text-[11px] font-bold text-violet-700 hover:bg-violet-50"
               >
-                היום
+                {t('Today','היום')}
               </button>
             </div>
           )}
@@ -404,7 +406,7 @@ export default function CalendarView({ initialTab = 'week' }) {
           className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>תור חדש</span>
+          <span>{t('New Appointment','תור חדש')}</span>
         </button>
       </div>
 
@@ -413,10 +415,10 @@ export default function CalendarView({ initialTab = 'week' }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
             <div>
               <p className="text-sm font-bold text-slate-900">{periodLabel}</p>
-              <p className="text-[11px] text-slate-500">תצוגה יומית מלאה של תורים וזמנים תפוסים</p>
+              <p className="text-[11px] text-slate-500">{t('Full daily view of appointments and busy times','תצוגה יומית מלאה של תורים וזמנים תפוסים')}</p>
             </div>
             <button type="button" onClick={() => openCreateForDate(getIsraelDateKey(focusDate))} className="text-xs font-bold text-violet-700 hover:underline">
-              + תור ביום הזה
+              + {t('Appointment on this day','תור ביום הזה')}
             </button>
           </div>
           <div className="divide-y divide-slate-200">
@@ -438,7 +440,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                         onClick={() => openCreateForDate(dateKey)}
                         className="h-full min-h-14 w-full rounded-lg text-[11px] text-slate-300 hover:text-violet-600 hover:bg-violet-50/40"
                       >
-                        פנוי
+                        {t('Available','פנוי')}
                       </button>
                     )}
                   </div>
@@ -455,7 +457,7 @@ export default function CalendarView({ initialTab = 'week' }) {
             <table className="w-full min-w-[850px] border-collapse text-start">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
-                  <th className="py-2.5 px-3 border-l border-slate-200 w-20 text-center">שעה</th>
+                  <th className="py-2.5 px-3 border-l border-slate-200 w-20 text-center">{t('Time','שעה')}</th>
                   {weekDays.map(day => (
                     <th key={day.isoStr} className={`py-2.5 px-3 border-l border-slate-200 text-center w-[13.5%] ${day.isoStr === getIsraelDateKey() ? 'bg-violet-50/70' : ''}`}>
                       <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="w-full">
@@ -495,7 +497,7 @@ export default function CalendarView({ initialTab = 'week' }) {
       {viewMode === 'month' && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
           <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 text-center">
-            {['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'].map(day => <div key={day} className="py-2.5 border-l border-slate-200">{day}</div>)}
+            {(language === 'he' ? ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']).map(day => <div key={day} className="py-2.5 border-l border-slate-200">{day}</div>)}
           </div>
           <div className="grid grid-cols-7">
             {monthDays.map(day => {
@@ -519,7 +521,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                     {dayAppts.slice(0, 3).map(appt => renderEventCard(appt, true))}
                     {dayAppts.length + dayBlocks.length > 4 && (
                       <button type="button" onClick={() => { setFocusDate(day.dateObj); setViewMode('day'); }} className="text-[10px] font-bold text-slate-500 hover:text-violet-700">
-                        +{dayAppts.length + dayBlocks.length - 4} נוספים
+                        +{dayAppts.length + dayBlocks.length - 4} {t('more','נוספים')}
                       </button>
                     )}
                   </div>
@@ -535,63 +537,63 @@ export default function CalendarView({ initialTab = 'week' }) {
       <Drawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
-        title="קביעת תור חדש"
+        title={t("Create New Appointment","קביעת תור חדש")}
         footer={
           <>
             <button type="button" onClick={() => setIsAddDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">
-              ביטול
+              {t('Cancel','ביטול')}
             </button>
             <button type="button" onClick={handleCreateAppointment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50">
-              {isSubmitting ? 'שומר...' : 'קבע תור'}
+              {isSubmitting ? t('Saving...','שומר...') : t('Schedule Appointment','קבע תור')}
             </button>
           </>
         }
       >
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">לקוח / ליד *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Client / Lead *','לקוח / ליד *')}</label>
             <select required value={personId} onChange={e => setPersonId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
-              <option value="">בחר לקוח או ליד...</option>
+              <option value="">{t("Select client or lead...","בחר לקוח או ליד...")}</option>
               {bookablePeople.map(person => {
                 const lead = leads.find(item => item.person_id === person.id);
-                const suffix = person.client_status === 'customer' ? 'לקוח' : (lead?.status === 'scheduled' ? 'ליד · נקבע תור' : 'ליד');
+                const suffix = person.client_status === 'customer' ? t('Client','לקוח') : (lead?.status === 'scheduled' ? t('Lead · Scheduled','ליד · נקבע תור') : t('Lead','ליד'));
                 return <option key={person.id} value={person.id}>{person.full_name} · {suffix}</option>;
               })}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">שירות *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Service *','שירות *')}</label>
             <select required value={serviceId} onChange={e => setServiceId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
-              <option value="">בחר שירות...</option>
+              <option value="">{t("Select service...","בחר שירות...")}</option>
               {services.map(s => <option key={s.id} value={s.id}>{s.name} (₪{s.default_price || 0})</option>)}
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Date','תאריך')}</label>
               <input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">שעה פנויה</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Available Time','שעה פנויה')}</label>
               <select value={apptTime} onChange={e => setApptTime(e.target.value)} disabled={!serviceId || !apptDate || availableSlots.length === 0} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none disabled:opacity-60">
-                {availableSlots.length === 0 ? <option value="">אין שעות פנויות</option> : availableSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
+                {availableSlots.length === 0 ? <option value="">{t("No available times","אין שעות פנויות")}</option> : availableSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס תור</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Appointment Status','סטטוס תור')}</label>
             <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
-              <option value="scheduled">מתוכנן</option>
-              <option value="confirmed">מאושר</option>
+              <option value="scheduled">{t("Scheduled","מתוכנן")}</option>
+              <option value="confirmed">{t("Confirmed","מאושר")}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">הערות</label>
-            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="הערות לתור..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Notes','הערות')}</label>
+            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t("Appointment notes...","הערות לתור...")} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500 flex items-start gap-2">
@@ -604,7 +606,7 @@ export default function CalendarView({ initialTab = 'week' }) {
       <Drawer
         isOpen={Boolean(selectedAppointment)}
         onClose={() => setSelectedAppointment(null)}
-        title="פרטי תור"
+        title={t("Appointment Details","פרטי תור")}
         footer={
           <>
             <button
@@ -613,7 +615,7 @@ export default function CalendarView({ initialTab = 'week' }) {
               disabled={isEditingAppointment}
               className="px-4 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50"
             >
-              העבר לאשפה
+              {t('Move to Trash','העבר לאשפה')}
             </button>
             <div className="flex-1" />
             <button
@@ -621,7 +623,7 @@ export default function CalendarView({ initialTab = 'week' }) {
               onClick={() => setSelectedAppointment(null)}
               className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
-              סגור
+              {t('Close','סגור')}
             </button>
             <button
               type="button"
@@ -629,7 +631,7 @@ export default function CalendarView({ initialTab = 'week' }) {
               disabled={isEditingAppointment}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
-              {isEditingAppointment ? 'שומר...' : 'שמור שינויים'}
+              {isEditingAppointment ? t('Saving...','שומר...') : t('Save Changes','שמור שינויים')}
             </button>
           </>
         }
@@ -637,13 +639,13 @@ export default function CalendarView({ initialTab = 'week' }) {
         {selectedAppointment && (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">לקוח / ליד</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Client / Lead','לקוח / ליד')}</label>
               <select
                 value={editForm.person_id}
                 onChange={e => setEditForm(prev => ({ ...prev, person_id: e.target.value }))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
-                <option value="">בחר לקוח...</option>
+                <option value="">{t("Select client...","בחר לקוח...")}</option>
                 {bookablePeople.map(person => (
                   <option key={person.id} value={person.id}>{person.full_name}</option>
                 ))}
@@ -651,16 +653,16 @@ export default function CalendarView({ initialTab = 'week' }) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">שירות</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Service','שירות')}</label>
               <select
                 value={editForm.service_id}
                 onChange={e => setEditForm(prev => ({ ...prev, service_id: e.target.value }))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
-                <option value="">בחר שירות...</option>
+                <option value="">{t("Select service...","בחר שירות...")}</option>
                 {services.map(service => (
                   <option key={service.id} value={service.id}>
-                    {service.name} · {service.duration_minutes || 30} דק׳
+                    {service.name} · {service.duration_minutes || 30} {t('min','דק׳')}
                   </option>
                 ))}
               </select>
@@ -668,7 +670,7 @@ export default function CalendarView({ initialTab = 'week' }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">{t('Date','תאריך')}</label>
                 <input
                   type="date"
                   value={editForm.appointment_date}
@@ -677,7 +679,7 @@ export default function CalendarView({ initialTab = 'week' }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">שעה</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">{t('Time','שעה')}</label>
                 <input
                   type="time"
                   step="1800"
@@ -689,29 +691,29 @@ export default function CalendarView({ initialTab = 'week' }) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Status','סטטוס')}</label>
               <select
                 value={editForm.status}
                 onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
-                <option value="scheduled">מתוכנן</option>
-                <option value="confirmed">מאושר</option>
-                <option value="completed">הושלם</option>
-                <option value="no_show">אי הופעה</option>
-                <option value="cancelled">מבוטל</option>
-                <option value="rescheduled">הוזז</option>
+                <option value="scheduled">{t("Scheduled","מתוכנן")}</option>
+                <option value="confirmed">{t("Confirmed","מאושר")}</option>
+                <option value="completed">{t("Completed","הושלם")}</option>
+                <option value="no_show">{t("No Show","אי הופעה")}</option>
+                <option value="cancelled">{t("Cancelled","מבוטל")}</option>
+                <option value="rescheduled">{t("Rescheduled","הוזז")}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">הערות</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Notes','הערות')}</label>
               <textarea
                 rows={4}
                 value={editForm.notes}
                 onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-                placeholder="הערות לתור..."
+                placeholder={t("Appointment notes...","הערות לתור...")}
               />
             </div>
 
