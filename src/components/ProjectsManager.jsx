@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
@@ -16,6 +17,7 @@ export default function ProjectsManager() {
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
+  const { t } = useContext(LanguageContext);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -33,7 +35,7 @@ export default function ProjectsManager() {
   const handleCreateProject = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      showToast('אנא הזן שם פרויקט', 'error');
+      showToast(t('Please enter a project name', 'אנא הזן שם פרויקט'), 'error');
       return;
     }
     setIsSubmitting(true);
@@ -47,12 +49,12 @@ export default function ProjectsManager() {
         due_date: dueDate || null,
         progress: 0
       });
-      showToast('הפרויקט נוצר בהצלחה');
+      showToast(t('Project created successfully', 'הפרויקט נוצר בהצלחה'));
       setIsAddDrawerOpen(false);
       setName('');
       setObjective('');
     } catch (err) {
-      showToast(err.message || 'שגיאה ביצירת פרויקט', 'error');
+      showToast(err.message || t('Could not create project', 'שגיאה ביצירת פרויקט'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -62,12 +64,12 @@ export default function ProjectsManager() {
     if (!deleteModalProj) return;
     try {
       await deleteProject(deleteModalProj.id);
-      showToast('הפרויקט הועבר לאשפה');
+      showToast(t('Project moved to trash', 'הפרויקט הועבר לאשפה'));
       if (selectedProject?.id === deleteModalProj.id) {
         setSelectedProject(null);
       }
     } catch (err) {
-      showToast('שגיאה בהעברת הפרויקט לאשפה', 'error');
+      showToast(t('Could not move project to trash', 'שגיאה בהעברת הפרויקט לאשפה'), 'error');
     } finally {
       setDeleteModalProj(null);
     }
@@ -78,7 +80,7 @@ export default function ProjectsManager() {
       {/* Top Toolbar */}
       <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
         <div className="text-xs text-slate-500">
-          סה״כ פרויקטים פתוחים: <span className="text-slate-900 font-bold">{projects.filter(p => p.status !== 'completed').length}</span>
+          {t('Open projects:', 'סה״כ פרויקטים פתוחים:')} <span className="text-slate-900 font-bold">{projects.filter(p => p.status !== 'completed').length}</span>
         </div>
 
         <button
@@ -86,7 +88,7 @@ export default function ProjectsManager() {
           className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>פרויקט חדש</span>
+          <span>{t('New Project', 'פרויקט חדש')}</span>
         </button>
       </div>
 
@@ -96,19 +98,19 @@ export default function ProjectsManager() {
           <table className="w-full text-start border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
-                <th className="py-3 px-4 text-start">שם הפרויקט</th>
-                <th className="py-3 px-4 text-start">סטטוס</th>
-                <th className="py-3 px-4 text-start">תחום</th>
-                <th className="py-3 px-4 text-start">תאריך יעד</th>
-                <th className="py-3 px-4 text-start">התקדמות משימות</th>
-                <th className="py-3 px-4 text-start">משימות פתוחות</th>
+                <th className="py-3 px-4 text-start">{t('Project Name', 'שם הפרויקט')}</th>
+                <th className="py-3 px-4 text-start">{t('Status', 'סטטוס')}</th>
+                <th className="py-3 px-4 text-start">{t('Area', 'תחום')}</th>
+                <th className="py-3 px-4 text-start">{t('Due Date', 'תאריך יעד')}</th>
+                <th className="py-3 px-4 text-start">{t('Task Progress', 'התקדמות משימות')}</th>
+                <th className="py-3 px-4 text-start">{t('Open Tasks', 'משימות פתוחות')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
               {projects.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-500">
-                    אין פרויקטים להצגה.
+                    {t('No projects to display.', 'אין פרויקטים להצגה.')}
                   </td>
                 </tr>
               ) : (
@@ -132,13 +134,13 @@ export default function ProjectsManager() {
                       {/* Status */}
                       <td className="py-3.5 px-4">
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                          {proj.status === 'active' ? 'פעיל' : proj.status === 'planned' ? 'מתוכנן' : proj.status === 'completed' ? 'הושלם' : 'חסום'}
+                          {proj.status === 'active' ? t('Active','פעיל') : proj.status === 'planned' ? t('Planned','מתוכנן') : proj.status === 'completed' ? t('Completed','הושלם') : t('Blocked','חסום')}
                         </span>
                       </td>
 
                       {/* Area */}
                       <td className="py-3.5 px-4 text-slate-500">
-                        {proj.area === 'clinical' ? 'קליני' : proj.area === 'business' ? 'עסקי' : 'תפעול'}
+                        {proj.area === 'clinical' ? t('Clinical','קליני') : proj.area === 'business' ? t('Business','עסקי') : t('Operations','תפעול')}
                       </td>
 
                       {/* Due Date */}
@@ -175,7 +177,7 @@ export default function ProjectsManager() {
       <Drawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
-        title="יצירת פרויקט חדש"
+        title={t('Create New Project','יצירת פרויקט חדש')}
         footer={
           <>
             <button
@@ -189,67 +191,67 @@ export default function ProjectsManager() {
               disabled={isSubmitting}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
-              {isSubmitting ? 'שומר...' : 'שמור פרויקט'}
+              {isSubmitting ? t('Saving...','שומר...') : t('Save Project','שמור פרויקט')}
             </button>
           </>
         }
       >
         <form onSubmit={handleCreateProject} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">שם הפרויקט *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Project Name *','שם הפרויקט *')}</label>
             <input
               type="text"
               required
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="שם הפרויקט..."
+              placeholder={t('Project name...','שם הפרויקט...')}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">יעד / מטרה</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Goal / Objective','יעד / מטרה')}</label>
             <textarea
               rows={2}
               value={objective}
               onChange={e => setObjective(e.target.value)}
-              placeholder="תיאור מטרת הפרויקט..."
+              placeholder={t('Describe the project objective...','תיאור מטרת הפרויקט...')}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תחום</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Area', 'תחום')}</label>
               <select
                 value={area}
                 onChange={e => setArea(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
-                <option value="business">עסקי</option>
-                <option value="clinical">קליני</option>
-                <option value="operations">תפעול</option>
+                <option value="business">{t('Business','עסקי')}</option>
+                <option value="clinical">{t('Clinical','קליני')}</option>
+                <option value="operations">{t('Operations','תפעול')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Status', 'סטטוס')}</label>
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
               >
-                <option value="planned">מתוכנן</option>
-                <option value="active">פעיל</option>
-                <option value="blocked">חסום</option>
-                <option value="completed">הושלם</option>
+                <option value="planned">{t('Planned','מתוכנן')}</option>
+                <option value="active">{t('Active','פעיל')}</option>
+                <option value="blocked">{t('Blocked','חסום')}</option>
+                <option value="completed">{t('Completed','הושלם')}</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך התחלה</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Start Date','תאריך התחלה')}</label>
               <input
                 type="date"
                 value={startDate}
@@ -259,7 +261,7 @@ export default function ProjectsManager() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך יעד</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">{t('Due Date', 'תאריך יעד')}</label>
               <input
                 type="date"
                 value={dueDate}
@@ -276,7 +278,7 @@ export default function ProjectsManager() {
         <Drawer
           isOpen={Boolean(selectedProject)}
           onClose={() => setSelectedProject(null)}
-          title={`פרויקט: ${selectedProject.name}`}
+          title={`${t('Project','פרויקט')}: ${selectedProject.name}`}
           width="max-w-xl"
           footer={
             <div className="flex items-center justify-between w-full gap-3">
@@ -299,7 +301,7 @@ export default function ProjectsManager() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">שם הפרויקט</label>
+              <label className="block text-xs text-slate-500 mb-1">{t('Project Name', 'שם הפרויקט')}</label>
               <input
                 type="text"
                 value={selectedProject.name}
@@ -314,14 +316,14 @@ export default function ProjectsManager() {
 
             {selectedProject.objective && (
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <span className="text-[11px] text-slate-500 block mb-0.5">יעד:</span>
+                <span className="text-[11px] text-slate-500 block mb-0.5">{t('Objective:','יעד:')}</span>
                 <p className="text-xs text-slate-900">{selectedProject.objective}</p>
               </div>
             )}
 
             {/* Linked Tasks List */}
             <div className="space-y-2 pt-2">
-              <h4 className="text-xs font-bold text-slate-700">משימות בפרויקט זה</h4>
+              <h4 className="text-xs font-bold text-slate-700">{t('Tasks in this project','משימות בפרויקט זה')}</h4>
               <div className="space-y-1.5">
                 {tasks.filter(t => t.project_id === selectedProject.id).map(t => (
                   <div key={t.id} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex justify-between items-center text-xs">
@@ -332,7 +334,7 @@ export default function ProjectsManager() {
                   </div>
                 ))}
                 {tasks.filter(t => t.project_id === selectedProject.id).length === 0 && (
-                  <p className="text-xs text-slate-500 py-2">אין משימות שמשויכות לפרויקט זה.</p>
+                  <p className="text-xs text-slate-500 py-2">{t('No tasks are linked to this project.', 'אין משימות שמשויכות לפרויקט זה.')}</p>
                 )}
               </div>
             </div>
@@ -344,10 +346,10 @@ export default function ProjectsManager() {
         isOpen={Boolean(deleteModalProj)}
         onClose={() => setDeleteModalProj(null)}
         onConfirm={handleConfirmDelete}
-        title="להעביר את הפרויקט לאשפה?"
-        message={deleteModalProj ? `הפרויקט “${deleteModalProj.name}” יוסר מרשימת הפרויקטים ויישאר זמין לשחזור באשפה.` : ''}
-        confirmText="העבר לאשפה"
-        cancelText="ביטול"
+        title={t('Move project to trash?','להעביר את הפרויקט לאשפה?')}
+        message={deleteModalProj ? t(`Project “${deleteModalProj.name}” will be removed from the project list and remain available in Trash.`, `הפרויקט “${deleteModalProj.name}” יוסר מרשימת הפרויקטים ויישאר זמין לשחזור באשפה.`) : ''}
+        confirmText={t('Move to Trash','העבר לאשפה')}
+        cancelText={t('Cancel','ביטול')}
         isDanger
       />
     </div>
