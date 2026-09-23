@@ -150,59 +150,22 @@ export const ClinicProvider = ({ children }) => {
     setWorkOptions([]);
   };
 
-  // Supabase Auth Initialization
+  // Direct internal workspace initialization (no in-app login)
   useEffect(() => {
     let isMounted = true;
 
-    const loadAuthenticatedData = async (nextSession) => {
-      if (!isMounted) return;
-      setSession(nextSession || null);
-      setUser(nextSession?.user || null);
-
-      if (nextSession) {
-        try {
-          await fetchInitialData();
-        } catch (err) {
-          console.error("Error fetching authenticated data:", err);
-        }
-      } else {
-        clearData();
+    const init = async () => {
+      try {
+        await fetchInitialData();
+      } catch (err) {
+        console.error("Error fetching initial Clinify data:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-
-      if (isMounted) setIsLoading(false);
     };
 
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error("Error reading auth session:", error);
-        if (isMounted) {
-          setSession(null);
-          setUser(null);
-          clearData();
-          setIsLoading(false);
-        }
-        return;
-      }
-      return loadAuthenticatedData(data?.session || null);
-    }).catch(err => {
-      console.error("Auth initialization failed:", err);
-      if (isMounted) {
-        setSession(null);
-        setUser(null);
-        clearData();
-        setIsLoading(false);
-      }
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setIsLoading(true);
-      loadAuthenticatedData(nextSession || null);
-    });
-
-    return () => {
-      isMounted = false;
-      authListener?.subscription?.unsubscribe();
-    };
+    init();
+    return () => { isMounted = false; };
   }, []);
 
   const mapBookingSettingsFromDb = (dbRow) => {
