@@ -1,76 +1,190 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
-import { Plus, Trash2, Search } from 'lucide-react';
+import {
+  Plus, Trash2, Search, CalendarDays, Columns3, List,
+  Pencil, Filter, ExternalLink
+} from 'lucide-react';
+
+const STATUS_COLUMNS = [
+  { id:'idea', label:'רעיון' },
+  { id:'planned', label:'מתוכנן' },
+  { id:'in_production', label:'בהכנה' },
+  { id:'ready', label:'מוכן' },
+  { id:'scheduled', label:'מתוזמן' },
+  { id:'published', label:'פורסם' }
+];
+
+const PLATFORMS = [
+  ['instagram','Instagram'],
+  ['facebook','Facebook'],
+  ['tiktok','TikTok'],
+  ['linkedin','LinkedIn'],
+  ['youtube','YouTube'],
+  ['x','X'],
+  ['newsletter','Newsletter'],
+  ['website','Website'],
+  ['podcast','Podcast']
+];
+
+const FORMATS = [
+  ['reel','Reel / Short'],
+  ['carousel','Carousel'],
+  ['post','Post'],
+  ['story','Story'],
+  ['article','Article / Blog'],
+  ['video','Long Video'],
+  ['email','Email'],
+  ['podcast','Podcast']
+];
+
+const AUDIENCES = [
+  ['athletes','ספורטאים ומתאמנים'],
+  ['professionals','High-Demand Professionals'],
+  ['both','שני הקהלים'],
+  ['general','כללי']
+];
+
+const OBJECTIVES = [
+  ['awareness','מודעות'],
+  ['education','חינוך / ערך'],
+  ['authority','סמכות מקצועית'],
+  ['engagement','מעורבות'],
+  ['conversion','המרה'],
+  ['retention','שימור']
+];
+
+const STAGES = [
+  ['research','מחקר'],
+  ['writing','כתיבה'],
+  ['design','עיצוב'],
+  ['recording','צילום'],
+  ['editing','עריכה'],
+  ['review','בדיקה'],
+  ['done','מוכן']
+];
 
 export default function ContentManager() {
   const { contentItems, projects, addContentItem, updateContentItem, deleteContentItem } = useContext(ClinicContext);
   const { showToast } = useToast();
 
+  const [view, setView] = useState('kanban');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [campaignFilter, setCampaignFilter] = useState('all');
+  const [audienceFilter, setAudienceFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [deleteModalItem, setDeleteModalItem] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // New Content Form State
-  const [title, setTitle] = useState('');
-  const [platform, setPlatform] = useState('instagram');
-  const [format, setFormat] = useState('reel');
-  const [status, setStatus] = useState('idea');
-  const [publishDate, setPublishDate] = useState('');
-  const [campaign, setCampaign] = useState('');
-  const [projectId, setProjectId] = useState('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const statusColumns = [
-    { id: 'idea', label: 'רעיון' },
-    { id: 'planned', label: 'מתוכנן' },
-    { id: 'in_production', label: 'בהכנה' },
-    { id: 'ready', label: 'מוכן' },
-    { id: 'scheduled', label: 'מתוזמן' },
-    { id: 'published', label: 'פורסם' }
-  ];
+  const emptyForm = {
+    title:'',
+    platform:'instagram',
+    format:'reel',
+    audience:'both',
+    objective:'awareness',
+    status:'idea',
+    stage:'research',
+    publish_date:'',
+    campaign:'',
+    cta:'',
+    project_id:''
+  };
+  const [form, setForm] = useState(emptyForm);
 
-  const platformsList = Array.from(new Set(contentItems.map(i => i.platform).filter(Boolean)));
-  const campaignsList = Array.from(new Set(contentItems.map(i => i.campaign).filter(Boolean)));
+  const campaignsList = useMemo(
+    () => Array.from(new Set(contentItems.map(i => i.campaign).filter(Boolean))).sort(),
+    [contentItems]
+  );
 
-  const filteredItems = contentItems.filter(item => {
-    const matchesSearch = !searchTerm || (item.title && item.title.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesPlatform = platformFilter === 'all' || item.platform === platformFilter;
-    const matchesCampaign = campaignFilter === 'all' || item.campaign === campaignFilter;
-    return matchesSearch && matchesPlatform && matchesCampaign;
-  });
+  const filteredItems = useMemo(() => contentItems.filter(item => {
+    const q = searchTerm.trim().toLowerCase();
+    if (q) {
+      const haystack = [item.title,item.campaign,item.cta,item.platform,item.format,item.objective,item.audience].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    if (platformFilter !== 'all' && item.platform !== platformFilter) return false;
+    if (campaignFilter !== 'all' && item.campaign !== campaignFilter) return false;
+    if (audienceFilter !== 'all' && item.audience !== audienceFilter) return false;
+    return true;
+  }), [contentItems, searchTerm, platformFilter, campaignFilter, audienceFilter]);
 
-  const handleCreateContent = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      showToast('אנא הזן כותרת פריט תוכן', 'error');
+  const upcomingItems = useMemo(() =>
+    [...filteredItems]
+      .filter(item => item.publish_date)
+      .sort((a,b) => new Date(a.publish_date) - new Date(b.publish_date)),
+    [filteredItems]
+  );
+
+  const openNew = () => {
+    setEditingItem(null);
+    setForm(emptyForm);
+    setIsDrawerOpen(true);
+  };
+
+  const openEdit = (item) => {
+    setEditingItem(item);
+    setForm({
+      title:item.title || '',
+      platform:item.platform || 'instagram',
+      format:item.format || 'reel',
+      audience:item.audience || 'both',
+      objective:item.objective || 'awareness',
+      status:item.status || 'idea',
+      stage:item.stage || 'research',
+      publish_date:item.publish_date ? String(item.publish_date).slice(0,10) : '',
+      campaign:item.campaign || '',
+      cta:item.cta || '',
+      project_id:item.project_id || ''
+    });
+    setIsDrawerOpen(true);
+  };
+
+  const saveItem = async (e) => {
+    e?.preventDefault?.();
+    if (!form.title.trim()) {
+      showToast('אנא הזן כותרת / נושא תוכן', 'error');
       return;
     }
     setIsSubmitting(true);
     try {
-      await addContentItem({
-        title: title.trim(),
-        platform,
-        format,
-        status,
-        publish_date: publishDate || null,
-        campaign: campaign.trim() || null,
-        project_id: projectId || null
-      });
-      showToast('פריט התוכן נוצר בהצלחה');
-      setIsAddDrawerOpen(false);
-      setTitle('');
-      setCampaign('');
+      const payload = {
+        ...form,
+        title: form.title.trim(),
+        campaign: form.campaign.trim() || null,
+        cta: form.cta.trim() || null,
+        project_id: form.project_id || null,
+        publish_date: form.publish_date || null
+      };
+
+      if (editingItem) {
+        const updated = await updateContentItem(editingItem.id, payload);
+        setEditingItem(updated || { ...editingItem, ...payload });
+        showToast('פריט התוכן עודכן');
+      } else {
+        await addContentItem(payload);
+        showToast('פריט התוכן נוצר');
+      }
+      setIsDrawerOpen(false);
+      setEditingItem(null);
+      setForm(emptyForm);
     } catch (err) {
-      showToast(err.message || 'שגיאה ביצירת פריט תוכן', 'error');
+      showToast(err.message || 'לא ניתן לשמור את פריט התוכן', 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const quickStatusChange = async (item, status) => {
+    try {
+      await updateContentItem(item.id,{status});
+    } catch(err) {
+      showToast(err.message || 'לא ניתן לעדכן סטטוס','error');
     }
   };
 
@@ -78,284 +192,283 @@ export default function ContentManager() {
     if (!deleteModalItem) return;
     try {
       await deleteContentItem(deleteModalItem.id);
-      showToast('פריט התוכן נמחק');
-      if (selectedItem?.id === deleteModalItem.id) {
-        setSelectedItem(null);
-      }
-    } catch (err) {
-      showToast('שגיאה במחיקת תוכן', 'error');
+      showToast('פריט התוכן הועבר לאשפה');
+      setIsDrawerOpen(false);
+      setEditingItem(null);
+    } catch(err) {
+      showToast(err.message || 'לא ניתן להעביר לאשפה','error');
     } finally {
       setDeleteModalItem(null);
     }
   };
 
+  const platformLabel = value => PLATFORMS.find(([id])=>id===value)?.[1] || value || '-';
+  const optionLabel = (options,value) => options.find(([id])=>id===value)?.[1] || value || '-';
+
   return (
-    <div className="space-y-4 dir-rtl text-start font-sans">
-      {/* Top Controls Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
-        <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-[280px]">
-          {/* Search */}
-          <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="חיפוש תוכן..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-violet-500"
-            />
+    <div className="space-y-4 dir-rtl text-start">
+      <section className="premium-panel rounded-2xl overflow-hidden">
+        <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-950">תוכן</h1>
+            <p className="mt-1 text-xs text-slate-500">Pipeline אחד לכל התוכן של OP — מרעיון ועד פרסום.</p>
           </div>
 
-          {/* Platform Filter */}
-          <select
-            value={platformFilter}
-            onChange={e => setPlatformFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
-          >
-            <option value="all">כל הפלטפורמות</option>
-            {platformsList.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-
-          {/* Campaign Filter */}
-          <select
-            value={campaignFilter}
-            onChange={e => setCampaignFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
-          >
-            <option value="all">כל הקמפיינים</option>
-            {campaignsList.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-xl bg-slate-100 p-1">
+              <ViewButton active={view==='kanban'} onClick={()=>setView('kanban')} icon={Columns3}>Kanban</ViewButton>
+              <ViewButton active={view==='calendar'} onClick={()=>setView('calendar')} icon={CalendarDays}>Calendar</ViewButton>
+              <ViewButton active={view==='list'} onClick={()=>setView('list')} icon={List}>List</ViewButton>
+            </div>
+            <button onClick={openNew} className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white hover:bg-violet-500">
+              <Plus className="w-4 h-4"/> תוכן חדש
+            </button>
+          </div>
         </div>
 
-        {/* Primary CTA */}
-        <button
-          onClick={() => setIsAddDrawerOpen(true)}
-          className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>תוכן חדש</span>
-        </button>
-      </div>
+        <div className="border-t border-slate-100 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[220px] flex-1 max-w-sm">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
+              <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} placeholder="חיפוש תוכן..." className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pr-9 pl-3 text-xs outline-none focus:border-violet-400"/>
+            </div>
+            <button onClick={()=>setShowFilters(v=>!v)} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${showFilters ? 'border-violet-200 bg-violet-50 text-violet-700':'border-slate-200 bg-white text-slate-600'}`}>
+              <Filter className="w-4 h-4"/> סינון
+            </button>
+          </div>
 
-      {/* Horizontal Scroll Kanban Board */}
-      <div className="overflow-x-auto pb-4">
-        <div className="flex space-x-3 space-x-reverse min-w-[1200px] items-start">
-          {statusColumns.map(col => {
-            const colItems = filteredItems.filter(i => i.status === col.id);
-
-            return (
-              <div key={col.id} className="w-[280px] bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3 shrink-0 min-h-[440px]">
-                {/* Column Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <span className="text-xs font-bold text-slate-900">{col.label}</span>
-                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {colItems.length}
-                  </span>
-                </div>
-
-                {/* Content Cards */}
-                <div className="space-y-2.5">
-                  {colItems.map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => setSelectedItem(item)}
-                      className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-3 space-y-2 cursor-pointer transition-all hover:shadow-md group"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                          {item.platform} · {item.format}
-                        </span>
-                      </div>
-
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-violet-400 transition-colors leading-snug">
-                        {item.title}
-                      </h4>
-
-                      <div className="text-[11px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-200">
-                        {item.publish_date && <div>פרסום: {item.publish_date}</div>}
-                        {item.campaign && <div className="text-violet-400">{item.campaign}</div>}
-                      </div>
-                    </div>
-                  ))}
-
-                  {colItems.length === 0 && (
-                    <div className="text-center py-8 text-[11px] text-slate-600">
-                      אין פריטי תוכן
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {showFilters && (
+            <div className="grid gap-2 pt-3 sm:grid-cols-3">
+              <FilterSelect value={platformFilter} onChange={setPlatformFilter}>
+                <option value="all">כל הפלטפורמות</option>
+                {PLATFORMS.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+              </FilterSelect>
+              <FilterSelect value={campaignFilter} onChange={setCampaignFilter}>
+                <option value="all">כל הקמפיינים</option>
+                {campaignsList.map(c=><option key={c} value={c}>{c}</option>)}
+              </FilterSelect>
+              <FilterSelect value={audienceFilter} onChange={setAudienceFilter}>
+                <option value="all">כל הקהלים</option>
+                {AUDIENCES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+              </FilterSelect>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
-      {/* Add Content Drawer */}
+      {view==='kanban' && (
+        <div className="overflow-x-auto pb-3">
+          <div className="grid auto-cols-[280px] grid-flow-col gap-3 min-w-max">
+            {STATUS_COLUMNS.map(col=>{
+              const items=filteredItems.filter(item=>item.status===col.id);
+              return (
+                <section key={col.id} className="rounded-2xl border border-slate-200 bg-slate-50/80 overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-3">
+                    <span className="text-xs font-extrabold text-slate-900">{col.label}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{items.length}</span>
+                  </div>
+                  <div className="space-y-2 p-2 min-h-[420px]">
+                    {items.map(item=>(
+                      <article key={item.id} onClick={()=>openEdit(item)} className="group cursor-pointer rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="rounded-md bg-violet-50 px-2 py-1 text-[9px] font-bold text-violet-700">{platformLabel(item.platform)}</span>
+                          {item.publish_date && <span className="text-[9px] font-medium text-slate-400">{String(item.publish_date).slice(0,10)}</span>}
+                        </div>
+                        <h3 className="mt-2 text-xs font-extrabold leading-5 text-slate-900">{item.title}</h3>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {item.format && <Pill>{optionLabel(FORMATS,item.format)}</Pill>}
+                          {item.audience && <Pill>{optionLabel(AUDIENCES,item.audience)}</Pill>}
+                        </div>
+                        {item.campaign && <div className="mt-2 text-[10px] font-bold text-violet-600">{item.campaign}</div>}
+                        <select value={item.status || 'idea'} onClick={e=>e.stopPropagation()} onChange={e=>quickStatusChange(item,e.target.value)} className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px]">
+                          {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                        </select>
+                      </article>
+                    ))}
+                    {!items.length && <div className="py-10 text-center text-[10px] text-slate-400">אין פריטים</div>}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {view==='calendar' && (
+        <section className="premium-panel rounded-2xl overflow-hidden">
+          <div className="border-b border-slate-100 px-4 py-3">
+            <h2 className="text-xs font-extrabold text-slate-900">לוח פרסומים</h2>
+            <p className="mt-1 text-[10px] text-slate-400">ממויין לפי תאריך הפרסום המתוכנן.</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {upcomingItems.length ? upcomingItems.map(item=>(
+              <button key={item.id} type="button" onClick={()=>openEdit(item)} className="grid w-full grid-cols-[110px_1fr_auto] items-center gap-3 px-4 py-3 text-start hover:bg-slate-50">
+                <div className="font-mono text-[11px] font-bold text-violet-700">{String(item.publish_date).slice(0,10)}</div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-bold text-slate-900">{item.title}</div>
+                  <div className="mt-1 text-[10px] text-slate-400">{platformLabel(item.platform)} · {optionLabel(FORMATS,item.format)} · {optionLabel(AUDIENCES,item.audience)}</div>
+                </div>
+                <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{optionLabel(STATUS_COLUMNS.map(s=>[s.id,s.label]),item.status)}</span>
+              </button>
+            )) : <div className="py-14 text-center text-xs text-slate-400">אין פריטי תוכן עם תאריך פרסום.</div>}
+          </div>
+        </section>
+      )}
+
+      {view==='list' && (
+        <section className="premium-panel rounded-2xl overflow-x-auto">
+          <table className="w-full min-w-[980px] text-xs">
+            <thead className="bg-slate-50 text-[10px] font-bold text-slate-400">
+              <tr>
+                <th className="px-4 py-3 text-start">תוכן</th>
+                <th className="px-3 py-3 text-start">פלטפורמה</th>
+                <th className="px-3 py-3 text-start">קהל</th>
+                <th className="px-3 py-3 text-start">מטרה</th>
+                <th className="px-3 py-3 text-start">סטטוס</th>
+                <th className="px-3 py-3 text-start">פרסום</th>
+                <th className="px-3 py-3 text-center">פעולות</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredItems.map(item=>(
+                <tr key={item.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-slate-900">{item.title}</div>
+                    {item.campaign && <div className="mt-1 text-[10px] text-violet-600">{item.campaign}</div>}
+                  </td>
+                  <td className="px-3 py-3 text-slate-600">{platformLabel(item.platform)}</td>
+                  <td className="px-3 py-3 text-slate-600">{optionLabel(AUDIENCES,item.audience)}</td>
+                  <td className="px-3 py-3 text-slate-600">{optionLabel(OBJECTIVES,item.objective)}</td>
+                  <td className="px-3 py-3">
+                    <select value={item.status||'idea'} onChange={e=>quickStatusChange(item,e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px]">
+                      {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-3 font-mono text-[10px] text-slate-500">{item.publish_date ? String(item.publish_date).slice(0,10) : '-'}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={()=>openEdit(item)} className="p-1.5 text-slate-400 hover:text-violet-600"><Pencil className="w-4 h-4"/></button>
+                      <button onClick={()=>setDeleteModalItem(item)} className="p-1.5 text-slate-400 hover:text-rose-600"><Trash2 className="w-4 h-4"/></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       <Drawer
-        isOpen={isAddDrawerOpen}
-        onClose={() => setIsAddDrawerOpen(false)}
-        title="יצירת פריט תוכן חדש"
+        isOpen={isDrawerOpen}
+        onClose={()=>{setIsDrawerOpen(false);setEditingItem(null);}}
+        title={editingItem ? 'עריכת פריט תוכן' : 'פריט תוכן חדש'}
+        width="max-w-2xl"
         footer={
           <>
-            <button
-              onClick={() => setIsAddDrawerOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
-            >
-              ביטול
-            </button>
-            <button
-              onClick={handleCreateContent}
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
-            >
-              {isSubmitting ? 'שומר...' : 'שמור תוכן'}
+            {editingItem && (
+              <button type="button" onClick={()=>setDeleteModalItem(editingItem)} className="mr-auto inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+                <Trash2 className="w-4 h-4"/> העבר לאשפה
+              </button>
+            )}
+            <button type="button" onClick={()=>setIsDrawerOpen(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">ביטול</button>
+            <button type="button" onClick={saveItem} disabled={isSubmitting} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 disabled:opacity-50">
+              {isSubmitting ? 'שומר...' : 'שמור'}
             </button>
           </>
         }
       >
-        <form onSubmit={handleCreateContent} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">כותרת / נושא התוכן *</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="כותרת התוכן..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
-            />
+        <form onSubmit={saveItem} className="space-y-4">
+          <Field label="כותרת / נושא *">
+            <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="work-input" placeholder="מה נושא התוכן?" />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="פלטפורמה">
+              <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} className="work-input">
+                {PLATFORMS.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+              </select>
+            </Field>
+            <Field label="פורמט">
+              <select value={form.format} onChange={e=>setForm({...form,format:e.target.value})} className="work-input">
+                {FORMATS.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+              </select>
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">פלטפורמה</label>
-              <select
-                value={platform}
-                onChange={e => setPlatform(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              >
-                <option value="instagram">Instagram</option>
-                <option value="youtube">YouTube</option>
-                <option value="linkedin">LinkedIn</option>
-                <option value="newsletter">Newsletter</option>
-                <option value="website">Website</option>
-                <option value="podcast">Podcast</option>
+            <Field label="קהל יעד">
+              <select value={form.audience} onChange={e=>setForm({...form,audience:e.target.value})} className="work-input">
+                {AUDIENCES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">פורמט</label>
-              <select
-                value={format}
-                onChange={e => setFormat(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              >
-                <option value="reel">Reel / Short</option>
-                <option value="post">Post / Carousel</option>
-                <option value="article">Article / Blog</option>
-                <option value="video">Long Video</option>
-                <option value="story">Story</option>
+            </Field>
+            <Field label="מטרת התוכן">
+              <select value={form.objective} onChange={e=>setForm({...form,objective:e.target.value})} className="work-input">
+                {OBJECTIVES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
               </select>
-            </div>
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">סטטוס</label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              >
-                {statusColumns.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            <Field label="סטטוס">
+              <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} className="work-input">
+                {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">תאריך פרסום</label>
-              <input
-                type="date"
-                value={publishDate}
-                onChange={e => setPublishDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-              />
-            </div>
+            </Field>
+            <Field label="שלב הפקה">
+              <select value={form.stage} onChange={e=>setForm({...form,stage:e.target.value})} className="work-input">
+                {STAGES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+              </select>
+            </Field>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">קמפיין</label>
-            <input
-              type="text"
-              value={campaign}
-              onChange={e => setCampaign(e.target.value)}
-              placeholder="שם קמפיין..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="תאריך פרסום">
+              <input type="date" value={form.publish_date} onChange={e=>setForm({...form,publish_date:e.target.value})} className="work-input"/>
+            </Field>
+            <Field label="קמפיין">
+              <input value={form.campaign} onChange={e=>setForm({...form,campaign:e.target.value})} className="work-input" placeholder="למשל: Launch Jan 2027"/>
+            </Field>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">שיוך לפרויקט</label>
-            <select
-              value={projectId}
-              onChange={e => setProjectId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
-            >
-              <option value="">ללא קישור לפרויקט</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <Field label="CTA">
+            <input value={form.cta} onChange={e=>setForm({...form,cta:e.target.value})} className="work-input" placeholder="מה אנחנו רוצים שהקורא יעשה?"/>
+          </Field>
+
+          <Field label="שיוך לפרויקט">
+            <select value={form.project_id} onChange={e=>setForm({...form,project_id:e.target.value})} className="work-input">
+              <option value="">ללא פרויקט</option>
+              {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-          </div>
+          </Field>
         </form>
       </Drawer>
 
-      {/* Selected Item Detail Drawer */}
-      {selectedItem && (
-        <Drawer
-          isOpen={Boolean(selectedItem)}
-          onClose={() => setSelectedItem(null)}
-          title={`פריט תוכן: ${selectedItem.title}`}
-          footer={
-            <div className="flex justify-end items-center w-full">
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
-              >
-                סגור
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">כותרת</label>
-              <input
-                type="text"
-                value={selectedItem.title}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSelectedItem(prev => ({ ...prev, title: val }));
-                  updateContentItem(selectedItem.id, { title: val });
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">סטטוס</label>
-              <select
-                value={selectedItem.status || 'idea'}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSelectedItem(prev => ({ ...prev, status: val }));
-                  updateContentItem(selectedItem.id, { status: val });
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
-              >
-                {statusColumns.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
-            </div>
-          </div>
-        </Drawer>
-      )}
+      <ConfirmModal
+        isOpen={Boolean(deleteModalItem)}
+        onClose={()=>setDeleteModalItem(null)}
+        onConfirm={handleConfirmDelete}
+        title="להעביר את פריט התוכן לאשפה?"
+        message={deleteModalItem ? `“${deleteModalItem.title}” יוסר מה־pipeline ויישאר זמין לשחזור באשפה.` : ''}
+        confirmText="העבר לאשפה"
+        cancelText="ביטול"
+        isDanger
+      />
     </div>
   );
+}
+
+function Field({label,children}) {
+  return <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-500">{label}</span>{children}</label>;
+}
+
+function FilterSelect({value,onChange,children}) {
+  return <select value={value} onChange={e=>onChange(e.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700">{children}</select>;
+}
+
+function Pill({children}) {
+  return <span className="rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-500">{children}</span>;
+}
+
+function ViewButton({active,onClick,icon:Icon,children}) {
+  return <button type="button" onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-bold transition ${active ? 'bg-white text-slate-950 shadow-sm':'text-slate-500'}`}><Icon className="w-3.5 h-3.5"/>{children}</button>;
 }
