@@ -133,7 +133,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
 
   if (!item || !person) return null;
 
-  const name = person.full_name || 'לא צוין שם';
+  const name = person.full_name || t('Name not provided','לא צוין שם');
   const rawPhone = person.phone || '';
   const rawEmail = person.email || '';
   const phone = rawPhone || '-';
@@ -205,7 +205,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   };
 
   const handleDeleteClinicalNote = async (note) => {
-    if (!window.confirm('להעביר את תרשומת הטיפול לאשפה?')) return;
+    if (!window.confirm(t('Move the clinical note to Trash?','להעביר את תרשומת הטיפול לאשפה?'))) return;
     try {
       await softDeleteRecord('patient_clinical_notes', note.id);
       showToast('תרשומת הטיפול הועברה לאשפה');
@@ -224,7 +224,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   };
 
   const handleDeleteClient = async () => {
-    const confirmed = window.confirm(`להעביר את ${person.full_name || 'הלקוח'} לאשפה? הרשומות המקושרות יישארו במערכת וניתן לשחזר את הלקוח מהאשפה.`);
+    const confirmed = window.confirm(t(`Move ${person.full_name || 'the client'} to Trash? Linked records will remain and the client can be restored from Trash.`, `להעביר את ${person.full_name || 'הלקוח'} לאשפה? הרשומות המקושרות יישארו במערכת וניתן לשחזר את הלקוח מהאשפה.`));
     if (!confirmed) return;
     try {
       if (lead?.id) await deleteLead(lead.id);
@@ -238,7 +238,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   };
 
   const handleDeleteLinkedTask = async (task) => {
-    if (!window.confirm(`להעביר את המשימה "${task.title}" לאשפה?`)) return;
+    if (!window.confirm(t(`Move task "${task.title}" to Trash?`, `להעביר את המשימה "${task.title}" לאשפה?`))) return;
     await deleteTask(task.id);
   };
 
@@ -636,7 +636,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         </div>
                         <div className="flex items-center gap-2">
                           {task.due_date && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{task.due_date}</span>}
-                          <button type="button" onClick={() => handleDeleteLinkedTask(task)} className="text-[10px] font-bold text-rose-600 hover:text-rose-700">אשפה</button>
+                          <button type="button" onClick={() => handleDeleteLinkedTask(task)} className="text-[10px] font-bold text-rose-600 hover:text-rose-700">{t('Trash','אשפה')}</button>
                         </div>
                       </div>
                     ))
@@ -734,7 +734,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
             <div className="mt-6 border-t border-rose-100 pt-4">
               <button type="button" onClick={handleDeleteClient}
                 className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50">
-                העבר לקוח לאשפה
+                {t('Move Client to Trash','העבר לקוח לאשפה')}
               </button>
             </div>
 
@@ -785,19 +785,19 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         {noteMode === 'soap' ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                             <div>
-                              <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">S - Subjective (תלונה/תיאור)</label>
+                              <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{t('S - Subjective','S - Subjective (תלונה/תיאור)')}</label>
                               <textarea rows={2} value={soapForm.subjective} onChange={e => setSoapForm({...soapForm, subjective: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-violet-600 uppercase mb-1">O - Objective (ממצאים/בדיקה)</label>
+                              <label className="block text-[10px] font-bold text-violet-600 uppercase mb-1">{t('O - Objective','O - Objective (ממצאים/בדיקה)')}</label>
                               <textarea rows={2} value={soapForm.objective} onChange={e => setSoapForm({...soapForm, objective: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">A - Assessment (אבחון/הערכה)</label>
+                              <label className="block text-[10px] font-bold text-purple-600 uppercase mb-1">{t('A - Assessment','A - Assessment (אבחון/הערכה)')}</label>
                               <textarea rows={2} value={soapForm.assessment} onChange={e => setSoapForm({...soapForm, assessment: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">P - Plan (תוכנית המשך)</label>
+                              <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">{t('P - Plan','P - Plan (תוכנית המשך)')}</label>
                               <textarea rows={2} value={soapForm.plan} onChange={e => setSoapForm({...soapForm, plan: e.target.value})} className="w-full p-2 premium-panel rounded-2xl outline-none" />
                             </div>
                           </div>
@@ -826,10 +826,10 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                         patient.clinical_notes.map(note => (
                           <div key={note.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2">
                             <div className="flex justify-between items-center text-[10px] text-slate-500">
-                              <span className="font-bold text-slate-700">{note.author || 'מטפל'}</span>
+                              <span className="font-bold text-slate-700">{note.author || t('Therapist','מטפל')}</span>
                               <div className="flex items-center gap-2">
                                 <span>{new Date(note.created_at).toLocaleString('he-IL')}</span>
-                                <button type="button" onClick={() => handleDeleteClinicalNote(note)} className="font-bold text-rose-600 hover:text-rose-700">אשפה</button>
+                                <button type="button" onClick={() => handleDeleteClinicalNote(note)} className="font-bold text-rose-600 hover:text-rose-700">{t('Trash','אשפה')}</button>
                               </div>
                             </div>
                             {renderNoteContent(note.content)}
