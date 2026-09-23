@@ -54,7 +54,7 @@ const ServicesCatalog = () => {
 
   const handleDeleteItem = async (item) => {
     if (!item) return;
-    if (!window.confirm(`להעביר את "${item.name || 'הפריט'}" לאשפה?`)) return;
+    if (!window.confirm(t(`Move "${item.name || 'item'}" to Trash?`, `להעביר את "${item.name || 'הפריט'}" לאשפה?`))) return;
     try {
       await deleteService(item.id);
       showToast(t('Item moved to trash', 'הפריט הועבר לאשפה'));
@@ -63,7 +63,7 @@ const ServicesCatalog = () => {
         setEditingItemId(null);
       }
     } catch (err) {
-      showToast(err.message || 'שגיאה בהעברת הפריט לאשפה', 'error');
+      showToast(err.message || t('Could not move item to Trash','שגיאה בהעברת הפריט לאשפה'), 'error');
     }
   };
 
@@ -80,12 +80,12 @@ const ServicesCatalog = () => {
     }
 
     if (formData.type === 'service' && (!Number.isFinite(duration) || duration <= 0)) {
-      showToast('לטיפול חייב להיות משך זמן גדול מאפס', 'error');
+      showToast(t('A treatment must have a duration greater than zero','לטיפול חייב להיות משך זמן גדול מאפס'), 'error');
       return;
     }
 
     if (formData.type === 'package' && (!Number.isFinite(sessionCount) || sessionCount <= 0)) {
-      showToast('בחבילה חייב להיות לפחות טיפול אחד', 'error');
+      showToast(t('A package must contain at least one session','בחבילה חייב להיות לפחות טיפול אחד'), 'error');
       return;
     }
 
@@ -102,15 +102,15 @@ const ServicesCatalog = () => {
     try {
       if (editingItemId) {
         await updateService(editingItemId, payload);
-        showToast('הפריט עודכן');
+        showToast(t('Item updated','הפריט עודכן'));
       } else {
         await addService(payload);
-        showToast('הפריט נוסף לקטלוג');
+        showToast(t('Item added to catalog','הפריט נוסף לקטלוג'));
       }
       setIsModalOpen(false);
       setEditingItemId(null);
     } catch (err) {
-      showToast(err.message || 'לא ניתן לשמור את הפריט', 'error');
+      showToast(err.message || t('Could not save item','לא ניתן לשמור את הפריט'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -220,7 +220,7 @@ const ServicesCatalog = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-extrabold text-slate-800 text-base group-hover:text-violet-600 transition-colors">{item.name || 'ללא שם'}</h3>
+                    <h3 className="font-extrabold text-slate-800 text-base group-hover:text-violet-600 transition-colors">{item.name || t('Unnamed','ללא שם')}</h3>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description || '-'}</p>
                   </div>
                 </div>
@@ -250,7 +250,7 @@ const ServicesCatalog = () => {
                     <button
                       onClick={() => handleDeleteItem(item)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                      title="העבר לאשפה"
+                      title={t("Move to Trash","העבר לאשפה")}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
@@ -367,7 +367,7 @@ const ServicesCatalog = () => {
                   disabled={isSubmitting}
                   className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl shadow-xs transition-colors text-xs"
                 >
-                  {isSubmitting ? 'שומר...' : editingItemId ? t('Update Item', 'עדכן פריט') : t('Save Item', 'שמור פריט לקטלוג')}
+                  {isSubmitting ? t('Saving...','שומר...') : editingItemId ? t('Update Item', 'עדכן פריט') : t('Save Item', 'שמור פריט לקטלוג')}
                 </button>
               </div>
 
