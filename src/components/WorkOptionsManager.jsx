@@ -14,7 +14,32 @@ const TYPE_META = {
 export default function WorkOptionsManager() {
   const { workOptions, addWorkOption, updateWorkOption } = useContext(ClinicContext);
   const { showToast } = useToast();
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
+  const systemOptionLabel = (type, value, fallback) => {
+    const map = {
+      status: {
+        todo: { en: 'To Do', he: 'לביצוע' },
+        in_progress: { en: 'In Progress', he: 'בתהליך' },
+        blocked: { en: 'Blocked', he: 'חסום' },
+        done: { en: 'Done', he: 'הושלם' }
+      },
+      priority: {
+        critical: { en: 'Critical', he: 'קריטי' },
+        high: { en: 'High', he: 'גבוה' },
+        medium: { en: 'Medium', he: 'בינוני' },
+        low: { en: 'Low', he: 'נמוך' }
+      },
+      area: {
+        operations: { en: 'Operations', he: 'תפעול' },
+        business: { en: 'Business', he: 'עסקי' },
+        clinical: { en: 'Clinical', he: 'קליני' }
+      }
+    };
+    const systemValue = map[type]?.[value];
+    if (!systemValue) return fallback;
+    const isSystemLabel = fallback === systemValue.he || fallback === systemValue.en;
+    return isSystemLabel ? systemValue[language] : fallback;
+  };
   const [activeType, setActiveType] = useState('status');
   const [newLabel, setNewLabel] = useState('');
   const [newColor, setNewColor] = useState('#64748b');
@@ -69,7 +94,7 @@ export default function WorkOptionsManager() {
           {options.map(option => (
             <div key={option.id} className="p-3 grid grid-cols-[1fr_90px_100px_80px] gap-2 items-center">
               <input
-                value={option.label}
+                value={systemOptionLabel(option.option_type, option.value, option.label)}
                 onChange={e => updateWorkOption(option.id,{label:e.target.value})}
                 className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs"
               />
