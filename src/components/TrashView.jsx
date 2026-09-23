@@ -99,7 +99,7 @@ export default function TrashView() {
         </div>
         <button type="button" onClick={loadTrash} disabled={loading} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          רענון
+          {t('Refresh','רענון')}
         </button>
       </div>
 
