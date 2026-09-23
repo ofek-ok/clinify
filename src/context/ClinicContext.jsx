@@ -252,14 +252,34 @@ export const ClinicProvider = ({ children }) => {
         const mapped = mapBookingSettingsFromDb(bookingSetRes.data);
         if (mapped) setBookingSettings(mapped);
       }
-      if (hoursRes.data && hoursRes.data.length > 0) {
-        setBusinessHours(hoursRes.data.map(h => ({
-          dayIndex: h.day_index,
-          dayOfWeek: h.day_of_week,
-          isOpen: h.is_open,
-          startTime: h.start_time,
-          endTime: h.end_time
-        })));
+      if (hoursRes.data) {
+        const fallbackHours = [
+          { dayIndex: 0, dayOfWeek: 'Sunday', isOpen: false, startTime: '09:00', endTime: '17:00' },
+          { dayIndex: 1, dayOfWeek: 'Monday', isOpen: true, startTime: '09:00', endTime: '17:00' },
+          { dayIndex: 2, dayOfWeek: 'Tuesday', isOpen: true, startTime: '09:00', endTime: '17:00' },
+          { dayIndex: 3, dayOfWeek: 'Wednesday', isOpen: true, startTime: '09:00', endTime: '17:00' },
+          { dayIndex: 4, dayOfWeek: 'Thursday', isOpen: true, startTime: '09:00', endTime: '17:00' },
+          { dayIndex: 5, dayOfWeek: 'Friday', isOpen: true, startTime: '09:00', endTime: '14:00' },
+          { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' }
+        ];
+
+        const dbHoursByIndex = new Map(
+          hoursRes.data.map(h => [Number(h.day_index), h])
+        );
+
+        setBusinessHours(
+          fallbackHours.map(day => {
+            const h = dbHoursByIndex.get(day.dayIndex);
+            if (!h) return day;
+            return {
+              dayIndex: day.dayIndex,
+              dayOfWeek: h.day_of_week || day.dayOfWeek,
+              isOpen: Boolean(h.is_open),
+              startTime: String(h.start_time || day.startTime).slice(0, 5),
+              endTime: String(h.end_time || day.endTime).slice(0, 5)
+            };
+          })
+        );
       }
     } catch (error) {
       console.error("Error fetching internal OP OS data:", error);
