@@ -369,7 +369,7 @@ export default function ContentManager() {
           <>
             {editingItem && (
               <button type="button" onClick={()=>setDeleteModalItem(editingItem)} className="mr-auto inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
-                <Trash2 className="w-4 h-4"/> העבר לאשפה
+                <Trash2 className="w-4 h-4"/> {t('Move to Trash','העבר לאשפה')}
               </button>
             )}
             <button type="button" onClick={()=>setIsDrawerOpen(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">{t('Cancel','ביטול')}</button>
