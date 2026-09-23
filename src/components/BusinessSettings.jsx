@@ -49,10 +49,10 @@ export default function BusinessSettings({ activeFormSubTab }) {
   return (
     <div className="space-y-6 dir-rtl text-start font-sans">
       {/* Settings Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">הגדרות</h1>
 
-        <div className="flex bg-white p-1 rounded-xl border border-slate-200">
+        <div className="flex max-w-full overflow-x-auto bg-white p-1 rounded-xl border border-slate-200">
           {[
             { id: 'services', label: 'שירותים' },
             { id: 'hours', label: 'שעות פעילות' },
@@ -62,7 +62,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`shrink-0 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab.id
                   ? 'bg-violet-600 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-700'
@@ -146,7 +146,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
         {/* TAB 3: Booking Portal */}
         {activeTab === 'bookingPortal' && (
           <div className="space-y-4">
-            <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between">
+            <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-xs font-bold text-slate-900">כתובת דף הזימון הציבורי</h3>
                 <p className="text-slate-500 text-xs font-mono dir-ltr text-right mt-0.5">{window.location.origin}/book</p>
