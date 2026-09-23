@@ -31,7 +31,7 @@ export default function WorkManager({ initialTab = 'board' }) {
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">{t('Work','עבודה')}</h1>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-              משימות, פרויקטים ותכנון ביצוע במקום אחד — עם כמה תצוגות על אותו מידע.
+              {t('Tasks, projects and execution planning in one place — with multiple views of the same data.','משימות, פרויקטים ותכנון ביצוע במקום אחד — עם כמה תצוגות על אותו מידע.')}
             </p>
           </div>
         </div>
