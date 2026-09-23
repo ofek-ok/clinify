@@ -164,3 +164,39 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Full bilingual direction support */
+html[dir="ltr"] .dir-rtl,
+body[dir="ltr"] .dir-rtl {
+  direction: ltr !important;
+  text-align: start;
+}
+
+html[dir="rtl"] .dir-ltr,
+body[dir="rtl"] .dir-ltr {
+  direction: rtl !important;
+  text-align: start;
+}
+
+html[dir="ltr"] .clinify-workspace,
+body[dir="ltr"] .clinify-workspace {
+  direction: ltr;
+}
+
+html[dir="rtl"] .clinify-workspace,
+body[dir="rtl"] .clinify-workspace {
+  direction: rtl;
+}
+
+html[dir="ltr"] .clinify-workspace input:not([dir]),
+html[dir="ltr"] .clinify-workspace textarea:not([dir]),
+html[dir="ltr"] .clinify-workspace select:not([dir]) {
+  text-align: left;
+}
+
+html[dir="rtl"] .clinify-workspace input:not([dir]),
+html[dir="rtl"] .clinify-workspace textarea:not([dir]),
+html[dir="rtl"] .clinify-workspace select:not([dir]) {
+  text-align: right;
+}
