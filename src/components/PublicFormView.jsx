@@ -23,7 +23,13 @@ const PublicFormView = () => {
   const fetchForm = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('forms').select('id, title, description, fields').eq('id', id).single();
+      const { data, error } = await supabase
+        .from('forms')
+        .select('id, title, description, fields, is_public')
+        .eq('id', id)
+        .eq('is_public', true)
+        .is('deleted_at', null)
+        .single();
       if (error || !data) {
         setError(t('Form not found.', 'הטופס לא נמצא.'));
       } else {
@@ -120,17 +126,29 @@ const PublicFormView = () => {
                 </label>
                 
                 {field.type === 'text' && (
-                  <input type="text" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-sm font-medium" />
+                  <input type="text" placeholder={field.placeholder || ''} required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-sm font-medium" />
                 )}
                 
                 {field.type === 'tel' && (
-                  <input type="tel" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} dir="ltr" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-end text-sm font-medium" />
+                  <input type="tel" placeholder={field.placeholder || ''} required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} dir="ltr" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-end text-sm font-medium" />
                 )}
                 
                 {field.type === 'textarea' && (
-                  <textarea required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} rows="4" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all resize-none text-sm font-medium"></textarea>
+                  <textarea placeholder={field.placeholder || ''} required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} rows="4" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all resize-none text-sm font-medium"></textarea>
                 )}
                 
+                {field.type === 'email' && (
+                  <input type="email" placeholder={field.placeholder || ''} required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-sm font-medium" />
+                )}
+
+                {field.type === 'number' && (
+                  <input type="number" placeholder={field.placeholder || ''} required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-sm font-medium" />
+                )}
+
+                {field.type === 'date' && (
+                  <input type="date" required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-sm font-medium" />
+                )}
+
                 {field.type === 'dropdown' && (
                   <select required={field.required} value={responses[field.id] || ''} onChange={e => handleInputChange(field.id, e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all cursor-pointer text-sm font-medium">
                     <option value="">{t('Select an option...', 'בחר אפשרות...')}</option>
