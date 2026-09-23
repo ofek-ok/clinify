@@ -2,9 +2,11 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import PatientDirectory from './PatientDirectory';
 import LeadsPipeline from './LeadsPipeline';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 
 export default function ClientCrmManager({ initialTab = 'leads' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const { t } = useContext(LanguageContext);
   const { leads = [], people = [] } = useContext(ClinicContext);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            לידים <span className="mr-1 text-[10px] opacity-75">{openLeadsCount}</span>
+            {t('Leads','לידים')} <span className="ms-1 text-[10px] opacity-75">{openLeadsCount}</span>
           </button>
           <button
             onClick={() => setActiveTab('clients')}
@@ -47,7 +49,7 @@ export default function ClientCrmManager({ initialTab = 'leads' }) {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            לקוחות <span className="mr-1 text-[10px] opacity-75">{customersCount}</span>
+            {t('Clients','לקוחות')} <span className="ms-1 text-[10px] opacity-75">{customersCount}</span>
           </button>
         </div>
       </div>
