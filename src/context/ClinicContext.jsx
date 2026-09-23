@@ -3,7 +3,11 @@ import { supabase } from '../supabaseClient';
 
 export const ClinicContext = createContext();
 
-const lt = (en, he) => (document?.documentElement?.lang === 'en' ? en : he);
+const lt = (en, he) => (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? en : he);
+const localizedSystemDefault = (value, en, he) => {
+  if (!value || value === en || value === he) return lt(en, he);
+  return value;
+};
 
 const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
 
@@ -182,8 +186,8 @@ export const ClinicProvider = ({ children }) => {
       allowPackages: dbRow.allow_packages ?? true,
       allowPayAtClinic: dbRow.allow_pay_at_clinic ?? true,
       requirePolicy: dbRow.require_policy ?? true,
-      cancellationPolicyText: dbRow.cancellation_policy_text || lt('Appointments can be cancelled up to 24 hours in advance.','ביטול תור יתאפשר עד 24 שעות מראש.'),
-      welcomeMessage: dbRow.welcome_message || lt('Welcome to the public booking page. Please choose a service and a convenient time.','ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.'),
+      cancellationPolicyText: localizedSystemDefault(dbRow.cancellation_policy_text, 'Appointments can be cancelled up to 24 hours in advance.', 'ביטול תור יתאפשר עד 24 שעות מראש.'),
+      welcomeMessage: localizedSystemDefault(dbRow.welcome_message, 'Welcome to the public booking page. Please choose a service and a convenient time.', 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.'),
       clinicAddress: dbRow.clinic_address || '',
       logoUrl: dbRow.logo_url || '',
       businessName: dbRow.business_name || 'Okonski Performance',
