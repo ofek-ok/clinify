@@ -129,6 +129,27 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
+  const clearData = () => {
+    setPeople([]);
+    setPatients([]);
+    setServices([]);
+    setPatientPackages([]);
+    setAppointments([]);
+    setLeads([]);
+    setTasks([]);
+    setProjects([]);
+    setContentItems([]);
+    setPayments([]);
+    setExpenses([]);
+    setForms([]);
+    setFormSubmissions([]);
+    setLeadCommunications([]);
+    setClinicalNotes([]);
+    setPatientDocuments([]);
+    setCalendarBlocks([]);
+    setWorkOptions([]);
+  };
+
   // Supabase Auth Initialization
   useEffect(() => {
     let isMounted = true;
@@ -154,10 +175,23 @@ export const ClinicProvider = ({ children }) => {
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
         console.error("Error reading auth session:", error);
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          clearData();
+          setIsLoading(false);
+        }
         return;
       }
-      loadAuthenticatedData(data?.session || null);
+      return loadAuthenticatedData(data?.session || null);
+    }).catch(err => {
+      console.error("Auth initialization failed:", err);
+      if (isMounted) {
+        setSession(null);
+        setUser(null);
+        clearData();
+        setIsLoading(false);
+      }
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -292,20 +326,8 @@ export const ClinicProvider = ({ children }) => {
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
-    setPeople([]);
-    setPatients([]);
-    setAppointments([]);
-    setLeads([]);
-    setTasks([]);
-    setProjects([]);
-    setContentItems([]);
-    setPayments([]);
-    setExpenses([]);
-    setLeadCommunications([]);
-    setClinicalNotes([]);
-    setPatientDocuments([]);
-    setCalendarBlocks([]);
-    setWorkOptions([]);
+    clearData();
+    setIsLoading(false);
   };
 
   const removeFromLocalState = (table, id) => {
