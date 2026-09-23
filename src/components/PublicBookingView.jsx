@@ -41,7 +41,11 @@ const PublicBookingView = () => {
       setIsLoadingPublicData(true);
       try {
         const [servicesRes, hoursRes, settingsRes] = await Promise.all([
-          supabase.from('services').select('id, name, description, duration_minutes, default_price, type, session_count'),
+          supabase
+            .from('services')
+            .select('id, name, description, duration_minutes, default_price, type, session_count')
+            .eq('type', 'service')
+            .is('deleted_at', null),
           supabase.from('business_hours').select('day_index, day_of_week, is_open, start_time, end_time'),
           supabase.from('booking_settings').select('allow_packages, allow_pay_at_clinic, require_policy, cancellation_policy_text, welcome_message, clinic_address, logo_url').maybeSingle()
         ]);
