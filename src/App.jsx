@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ClinicProvider, ClinicContext } from './context/ClinicContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
-import OwnerAuthScreen from './components/OwnerAuthScreen';
 import PublicFormView from './components/PublicFormView';
 import PublicBookingView from './components/PublicBookingView';
 import PublicPerformanceSignupView from './components/PublicPerformanceSignupView';
@@ -50,7 +49,7 @@ class ErrorBoundary extends Component {
 }
 
 const MainAppRoute = () => {
-  const { isLoading, session } = useContext(ClinicContext);
+  const { isLoading } = useContext(ClinicContext);
 
   if (isLoading) {
     return (
@@ -59,8 +58,6 @@ const MainAppRoute = () => {
       </div>
     );
   }
-
-  if (!session) return <OwnerAuthScreen />;
 
   return <Layout />;
 };
@@ -76,7 +73,7 @@ function App() {
             <Route path="/form/:id" element={<PublicFormView />} />
             <Route path="/performance" element={<PublicPerformanceSignupView />} />
             
-            {/* Main Application - Owner authentication required */}
+            {/* Main Application - direct internal workspace access */}
             <Route 
               path="/*" 
               element={
