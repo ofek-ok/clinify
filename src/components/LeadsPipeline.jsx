@@ -321,7 +321,7 @@ export default function LeadsPipeline({ onSelectLead }) {
 
                 {colLeads.length === 0 && (
                   <div className="text-center py-8 text-[11px] text-slate-600">
-                    אין לידים בסטטוס זה
+                    {t('No leads in this status','אין לידים בסטטוס זה')}
                   </div>
                 )}
               </div>
@@ -562,7 +562,7 @@ export default function LeadsPipeline({ onSelectLead }) {
 
                 {selectedLeadCommunications.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
-                    עדיין אין תיעוד תקשורת.
+                    {t('No communication history yet.','עדיין אין תיעוד תקשורת.')}
                   </div>
                 ) : (
                   <div className="space-y-2">
