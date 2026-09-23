@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { LanguageContext } from '../context/LanguageContext';
 
 const PublicBookingView = () => {
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
 
   const [services, setServices] = useState([]);
   const [businessHours, setBusinessHours] = useState([]);
@@ -56,7 +56,28 @@ const PublicBookingView = () => {
 
         if (servicesRes.data) setServices(servicesRes.data);
         if (hoursRes.data) setBusinessHours(hoursRes.data);
-        if (settingsRes.data) setBookingSettings(prev => ({ ...prev, ...settingsRes.data }));
+        if (settingsRes.data) {
+          const defaultPolicyHe = 'ביטול תור יתאפשר עד 24 שעות מראש.';
+          const defaultPolicyEn = 'Appointments can be cancelled up to 24 hours in advance.';
+          const defaultWelcomeHe = 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.';
+          const defaultWelcomeEn = 'Welcome to the public booking page. Please choose a service and a convenient time.';
+          setBookingSettings(prev => ({
+            ...prev,
+            ...settingsRes.data,
+            cancellation_policy_text:
+              !settingsRes.data.cancellation_policy_text ||
+              settingsRes.data.cancellation_policy_text === defaultPolicyHe ||
+              settingsRes.data.cancellation_policy_text === defaultPolicyEn
+                ? t(defaultPolicyEn, defaultPolicyHe)
+                : settingsRes.data.cancellation_policy_text,
+            welcome_message:
+              !settingsRes.data.welcome_message ||
+              settingsRes.data.welcome_message === defaultWelcomeHe ||
+              settingsRes.data.welcome_message === defaultWelcomeEn
+                ? t(defaultWelcomeEn, defaultWelcomeHe)
+                : settingsRes.data.welcome_message
+          }));
+        }
       } catch (err) {
         console.error("Error loading public booking data:", err);
       } finally {
@@ -65,7 +86,7 @@ const PublicBookingView = () => {
     };
 
     fetchPublicData();
-  }, []);
+  }, [language]);
 
   // Calculate available time slots locally using public business_hours
   const availableSlots = useMemo(() => {
