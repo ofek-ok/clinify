@@ -116,7 +116,11 @@ export const ClinicProvider = ({ children }) => {
     cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש.',
     welcomeMessage: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
     clinicAddress: '',
-    logoUrl: ''
+    logoUrl: '',
+    businessName: 'Okonski Performance',
+    publicPhone: '',
+    publicEmail: '',
+    publicWebsite: ''
   });
   
   const [businessHours, setBusinessHours] = useState([
@@ -179,7 +183,11 @@ export const ClinicProvider = ({ children }) => {
       cancellationPolicyText: dbRow.cancellation_policy_text || 'ביטול תור יתאפשר עד 24 שעות מראש.',
       welcomeMessage: dbRow.welcome_message || 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
       clinicAddress: dbRow.clinic_address || '',
-      logoUrl: dbRow.logo_url || ''
+      logoUrl: dbRow.logo_url || '',
+      businessName: dbRow.business_name || 'Okonski Performance',
+      publicPhone: dbRow.public_phone || '',
+      publicEmail: dbRow.public_email || '',
+      publicWebsite: dbRow.public_website || ''
     };
   };
 
@@ -192,6 +200,10 @@ export const ClinicProvider = ({ children }) => {
       welcome_message: settings.welcomeMessage,
       clinic_address: settings.clinicAddress,
       logo_url: settings.logoUrl,
+      business_name: settings.businessName,
+      public_phone: settings.publicPhone,
+      public_email: settings.publicEmail,
+      public_website: settings.publicWebsite,
       updated_at: new Date().toISOString()
     };
   };
@@ -404,6 +416,7 @@ export const ClinicProvider = ({ children }) => {
 
   const updateBookingSettings = async (updates) => {
     const nextSettings = { ...bookingSettings, ...updates };
+    setBookingSettings(nextSettings);
     const dbPayload = mapBookingSettingsToDb(nextSettings);
 
     let data, error;
@@ -426,12 +439,16 @@ export const ClinicProvider = ({ children }) => {
 
     if (error) {
       console.error("Error updating booking settings:", error);
+      setBookingSettings(bookingSettings);
       throw error;
     }
 
     if (data && data[0]) {
-      const updatedMapped = mapBookingSettingsFromDb(data[0]);
-      setBookingSettings(updatedMapped);
+      setBookingSettings(prev => ({
+        ...prev,
+        id: data[0].id,
+        clinicId: data[0].clinic_id
+      }));
     }
   };
 
