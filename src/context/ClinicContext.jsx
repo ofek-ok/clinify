@@ -1298,6 +1298,38 @@ export const ClinicProvider = ({ children }) => {
     return null;
   };
 
+  const updateFormSubmission = async (submissionId, updates) => {
+    const payload = { ...updates };
+
+    if (updates.person_id !== undefined) {
+      const personId = updates.person_id || null;
+      payload.person_id = personId;
+      const linkedPatient = personId ? patients.find(p => p.person_id === personId) : null;
+      const linkedLead = personId ? leads.find(l => l.person_id === personId) : null;
+      payload.patient_id = linkedPatient?.id || null;
+      payload.lead_id = linkedLead?.id || null;
+    }
+
+    const { data, error } = await supabase
+      .from('form_submissions')
+      .update(payload)
+      .eq('id', submissionId)
+      .select();
+
+    if (error) {
+      console.error("Error updating form submission:", error);
+      throw error;
+    }
+
+    if (data?.[0]) {
+      setFormSubmissions(prev => prev.map(item => item.id === submissionId ? data[0] : item));
+      return data[0];
+    }
+    return null;
+  };
+
+  const deleteFormSubmission = async (submissionId) => softDeleteRecord('form_submissions', submissionId);
+
   const updateLeadStatus = async (leadId, newStatus) => {
     const { error } = await supabase.from('leads').update({ status: newStatus }).eq('id', leadId);
     if (error) {
@@ -1646,7 +1678,7 @@ export const ClinicProvider = ({ children }) => {
       addContentItem, updateContentItem, deleteContentItem,
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
       addExpense, updateExpense, deleteExpense, 
-      addForm, updateForm, addFormSubmission, updateBookingSettings,
+      addForm, updateForm, addFormSubmission, updateFormSubmission, deleteFormSubmission, updateBookingSettings,
       issuePackageToPatient, redeemPackageSession, triggerCustomerConversionIfEligible,
       updateLeadStatus, updateBusinessHour, getAvailableSlotsForDate,
       getPatientName, getServiceName, getPaymentForAppointment, 
