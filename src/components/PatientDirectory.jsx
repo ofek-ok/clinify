@@ -192,11 +192,11 @@ export default function PatientDirectory() {
                     <td className="px-4 py-3.5">
                       {client.patient ? (
                         <span className="inline-flex rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
-                          קיים
+                          {t('Exists','קיים')}
                         </span>
                       ) : (
                         <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-500">
-                          טרם נפתח
+                          {t('Not opened yet','טרם נפתח')}
                         </span>
                       )}
                     </td>
@@ -222,7 +222,7 @@ export default function PatientDirectory() {
                         }}
                         className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-violet-700 transition-colors hover:bg-slate-200"
                       >
-                        פרטים
+                        {t('Details','פרטים')}
                       </button>
                     </td>
                   </tr>
