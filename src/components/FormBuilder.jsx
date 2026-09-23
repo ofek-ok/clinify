@@ -111,7 +111,7 @@ const FormBuilder = ({ navigate }) => {
             <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder={t("Form description (optional)","תיאור הטופס (אופציונלי)")} rows={2} className="w-full text-sm text-slate-500 bg-transparent outline-none resize-none" />
             <label className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-slate-600">
               <input type="checkbox" checked={isPublic} onChange={e=>setIsPublic(e.target.checked)} className="w-4 h-4 accent-violet-600" />
-              טופס ציבורי שניתן לשתף בקישור
+              {t('Public form that can be shared by link','טופס ציבורי שניתן לשתף בקישור')}
             </label>
           </div>
 
@@ -152,7 +152,7 @@ const FormBuilder = ({ navigate }) => {
 
                 <label className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-slate-600">
                   <input type="checkbox" checked={Boolean(field.required)} onChange={e=>updateField(field.id,'required',e.target.checked)} className="w-4 h-4 accent-violet-600" />
-                  שדה חובה
+                  {t('Required Field','שדה חובה')}
                 </label>
               </div>
             ))}
