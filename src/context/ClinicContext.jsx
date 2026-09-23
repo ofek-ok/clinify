@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient';
 
 export const ClinicContext = createContext();
 
+const lt = (en, he) => (document?.documentElement?.lang === 'en' ? en : he);
+
 const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
 
 const getIsraelDateParts = (value = new Date()) => {
@@ -113,8 +115,8 @@ export const ClinicProvider = ({ children }) => {
     allowPackages: true,
     allowPayAtClinic: true,
     requirePolicy: true,
-    cancellationPolicyText: 'ביטול תור יתאפשר עד 24 שעות מראש.',
-    welcomeMessage: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
+    cancellationPolicyText: lt('Appointments can be cancelled up to 24 hours in advance.','ביטול תור יתאפשר עד 24 שעות מראש.'),
+    welcomeMessage: lt('Welcome to the public booking page. Please choose a service and a convenient time.','ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.'),
     clinicAddress: '',
     logoUrl: '',
     businessName: 'Okonski Performance',
@@ -180,8 +182,8 @@ export const ClinicProvider = ({ children }) => {
       allowPackages: dbRow.allow_packages ?? true,
       allowPayAtClinic: dbRow.allow_pay_at_clinic ?? true,
       requirePolicy: dbRow.require_policy ?? true,
-      cancellationPolicyText: dbRow.cancellation_policy_text || 'ביטול תור יתאפשר עד 24 שעות מראש.',
-      welcomeMessage: dbRow.welcome_message || 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
+      cancellationPolicyText: dbRow.cancellation_policy_text || lt('Appointments can be cancelled up to 24 hours in advance.','ביטול תור יתאפשר עד 24 שעות מראש.'),
+      welcomeMessage: dbRow.welcome_message || lt('Welcome to the public booking page. Please choose a service and a convenient time.','ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.'),
       clinicAddress: dbRow.clinic_address || '',
       logoUrl: dbRow.logo_url || '',
       businessName: dbRow.business_name || 'Okonski Performance',
@@ -336,7 +338,7 @@ export const ClinicProvider = ({ children }) => {
       'patient_packages','lead_communications','patient_clinical_notes',
       'patient_documents','calendar_blocks'
     ]);
-    if (!allowedTables.has(table)) throw new Error('סוג הרשומה אינו נתמך למחיקה');
+    if (!allowedTables.has(table)) throw new Error(lt('This record type cannot be deleted','סוג הרשומה אינו נתמך למחיקה'));
 
     const { error } = await supabase
       .from(table)
@@ -460,15 +462,15 @@ export const ClinicProvider = ({ children }) => {
     const cleanEmail = emailVal ? emailVal.toLowerCase() : null;
 
     if (!nameVal) {
-      throw new Error('שם מלא נדרש ליצירת זהות');
+      throw new Error(lt('Full name is required','שם מלא נדרש ליצירת זהות'));
     }
 
     if (phoneVal && (!cleanPhone || cleanPhone.length < 7)) {
-      throw new Error('מספר הטלפון שהוזן אינו תקין');
+      throw new Error(lt('The phone number is invalid','מספר הטלפון שהוזן אינו תקין'));
     }
 
     if (!cleanPhone && !cleanEmail) {
-      throw new Error('יש להזין לפחות טלפון או דוא״ל');
+      throw new Error(lt('Enter at least a phone number or email address','יש להזין לפחות טלפון או דוא״ל'));
     }
 
     let phonePerson = null;
@@ -573,7 +575,7 @@ export const ClinicProvider = ({ children }) => {
       clientStatus: 'lead'
     });
 
-    if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
+    if (!person) throw new Error(lt('Could not create the central contact identity','נכשל ביצירת זהות מרכזית'));
 
     const existingPatient = patients.find(p => p.person_id === person.id);
     if (existingPatient) return existingPatient;
@@ -688,11 +690,11 @@ export const ClinicProvider = ({ children }) => {
     const durationMinutes = Number(service?.duration_minutes || 30);
 
     if (!isWithinBusinessHours(appt.appointment_date, durationMinutes)) {
-      throw new Error('התור נמצא מחוץ לשעות הפעילות');
+      throw new Error(lt('The appointment is outside business hours','התור נמצא מחוץ לשעות הפעילות'));
     }
 
     if (!isTimeSlotAvailable(appt.appointment_date, durationMinutes)) {
-      throw new Error('המועד שנבחר מתנגש עם תור קיים');
+      throw new Error(lt('The selected time conflicts with an existing appointment','המועד שנבחר מתנגש עם תור קיים'));
     }
 
     const appointmentStart = new Date(appt.appointment_date);
@@ -709,7 +711,7 @@ export const ClinicProvider = ({ children }) => {
       console.error("Error creating appointment:", error);
       const message = String(error.message || '');
       if (message.includes('appointments_no_overlap') || message.includes('exclusion')) {
-        throw new Error('המועד שנבחר כבר תפוס. בחר שעה אחרת.');
+        throw new Error(lt('The selected time is already booked. Choose another time.','המועד שנבחר כבר תפוס. בחר שעה אחרת.'));
       }
       throw error;
     }
@@ -743,7 +745,7 @@ export const ClinicProvider = ({ children }) => {
 
   const updateAppointment = async (apptId, updates) => {
     const existing = appointments.find(a => a.id === apptId);
-    if (!existing) throw new Error('התור לא נמצא');
+    if (!existing) throw new Error(lt('Appointment not found','התור לא נמצא'));
 
     const nextServiceId = updates.service_id ?? existing.service_id;
     const nextStart = updates.appointment_date ?? existing.appointment_date;
@@ -753,10 +755,10 @@ export const ClinicProvider = ({ children }) => {
 
     if (!['cancelled', 'rescheduled'].includes(nextStatus)) {
       if (!isWithinBusinessHours(nextStart, durationMinutes)) {
-        throw new Error('התור נמצא מחוץ לשעות הפעילות');
+        throw new Error(lt('The appointment is outside business hours','התור נמצא מחוץ לשעות הפעילות'));
       }
       if (!isTimeSlotAvailable(nextStart, durationMinutes, apptId)) {
-        throw new Error('המועד שנבחר מתנגש עם תור או זמן תפוס');
+        throw new Error(lt('The selected time conflicts with an appointment or blocked time','המועד שנבחר מתנגש עם תור או זמן תפוס'));
       }
     }
 
@@ -783,7 +785,7 @@ export const ClinicProvider = ({ children }) => {
       console.error("Error updating appointment:", error);
       const message = String(error.message || '');
       if (message.includes('appointments_no_overlap') || message.includes('exclusion')) {
-        throw new Error('המועד שנבחר כבר תפוס. בחר שעה אחרת.');
+        throw new Error(lt('The selected time is already booked. Choose another time.','המועד שנבחר כבר תפוס. בחר שעה אחרת.'));
       }
       throw error;
     }
@@ -801,7 +803,7 @@ export const ClinicProvider = ({ children }) => {
 
   const updateAppointmentStatus = async (apptId, newStatus) => {
     const appt = appointments.find(a => a.id === apptId);
-    if (!appt) throw new Error('התור לא נמצא');
+    if (!appt) throw new Error(lt('Appointment not found','התור לא נמצא'));
     if (appt.status === newStatus) return appt;
 
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', apptId);
@@ -841,10 +843,10 @@ export const ClinicProvider = ({ children }) => {
       clientStatus: 'lead'
     });
 
-    if (!person) throw new Error('נכשל ביצירת זהות מרכזית');
+    if (!person) throw new Error(lt('Could not create the central contact identity','נכשל ביצירת זהות מרכזית'));
 
     if (person.client_status === 'customer') {
-      throw new Error('האדם כבר קיים כלקוח במערכת');
+      throw new Error(lt('This person already exists as a client','האדם כבר קיים כלקוח במערכת'));
     }
 
     let existingLead = leads.find(l => l.person_id === person.id) || null;
@@ -916,7 +918,7 @@ export const ClinicProvider = ({ children }) => {
       .replace(/\s+/g, '_')
       .replace(/[^a-z0-9_\u0590-\u05ff-]/g, '');
 
-    if (!normalizedValue || !option.label?.trim()) throw new Error('יש להזין שם לאפשרות');
+    if (!normalizedValue || !option.label?.trim()) throw new Error(lt('Enter a name for the option','יש להזין שם לאפשרות'));
 
     const payload = {
       option_type: option.option_type,
@@ -1178,7 +1180,7 @@ export const ClinicProvider = ({ children }) => {
       }
 
       if (payment.item_type === 'package' && payment.patient_id) {
-        const catalogItem = services.find(s => s.id === payment.catalog_item_id) || { name: 'כרטיסיית טיפולים', session_count: 10 };
+        const catalogItem = services.find(s => s.id === payment.catalog_item_id) || { name: lt('Treatment Package','כרטיסיית טיפולים'), session_count: 10 };
         await issuePackageToPatient(payment.patient_id, catalogItem);
       }
       return createdPayment;
@@ -1579,7 +1581,7 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const addClinicalNote = async (patientId, noteText, author = null) => {
-    const defaultAuthor = author || user?.user_metadata?.full_name || 'מטפל/ת';
+    const defaultAuthor = author || user?.user_metadata?.full_name || lt('Therapist','מטפל/ת');
     const patient = patients.find(p => p.id === patientId);
     const personId = patient ? patient.person_id : null;
 
@@ -1604,10 +1606,10 @@ export const ClinicProvider = ({ children }) => {
 
   const addPatientDocument = async (patientId, docName, docUrl) => {
     const patient = patients.find(p => p.id === patientId);
-    if (!patient) throw new Error('לא נמצא תיק טיפולי תקין');
-    if (!docName?.trim()) throw new Error('שם המסמך נדרש');
+    if (!patient) throw new Error(lt('A valid clinical record was not found','לא נמצא תיק טיפולי תקין'));
+    if (!docName?.trim()) throw new Error(lt('Document name is required','שם המסמך נדרש'));
     if (!docUrl || docUrl === '#') {
-      throw new Error('יש לצרף קישור או קובץ אמיתי לפני שמירת מסמך');
+      throw new Error(lt('Attach a valid link or file before saving the document','יש לצרף קישור או קובץ אמיתי לפני שמירת מסמך'));
     }
 
     const newDoc = {
@@ -1637,7 +1639,7 @@ export const ClinicProvider = ({ children }) => {
       null;
 
     if (!targetLead && !targetPersonId) {
-      throw new Error('לא נמצא איש קשר תקין לשיוך התקשורת');
+      throw new Error(lt('A valid contact was not found for this communication','לא נמצא איש קשר תקין לשיוך התקשורת'));
     }
 
     const newComm = {
