@@ -63,10 +63,10 @@ const PublicPerformanceSignupView = () => {
             Okonski Performance
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
-            הצטרפות לעדכונים
+            {t('Join the Updates List','הצטרפות לעדכונים')}
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm">
-            אני רוצה לקבל עדכון כשהטיפולים נפתחים ולקבל גישה מוקדמת.
+            {t('Get notified when treatments open and receive early access.','אני רוצה לקבל עדכון כשהטיפולים נפתחים ולקבל גישה מוקדמת.')}
           </p>
         </div>
 
@@ -77,7 +77,7 @@ const PublicPerformanceSignupView = () => {
             </div>
             <h3 className="text-lg font-bold text-white">{t('Signup received successfully!','ההרשמה התקבלה בהצלחה!')}</h3>
             <p className="text-xs text-slate-300">
-              תודה רבה. נעדכן אותך ברגע שההרשמה לטיפולים תיפתח.
+              {t('Thank you. We will update you as soon as treatment registration opens.','תודה רבה. נעדכן אותך ברגע שההרשמה לטיפולים תיפתח.')}
             </p>
           </div>
         ) : (
@@ -90,7 +90,7 @@ const PublicPerformanceSignupView = () => {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
-                שם מלא *
+                {t('Full Name *','שם מלא *')}
               </label>
               <input 
                 type="text" 
@@ -104,7 +104,7 @@ const PublicPerformanceSignupView = () => {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
-                דואר אלקטרוני
+                {t('Email','דואר אלקטרוני')}
               </label>
               <input 
                 type="email" 
@@ -117,7 +117,7 @@ const PublicPerformanceSignupView = () => {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
-                מספר טלפון
+                {t('Phone Number','מספר טלפון')}
               </label>
               <input 
                 type="tel" 
