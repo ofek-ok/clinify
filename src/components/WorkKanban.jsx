@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import { useToast } from './ui/Toast';
 
 export default function WorkKanban() {
@@ -8,6 +9,7 @@ export default function WorkKanban() {
   const [projectFilter, setProjectFilter] = useState('');
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
+  const { t } = useContext(LanguageContext);
 
   const statuses = useMemo(() => {
     const configured = (workOptions || [])
@@ -15,10 +17,10 @@ export default function WorkKanban() {
       .sort((a,b) => a.sort_order - b.sort_order);
     if (configured.length) return configured;
     return [
-      { value:'todo', label:'לביצוע', color:'#64748b' },
-      { value:'in_progress', label:'בתהליך', color:'#3b82f6' },
-      { value:'blocked', label:'חסום', color:'#f43f5e' },
-      { value:'done', label:'הושלם', color:'#8b5cf6' }
+      { value:'todo', label:t('To Do','לביצוע'), color:'#64748b' },
+      { value:'in_progress', label:t('In Progress','בתהליך'), color:'#3b82f6' },
+      { value:'blocked', label:t('Blocked','חסום'), color:'#f43f5e' },
+      { value:'done', label:t('Done','הושלם'), color:'#8b5cf6' }
     ];
   }, [workOptions]);
 
@@ -37,7 +39,7 @@ export default function WorkKanban() {
     if (groupBy === 'priority') return getOptions('priority').map(o => ({...o}));
     if (groupBy === 'area') return getOptions('area').map(o => ({...o}));
     if (groupBy === 'project') return [
-      { value:'__none__', label:'ללא פרויקט', color:'#94a3b8' },
+      { value:'__none__', label:t('No Project','ללא פרויקט'), color:'#94a3b8' },
       ...projects.map(p => ({ value:p.id, label:p.name, color:p.color || '#64748b' }))
     ];
     return statuses;
@@ -49,9 +51,9 @@ export default function WorkKanban() {
       if (groupBy === 'priority') await updateTask(task.id, { priority: value });
       if (groupBy === 'area') await updateTask(task.id, { area: value });
       if (groupBy === 'project') await updateTask(task.id, { project_id: value === '__none__' ? null : value });
-      showToast('המשימה הועברה');
+      showToast(t('Task moved','המשימה הועברה'));
     } catch (err) {
-      showToast(err.message || 'לא ניתן להעביר את המשימה', 'error');
+      showToast(err.message || t('Could not move task','לא ניתן להעביר את המשימה'), 'error');
     }
   };
 
@@ -59,16 +61,16 @@ export default function WorkKanban() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-3">
         <select value={groupBy} onChange={e=>setGroupBy(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-          <option value="status">קבץ לפי סטטוס</option>
-          <option value="priority">קבץ לפי עדיפות</option>
-          <option value="area">קבץ לפי תחום</option>
-          <option value="project">קבץ לפי פרויקט</option>
+          <option value="status">{t('Group by Status','קבץ לפי סטטוס')}</option>
+          <option value="priority">{t('Group by Priority','קבץ לפי עדיפות')}</option>
+          <option value="area">{t('Group by Area','קבץ לפי תחום')}</option>
+          <option value="project">{t('Group by Project','קבץ לפי פרויקט')}</option>
         </select>
         <select value={projectFilter} onChange={e=>setProjectFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-          <option value="">כל הפרויקטים</option>
+          <option value="">{t('All Projects','כל הפרויקטים')}</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="חיפוש..." className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs min-w-[180px]" />
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t("Search...","חיפוש...")} className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs min-w-[180px]" />
       </div>
       <div className="overflow-x-auto pb-2">
       <div className="grid auto-cols-[280px] grid-flow-col gap-3 min-w-max">
@@ -100,7 +102,7 @@ export default function WorkKanban() {
                         {(task.labels || []).slice(0,3).map(label => <span key={label} className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600">{label}</span>)}
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-slate-400">
-                        <span>{project?.name || 'ללא פרויקט'}</span>
+                        <span>{project?.name || t('No Project','ללא פרויקט')}</span>
                         <span>{task.due_date || '-'}</span>
                       </div>
                       <select
@@ -113,7 +115,7 @@ export default function WorkKanban() {
                     </article>
                   );
                 })}
-                {columnTasks.length === 0 && <div className="py-8 text-center text-[11px] text-slate-400">אין משימות</div>}
+                {columnTasks.length === 0 && <div className="py-8 text-center text-[11px] text-slate-400">{t('No tasks','אין משימות')}</div>}
               </div>
             </section>
           );
