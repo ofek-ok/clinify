@@ -129,27 +129,45 @@ export const ClinicProvider = ({ children }) => {
     { dayIndex: 6, dayOfWeek: 'Saturday', isOpen: false, startTime: '09:00', endTime: '13:00' },
   ]);
 
-  // Supabase Auth Initialization (Strict Secure Session check)
-  // Temporary No-Login Mode: Fetch live DB data immediately on mount without auth session
+  // Supabase Auth Initialization
   useEffect(() => {
     let isMounted = true;
 
-    async function init() {
-      try {
-        await fetchInitialData();
-      } catch (err) {
-        console.error("Error fetching initial data on mount:", err);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
+    const loadAuthenticatedData = async (nextSession) => {
+      if (!isMounted) return;
+      setSession(nextSession || null);
+      setUser(nextSession?.user || null);
 
-    init();
+      if (nextSession) {
+        try {
+          await fetchInitialData();
+        } catch (err) {
+          console.error("Error fetching authenticated data:", err);
+        }
+      } else {
+        clearData();
+      }
+
+      if (isMounted) setIsLoading(false);
+    };
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("Error reading auth session:", error);
+        if (isMounted) setIsLoading(false);
+        return;
+      }
+      loadAuthenticatedData(data?.session || null);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setIsLoading(true);
+      loadAuthenticatedData(nextSession || null);
+    });
 
     return () => {
       isMounted = false;
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
 
