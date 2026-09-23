@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import ClientDetailDrawer from './ClientDetailDrawer';
 import { Search } from 'lucide-react';
 
@@ -10,7 +11,7 @@ const formatDateTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
 
-  return date.toLocaleString('he-IL', {
+  return date.toLocaleString(language === 'he' ? 'he-IL' : 'en-US', {
     timeZone: BUSINESS_TIME_ZONE,
     day: '2-digit',
     month: '2-digit',
@@ -25,7 +26,7 @@ const formatDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
 
-  return date.toLocaleDateString('he-IL', {
+  return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
     timeZone: BUSINESS_TIME_ZONE,
     day: '2-digit',
     month: '2-digit',
@@ -35,6 +36,7 @@ const formatDate = (value) => {
 
 export default function PatientDirectory() {
   const { people = [], patients = [], leads = [], appointments = [], payments = [] } = useContext(ClinicContext);
+  const { t, language } = useContext(LanguageContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
 
@@ -109,13 +111,13 @@ export default function PatientDirectory() {
   }, [clientsData, searchTerm]);
 
   return (
-    <div className="space-y-4 text-start font-sans" dir="rtl">
+    <div className="space-y-4 text-start font-sans" >
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full max-w-sm">
           <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="search"
-            placeholder="חיפוש לפי שם, טלפון או אימייל..."
+            placeholder={t("Search by name, phone or email...","חיפוש לפי שם, טלפון או אימייל...")}
             value={searchTerm}
             onChange={event => setSearchTerm(event.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-9 pl-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none"
@@ -125,11 +127,11 @@ export default function PatientDirectory() {
         <div className="text-xs font-medium text-slate-500">
           {searchTerm ? (
             <>
-              מוצגים: <span className="font-bold text-slate-900">{filteredClients.length}</span> מתוך {clientsData.length}
+              {t('Showing:','מוצגים:')} <span className="font-bold text-slate-900">{filteredClients.length}</span> {t('of','מתוך')} {clientsData.length}
             </>
           ) : (
             <>
-              סה״כ לקוחות: <span className="font-bold text-slate-900">{clientsData.length}</span>
+              {t('Total clients:','סה״כ לקוחות:')} <span className="font-bold text-slate-900">{clientsData.length}</span>
             </>
           )}
         </div>
@@ -140,14 +142,14 @@ export default function PatientDirectory() {
           <table className="w-full min-w-[980px] border-collapse text-start">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500">
-                <th className="px-4 py-3 text-start">לקוח</th>
-                <th className="px-4 py-3 text-start">קשר</th>
-                <th className="px-4 py-3 text-start">לקוח מאז</th>
-                <th className="px-4 py-3 text-start">תיק טיפולי</th>
-                <th className="px-4 py-3 text-start">תור הבא</th>
-                <th className="px-4 py-3 text-start">טיפול אחרון</th>
-                <th className="px-4 py-3 text-start">סה״כ שולם</th>
-                <th className="px-4 py-3 text-end">פעולה</th>
+                <th className="px-4 py-3 text-start">{t('Client','לקוח')}</th>
+                <th className="px-4 py-3 text-start">{t('Contact','קשר')}</th>
+                <th className="px-4 py-3 text-start">{t('Client Since','לקוח מאז')}</th>
+                <th className="px-4 py-3 text-start">{t('Clinical File','תיק טיפולי')}</th>
+                <th className="px-4 py-3 text-start">{t('Next Appointment','תור הבא')}</th>
+                <th className="px-4 py-3 text-start">{t('Last Treatment','טיפול אחרון')}</th>
+                <th className="px-4 py-3 text-start">{t('Total Paid','סה״כ שולם')}</th>
+                <th className="px-4 py-3 text-end">{t('Action','פעולה')}</th>
               </tr>
             </thead>
 
@@ -155,7 +157,7 @@ export default function PatientDirectory() {
               {filteredClients.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
-                    {searchTerm ? 'לא נמצאו לקוחות התואמים לחיפוש.' : 'אין עדיין לקוחות להצגה.'}
+                    {searchTerm ? t('No clients match your search.','לא נמצאו לקוחות התואמים לחיפוש.') : t('No clients to display yet.','אין עדיין לקוחות להצגה.')}
                   </td>
                 </tr>
               ) : (
@@ -168,7 +170,7 @@ export default function PatientDirectory() {
                     <td className="px-4 py-3.5">
                       <div className="font-bold text-slate-900">{client.full_name}</div>
                       <div className="mt-0.5 text-[10px] text-slate-400">
-                        {client.source || 'ללא מקור'}
+                        {client.source || t('No source','ללא מקור')}
                       </div>
                     </td>
 
@@ -208,7 +210,7 @@ export default function PatientDirectory() {
                     </td>
 
                     <td className="px-4 py-3.5 font-bold text-violet-600" dir="ltr">
-                      ₪{client.totalPaid.toLocaleString('he-IL')}
+                      ₪{client.totalPaid.toLocaleString(language === 'he' ? 'he-IL' : 'en-US')}
                     </td>
 
                     <td className="px-4 py-3.5 text-end">
