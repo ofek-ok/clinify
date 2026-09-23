@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { LanguageContext } from '../context/LanguageContext';
 
 const PublicPerformanceSignupView = () => {
+  const { t } = useContext(LanguageContext);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -26,7 +28,7 @@ const PublicPerformanceSignupView = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.full_name || (!formData.email && !formData.phone)) {
-      setStatus({ isSubmitting: false, isSuccess: false, error: 'נא להזין שם מלא וכן כתובת דוא"ל או טלפון' });
+      setStatus({ isSubmitting: false, isSuccess: false, error: t('Please enter your full name and either an email address or phone number','נא להזין שם מלא וכן כתובת דוא"ל או טלפון') });
       return;
     }
 
@@ -49,7 +51,7 @@ const PublicPerformanceSignupView = () => {
       setStatus({ isSubmitting: false, isSuccess: true, error: null });
     } catch (err) {
       console.error("Public signup error:", err);
-      setStatus({ isSubmitting: false, isSuccess: false, error: 'אירעה שגיאה בעת ההרשמה. אנא נסה שוב.' });
+      setStatus({ isSubmitting: false, isSuccess: false, error: t('Something went wrong during signup. Please try again.','אירעה שגיאה בעת ההרשמה. אנא נסה שוב.') });
     }
   };
 
@@ -73,7 +75,7 @@ const PublicPerformanceSignupView = () => {
             <div className="w-10 h-10 bg-violet-500/20 text-violet-400 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
               ✓
             </div>
-            <h3 className="text-lg font-bold text-white">ההרשמה התקבלה בהצלחה!</h3>
+            <h3 className="text-lg font-bold text-white">{t('Signup received successfully!','ההרשמה התקבלה בהצלחה!')}</h3>
             <p className="text-xs text-slate-300">
               תודה רבה. נעדכן אותך ברגע שההרשמה לטיפולים תיפתח.
             </p>
@@ -95,7 +97,7 @@ const PublicPerformanceSignupView = () => {
                 value={formData.full_name} 
                 onChange={e => setFormData({ ...formData, full_name: e.target.value })} 
                 required 
-                placeholder="לדוגמה: אופק אוקונסקי" 
+                placeholder={t("e.g. John Doe","לדוגמה: אופק אוקונסקי")} 
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-slate-600 outline-none text-sm text-white placeholder-slate-600 transition-colors" 
               />
             </div>
@@ -132,7 +134,7 @@ const PublicPerformanceSignupView = () => {
                 disabled={status.isSubmitting} 
                 className="w-full bg-white hover:bg-slate-100 disabled:opacity-50 text-slate-900 font-bold py-3 px-4 rounded-lg transition-colors text-xs"
               >
-                {status.isSubmitting ? 'שולח...' : 'אני רוצה לקבל עדכון'}
+                {status.isSubmitting ? t('Sending...','שולח...') : t('Notify Me','אני רוצה לקבל עדכון')}
               </button>
             </div>
           </form>
