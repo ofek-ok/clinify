@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
@@ -9,12 +10,12 @@ import {
 } from 'lucide-react';
 
 const STATUS_COLUMNS = [
-  { id:'idea', label:'רעיון' },
-  { id:'planned', label:'מתוכנן' },
-  { id:'in_production', label:'בהכנה' },
-  { id:'ready', label:'מוכן' },
-  { id:'scheduled', label:'מתוזמן' },
-  { id:'published', label:'פורסם' }
+  { id:'idea', en:'Idea', he:'רעיון' },
+  { id:'planned', en:'Planned', he:'מתוכנן' },
+  { id:'in_production', en:'In Production', he:'בהכנה' },
+  { id:'ready', en:'Ready', he:'מוכן' },
+  { id:'scheduled', en:'Scheduled', he:'מתוזמן' },
+  { id:'published', en:'Published', he:'פורסם' }
 ];
 
 const PLATFORMS = [
@@ -41,34 +42,35 @@ const FORMATS = [
 ];
 
 const AUDIENCES = [
-  ['athletes','ספורטאים ומתאמנים'],
-  ['professionals','High-Demand Professionals'],
-  ['both','שני הקהלים'],
-  ['general','כללי']
+  ['athletes','Athletes & Trainees','ספורטאים ומתאמנים'],
+  ['professionals','High-Demand Professionals','High-Demand Professionals'],
+  ['both','Both Audiences','שני הקהלים'],
+  ['general','General','כללי']
 ];
 
 const OBJECTIVES = [
-  ['awareness','מודעות'],
-  ['education','חינוך / ערך'],
-  ['authority','סמכות מקצועית'],
-  ['engagement','מעורבות'],
-  ['conversion','המרה'],
-  ['retention','שימור']
+  ['awareness','Awareness','מודעות'],
+  ['education','Education / Value','חינוך / ערך'],
+  ['authority','Authority','סמכות מקצועית'],
+  ['engagement','Engagement','מעורבות'],
+  ['conversion','Conversion','המרה'],
+  ['retention','Retention','שימור']
 ];
 
 const STAGES = [
-  ['research','מחקר'],
-  ['writing','כתיבה'],
-  ['design','עיצוב'],
-  ['recording','צילום'],
-  ['editing','עריכה'],
-  ['review','בדיקה'],
-  ['done','מוכן']
+  ['research','Research','מחקר'],
+  ['writing','Writing','כתיבה'],
+  ['design','Design','עיצוב'],
+  ['recording','Recording','צילום'],
+  ['editing','Editing','עריכה'],
+  ['review','Review','בדיקה'],
+  ['done','Done','מוכן']
 ];
 
 export default function ContentManager() {
   const { contentItems, projects, addContentItem, updateContentItem, deleteContentItem } = useContext(ClinicContext);
   const { showToast } = useToast();
+  const { t } = useContext(LanguageContext);
 
   const [view, setView] = useState('kanban');
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -148,7 +150,7 @@ export default function ContentManager() {
   const saveItem = async (e) => {
     e?.preventDefault?.();
     if (!form.title.trim()) {
-      showToast('אנא הזן כותרת / נושא תוכן', 'error');
+      showToast(t('Please enter a content title / topic','אנא הזן כותרת / נושא תוכן'), 'error');
       return;
     }
     setIsSubmitting(true);
@@ -165,16 +167,16 @@ export default function ContentManager() {
       if (editingItem) {
         const updated = await updateContentItem(editingItem.id, payload);
         setEditingItem(updated || { ...editingItem, ...payload });
-        showToast('פריט התוכן עודכן');
+        showToast(t('Content item updated','פריט התוכן עודכן'));
       } else {
         await addContentItem(payload);
-        showToast('פריט התוכן נוצר');
+        showToast(t('Content item created','פריט התוכן נוצר'));
       }
       setIsDrawerOpen(false);
       setEditingItem(null);
       setForm(emptyForm);
     } catch (err) {
-      showToast(err.message || 'לא ניתן לשמור את פריט התוכן', 'error');
+      showToast(err.message || t('Could not save content item','לא ניתן לשמור את פריט התוכן'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -184,7 +186,7 @@ export default function ContentManager() {
     try {
       await updateContentItem(item.id,{status});
     } catch(err) {
-      showToast(err.message || 'לא ניתן לעדכן סטטוס','error');
+      showToast(err.message || t('Could not update status','לא ניתן לעדכן סטטוס'),'error');
     }
   };
 
@@ -192,26 +194,26 @@ export default function ContentManager() {
     if (!deleteModalItem) return;
     try {
       await deleteContentItem(deleteModalItem.id);
-      showToast('פריט התוכן הועבר לאשפה');
+      showToast(t('Content item moved to Trash','פריט התוכן הועבר לאשפה'));
       setIsDrawerOpen(false);
       setEditingItem(null);
     } catch(err) {
-      showToast(err.message || 'לא ניתן להעביר לאשפה','error');
+      showToast(err.message || t('Could not move to Trash','לא ניתן להעביר לאשפה'),'error');
     } finally {
       setDeleteModalItem(null);
     }
   };
 
   const platformLabel = value => PLATFORMS.find(([id])=>id===value)?.[1] || value || '-';
-  const optionLabel = (options,value) => options.find(([id])=>id===value)?.[1] || value || '-';
+  const optionLabel = (options,value) => { const found = options.find(([id])=>id===value); return found ? t(found[1], found[2] ?? found[1]) : value || '-'; };
 
   return (
     <div className="space-y-4 dir-rtl text-start">
       <section className="premium-panel rounded-2xl overflow-hidden">
         <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-xl font-extrabold text-slate-950">תוכן</h1>
-            <p className="mt-1 text-xs text-slate-500">Pipeline אחד לכל התוכן של OP — מרעיון ועד פרסום.</p>
+            <h1 className="text-xl font-extrabold text-slate-950">{t('Content','תוכן')}</h1>
+            <p className="mt-1 text-xs text-slate-500">{t('One pipeline for all OP content — from idea to publication.','Pipeline אחד לכל התוכן של OP — מרעיון ועד פרסום.')}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -221,7 +223,7 @@ export default function ContentManager() {
               <ViewButton active={view==='list'} onClick={()=>setView('list')} icon={List}>List</ViewButton>
             </div>
             <button onClick={openNew} className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white hover:bg-violet-500">
-              <Plus className="w-4 h-4"/> תוכן חדש
+              <Plus className="w-4 h-4"/> {t('New Content','תוכן חדש')}
             </button>
           </div>
         </div>
@@ -230,26 +232,26 @@ export default function ContentManager() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[220px] flex-1 max-w-sm">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
-              <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} placeholder="חיפוש תוכן..." className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pr-9 pl-3 text-xs outline-none focus:border-violet-400"/>
+              <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} placeholder={t("Search content...","חיפוש תוכן...")} className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pr-9 pl-3 text-xs outline-none focus:border-violet-400"/>
             </div>
             <button onClick={()=>setShowFilters(v=>!v)} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${showFilters ? 'border-violet-200 bg-violet-50 text-violet-700':'border-slate-200 bg-white text-slate-600'}`}>
-              <Filter className="w-4 h-4"/> סינון
+              <Filter className="w-4 h-4"/> {t('Filter','סינון')}
             </button>
           </div>
 
           {showFilters && (
             <div className="grid gap-2 pt-3 sm:grid-cols-3">
               <FilterSelect value={platformFilter} onChange={setPlatformFilter}>
-                <option value="all">כל הפלטפורמות</option>
+                <option value="all">{t('All Platforms','כל הפלטפורמות')}</option>
                 {PLATFORMS.map(([id,label])=><option key={id} value={id}>{label}</option>)}
               </FilterSelect>
               <FilterSelect value={campaignFilter} onChange={setCampaignFilter}>
-                <option value="all">כל הקמפיינים</option>
+                <option value="all">{t('All Campaigns','כל הקמפיינים')}</option>
                 {campaignsList.map(c=><option key={c} value={c}>{c}</option>)}
               </FilterSelect>
               <FilterSelect value={audienceFilter} onChange={setAudienceFilter}>
-                <option value="all">כל הקהלים</option>
-                {AUDIENCES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+                <option value="all">{t('All Audiences','כל הקהלים')}</option>
+                {AUDIENCES.map(([id,en,he])=><option key={id} value={id}>{t(en,he)}</option>)}
               </FilterSelect>
             </div>
           )}
@@ -264,7 +266,7 @@ export default function ContentManager() {
               return (
                 <section key={col.id} className="rounded-2xl border border-slate-200 bg-slate-50/80 overflow-hidden">
                   <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-3">
-                    <span className="text-xs font-extrabold text-slate-900">{col.label}</span>
+                    <span className="text-xs font-extrabold text-slate-900">{t(col.en,col.he)}</span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{items.length}</span>
                   </div>
                   <div className="space-y-2 p-2 min-h-[420px]">
@@ -281,11 +283,11 @@ export default function ContentManager() {
                         </div>
                         {item.campaign && <div className="mt-2 text-[10px] font-bold text-violet-600">{item.campaign}</div>}
                         <select value={item.status || 'idea'} onClick={e=>e.stopPropagation()} onChange={e=>quickStatusChange(item,e.target.value)} className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px]">
-                          {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                          {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{t(s.en,s.he)}</option>)}
                         </select>
                       </article>
                     ))}
-                    {!items.length && <div className="py-10 text-center text-[10px] text-slate-400">אין פריטים</div>}
+                    {!items.length && <div className="py-10 text-center text-[10px] text-slate-400">{t('No items','אין פריטים')}</div>}
                   </div>
                 </section>
               );
@@ -297,8 +299,8 @@ export default function ContentManager() {
       {view==='calendar' && (
         <section className="premium-panel rounded-2xl overflow-hidden">
           <div className="border-b border-slate-100 px-4 py-3">
-            <h2 className="text-xs font-extrabold text-slate-900">לוח פרסומים</h2>
-            <p className="mt-1 text-[10px] text-slate-400">ממויין לפי תאריך הפרסום המתוכנן.</p>
+            <h2 className="text-xs font-extrabold text-slate-900">{t('Publishing Calendar','לוח פרסומים')}</h2>
+            <p className="mt-1 text-[10px] text-slate-400">{t('Sorted by planned publishing date.','ממויין לפי תאריך הפרסום המתוכנן.')}</p>
           </div>
           <div className="divide-y divide-slate-100">
             {upcomingItems.length ? upcomingItems.map(item=>(
@@ -308,9 +310,9 @@ export default function ContentManager() {
                   <div className="truncate text-xs font-bold text-slate-900">{item.title}</div>
                   <div className="mt-1 text-[10px] text-slate-400">{platformLabel(item.platform)} · {optionLabel(FORMATS,item.format)} · {optionLabel(AUDIENCES,item.audience)}</div>
                 </div>
-                <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{optionLabel(STATUS_COLUMNS.map(s=>[s.id,s.label]),item.status)}</span>
+                <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{optionLabel(STATUS_COLUMNS.map(s=>[s.id,s.en,s.he]),item.status)}</span>
               </button>
-            )) : <div className="py-14 text-center text-xs text-slate-400">אין פריטי תוכן עם תאריך פרסום.</div>}
+            )) : <div className="py-14 text-center text-xs text-slate-400">{t('No content items with a publishing date.','אין פריטי תוכן עם תאריך פרסום.')}</div>}
           </div>
         </section>
       )}
@@ -320,13 +322,13 @@ export default function ContentManager() {
           <table className="w-full min-w-[980px] text-xs">
             <thead className="bg-slate-50 text-[10px] font-bold text-slate-400">
               <tr>
-                <th className="px-4 py-3 text-start">תוכן</th>
-                <th className="px-3 py-3 text-start">פלטפורמה</th>
-                <th className="px-3 py-3 text-start">קהל</th>
-                <th className="px-3 py-3 text-start">מטרה</th>
-                <th className="px-3 py-3 text-start">סטטוס</th>
-                <th className="px-3 py-3 text-start">פרסום</th>
-                <th className="px-3 py-3 text-center">פעולות</th>
+                <th className="px-4 py-3 text-start">{t('Content','תוכן')}</th>
+                <th className="px-3 py-3 text-start">{t('Platform','פלטפורמה')}</th>
+                <th className="px-3 py-3 text-start">{t('Audience','קהל')}</th>
+                <th className="px-3 py-3 text-start">{t('Objective','מטרה')}</th>
+                <th className="px-3 py-3 text-start">{t('Status','סטטוס')}</th>
+                <th className="px-3 py-3 text-start">{t('Publish Date','פרסום')}</th>
+                <th className="px-3 py-3 text-center">{t('Actions','פעולות')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -341,7 +343,7 @@ export default function ContentManager() {
                   <td className="px-3 py-3 text-slate-600">{optionLabel(OBJECTIVES,item.objective)}</td>
                   <td className="px-3 py-3">
                     <select value={item.status||'idea'} onChange={e=>quickStatusChange(item,e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px]">
-                      {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                      {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{t(s.en,s.he)}</option>)}
                     </select>
                   </td>
                   <td className="px-3 py-3 font-mono text-[10px] text-slate-500">{item.publish_date ? String(item.publish_date).slice(0,10) : '-'}</td>
@@ -361,7 +363,7 @@ export default function ContentManager() {
       <Drawer
         isOpen={isDrawerOpen}
         onClose={()=>{setIsDrawerOpen(false);setEditingItem(null);}}
-        title={editingItem ? 'עריכת פריט תוכן' : 'פריט תוכן חדש'}
+        title={editingItem ? t('Edit Content Item','עריכת פריט תוכן') : t('New Content Item','פריט תוכן חדש')}
         width="max-w-2xl"
         footer={
           <>
@@ -370,25 +372,25 @@ export default function ContentManager() {
                 <Trash2 className="w-4 h-4"/> העבר לאשפה
               </button>
             )}
-            <button type="button" onClick={()=>setIsDrawerOpen(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">ביטול</button>
+            <button type="button" onClick={()=>setIsDrawerOpen(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">{t('Cancel','ביטול')}</button>
             <button type="button" onClick={saveItem} disabled={isSubmitting} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 disabled:opacity-50">
-              {isSubmitting ? 'שומר...' : 'שמור'}
+              {isSubmitting ? t('Saving...','שומר...') : t('Save','שמור')}
             </button>
           </>
         }
       >
         <form onSubmit={saveItem} className="space-y-4">
-          <Field label="כותרת / נושא *">
-            <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="work-input" placeholder="מה נושא התוכן?" />
+          <Field label={t("Title / Topic *","כותרת / נושא *")}>
+            <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="work-input" placeholder={t("What is the content topic?","מה נושא התוכן?")} />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="פלטפורמה">
+            <Field label={t("Platform","פלטפורמה")}>
               <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} className="work-input">
                 {PLATFORMS.map(([id,label])=><option key={id} value={id}>{label}</option>)}
               </select>
             </Field>
-            <Field label="פורמט">
+            <Field label={t("Format","פורמט")}>
               <select value={form.format} onChange={e=>setForm({...form,format:e.target.value})} className="work-input">
                 {FORMATS.map(([id,label])=><option key={id} value={id}>{label}</option>)}
               </select>
@@ -396,47 +398,47 @@ export default function ContentManager() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="קהל יעד">
+            <Field label={t("Audience","קהל יעד")}>
               <select value={form.audience} onChange={e=>setForm({...form,audience:e.target.value})} className="work-input">
-                {AUDIENCES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+                {AUDIENCES.map(([id,en,he])=><option key={id} value={id}>{t(en,he)}</option>)}
               </select>
             </Field>
-            <Field label="מטרת התוכן">
+            <Field label={t("Content Objective","מטרת התוכן")}>
               <select value={form.objective} onChange={e=>setForm({...form,objective:e.target.value})} className="work-input">
-                {OBJECTIVES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+                {OBJECTIVES.map(([id,en,he])=><option key={id} value={id}>{t(en,he)}</option>)}
               </select>
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="סטטוס">
+            <Field label={t("Status","סטטוס")}>
               <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} className="work-input">
-                {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                {STATUS_COLUMNS.map(s=><option key={s.id} value={s.id}>{t(s.en,s.he)}</option>)}
               </select>
             </Field>
-            <Field label="שלב הפקה">
+            <Field label={t("Production Stage","שלב הפקה")}>
               <select value={form.stage} onChange={e=>setForm({...form,stage:e.target.value})} className="work-input">
-                {STAGES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+                {STAGES.map(([id,en,he])=><option key={id} value={id}>{t(en,he)}</option>)}
               </select>
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="תאריך פרסום">
+            <Field label={t("Publish Date","תאריך פרסום")}>
               <input type="date" value={form.publish_date} onChange={e=>setForm({...form,publish_date:e.target.value})} className="work-input"/>
             </Field>
-            <Field label="קמפיין">
-              <input value={form.campaign} onChange={e=>setForm({...form,campaign:e.target.value})} className="work-input" placeholder="למשל: Launch Jan 2027"/>
+            <Field label={t("Campaign","קמפיין")}>
+              <input value={form.campaign} onChange={e=>setForm({...form,campaign:e.target.value})} className="work-input" placeholder={t("e.g. Launch Jan 2027","למשל: Launch Jan 2027")}/>
             </Field>
           </div>
 
           <Field label="CTA">
-            <input value={form.cta} onChange={e=>setForm({...form,cta:e.target.value})} className="work-input" placeholder="מה אנחנו רוצים שהקורא יעשה?"/>
+            <input value={form.cta} onChange={e=>setForm({...form,cta:e.target.value})} className="work-input" placeholder={t("What do we want the reader to do?","מה אנחנו רוצים שהקורא יעשה?")}/>
           </Field>
 
-          <Field label="שיוך לפרויקט">
+          <Field label={t("Linked Project","שיוך לפרויקט")}>
             <select value={form.project_id} onChange={e=>setForm({...form,project_id:e.target.value})} className="work-input">
-              <option value="">ללא פרויקט</option>
+              <option value="">{t("No Project","ללא פרויקט")}</option>
               {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
@@ -447,10 +449,10 @@ export default function ContentManager() {
         isOpen={Boolean(deleteModalItem)}
         onClose={()=>setDeleteModalItem(null)}
         onConfirm={handleConfirmDelete}
-        title="להעביר את פריט התוכן לאשפה?"
-        message={deleteModalItem ? `“${deleteModalItem.title}” יוסר מה־pipeline ויישאר זמין לשחזור באשפה.` : ''}
-        confirmText="העבר לאשפה"
-        cancelText="ביטול"
+        title={t("Move content item to Trash?","להעביר את פריט התוכן לאשפה?")}
+        message={deleteModalItem ? t(`“${deleteModalItem.title}” will be removed from the pipeline and remain available in Trash.`, `“${deleteModalItem.title}” יוסר מה־pipeline ויישאר זמין לשחזור באשפה.`) : ''}
+        confirmText={t("Move to Trash","העבר לאשפה")}
+        cancelText={t("Cancel","ביטול")}
         isDanger
       />
     </div>
