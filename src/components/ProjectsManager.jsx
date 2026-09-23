@@ -184,7 +184,7 @@ export default function ProjectsManager() {
               onClick={() => setIsAddDrawerOpen(false)}
               className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
-              ביטול
+              {t('Cancel','ביטול')}
             </button>
             <button
               onClick={handleCreateProject}
@@ -288,13 +288,13 @@ export default function ProjectsManager() {
                 className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100"
               >
                 <Trash2 className="w-4 h-4" />
-                העבר לאשפה
+                {t('Move to Trash','העבר לאשפה')}
               </button>
               <button
                 onClick={() => setSelectedProject(null)}
                 className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
               >
-                סגור
+                {t('Close','סגור')}
               </button>
             </div>
           }
