@@ -37,13 +37,13 @@ export default function BusinessSettings({ activeFormSubTab }) {
 
   const getDayName = (dayOfWeek) => {
     const dayMap = {
-      'Sunday': 'ראשון',
-      'Monday': 'שני',
-      'Tuesday': 'שלישי',
-      'Wednesday': 'רביעי',
-      'Thursday': 'חמישי',
-      'Friday': 'שישי',
-      'Saturday': 'שבת'
+      Sunday: t('Sunday', 'ראשון'),
+      Monday: t('Monday', 'שני'),
+      Tuesday: t('Tuesday', 'שלישי'),
+      Wednesday: t('Wednesday', 'רביעי'),
+      Thursday: t('Thursday', 'חמישי'),
+      Friday: t('Friday', 'שישי'),
+      Saturday: t('Saturday', 'שבת')
     };
     return dayMap[dayOfWeek] || dayOfWeek;
   };
@@ -113,7 +113,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { isOpen: e.target.checked })}
                           className="h-4 w-4 accent-violet-600"
                         />
-                        פתוח
+                        {t('Open', 'פתוח')}
                       </label>
                     </div>
 
