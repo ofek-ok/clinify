@@ -150,8 +150,8 @@ export default function FinanceView({ initialTab = 'overview' }) {
 
   const handleCreatePayment = async (e) => {
     e.preventDefault();
-    if (!payPatientId || !payAmount) {
-      showToast('אנא בחר לקוח והזן סכום לתשלום', 'error');
+    if (!payPatientId || !payAmount || Number(payAmount) <= 0) {
+      showToast('אנא בחר לקוח והזן סכום חיובי לתשלום', 'error');
       return;
     }
     setIsSubmitting(true);
@@ -182,8 +182,8 @@ export default function FinanceView({ initialTab = 'overview' }) {
 
   const handleCreateExpense = async (e) => {
     e.preventDefault();
-    if (!expDescription || !expAmount) {
-      showToast('אנא הזן תיאור וסכום הוצאה', 'error');
+    if (!expDescription.trim() || !expAmount || Number(expAmount) <= 0) {
+      showToast('אנא הזן תיאור וסכום הוצאה חיובי', 'error');
       return;
     }
     setIsSubmitting(true);
@@ -350,7 +350,7 @@ export default function FinanceView({ initialTab = 'overview' }) {
                                 showToast(err.message || 'לא ניתן לעדכן את התשלום', 'error');
                               }
                             }}
-                            className={`px-2 py-1 rounded text-[10px] font-bold outline-none border ${p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}
+                            className={`px-2 py-1 rounded text-[10px] font-bold outline-none border ${p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : p.status === 'refunded' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}
                           >
                             <option value="paid">שולם</option>
                             <option value="pending">ממתין</option>
@@ -517,17 +517,6 @@ export default function FinanceView({ initialTab = 'overview' }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">אמצעי תשלום</label>
-            <select value={expMethod} onChange={e => setExpMethod(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
-              <option value="Credit Card">כרטיס אשראי</option>
-              <option value="Bank Transfer">העברה בנקאית</option>
-              <option value="Cash">מזומן</option>
-              <option value="PayBox">PayBox</option>
-              <option value="תשלום במקום">תשלום במקום</option>
-            </select>
-          </div>
-
-          <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">תאריך</label>
             <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
           </div>
@@ -562,6 +551,17 @@ export default function FinanceView({ initialTab = 'overview' }) {
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">סכום (₪) *</label>
             <input type="number" required step="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="150" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">אמצעי תשלום</label>
+            <select value={expMethod} onChange={e => setExpMethod(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
+              <option value="Credit Card">כרטיס אשראי</option>
+              <option value="Bank Transfer">העברה בנקאית</option>
+              <option value="Cash">מזומן</option>
+              <option value="PayBox">PayBox</option>
+              <option value="תשלום במקום">תשלום במקום</option>
+            </select>
           </div>
 
           <div>
