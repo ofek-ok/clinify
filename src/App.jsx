@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ClinicProvider, ClinicContext } from './context/ClinicContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
+import OwnerAuthScreen from './components/OwnerAuthScreen';
 import PublicFormView from './components/PublicFormView';
 import PublicBookingView from './components/PublicBookingView';
 import PublicPerformanceSignupView from './components/PublicPerformanceSignupView';
@@ -36,7 +37,7 @@ class ErrorBoundary extends Component {
             </p>
             <button 
               onClick={() => window.location.reload()}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg transition-colors text-xs"
+              className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl shadow-lg transition-colors text-xs"
             >
               רענן עמוד
             </button>
@@ -49,15 +50,17 @@ class ErrorBoundary extends Component {
 }
 
 const MainAppRoute = () => {
-  const { isLoading } = useContext(ClinicContext);
+  const { isLoading, session } = useContext(ClinicContext);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 text-center font-sans">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
+
+  if (!session) return <OwnerAuthScreen />;
 
   return <Layout />;
 };
@@ -73,7 +76,7 @@ function App() {
             <Route path="/form/:id" element={<PublicFormView />} />
             <Route path="/performance" element={<PublicPerformanceSignupView />} />
             
-            {/* Main Application - Temporary No-Login Direct Access */}
+            {/* Main Application - Owner authentication required */}
             <Route 
               path="/*" 
               element={
