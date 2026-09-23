@@ -598,7 +598,7 @@ export default function CalendarView({ initialTab = 'week' }) {
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500 flex items-start gap-2">
             <CalendarDays className="w-4 h-4 mt-0.5 shrink-0" />
-            זמינות השעות מתחשבת בשעות הפעילות, בתורים קיימים ובזמנים תפוסים שיסונכרנו מ-Google Calendar.
+            {t('Availability considers business hours, existing appointments and busy times synced from Google Calendar.','זמינות השעות מתחשבת בשעות הפעילות, בתורים קיימים ובזמנים תפוסים שיסונכרנו מ-Google Calendar.')}
           </div>
         </form>
       </Drawer>
@@ -718,7 +718,7 @@ export default function CalendarView({ initialTab = 'week' }) {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500">
-              שינוי תאריך, שעה או שירות נבדק מול שעות הפעילות, תורים קיימים וזמנים תפוסים לפני השמירה.
+              {t('Changes to date, time or service are checked against business hours, existing appointments and busy times before saving.','שינוי תאריך, שעה או שירות נבדק מול שעות הפעילות, תורים קיימים וזמנים תפוסים לפני השמירה.')}
             </div>
           </div>
         )}
