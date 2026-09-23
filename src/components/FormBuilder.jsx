@@ -46,7 +46,7 @@ const FormBuilder = ({ navigate }) => {
       label: t('New Field', 'שדה חדש'),
       required: false,
       placeholder: '',
-      options: type === 'dropdown' ? ['אפשרות 1', 'אפשרות 2'] : undefined
+      options: type === 'dropdown' ? [t('Option 1','אפשרות 1'), t('Option 2','אפשרות 2')] : undefined
     }]);
   };
 
@@ -66,22 +66,22 @@ const FormBuilder = ({ navigate }) => {
   const handleSave = async () => {
     if (!title.trim()) return showToast(t('Please enter a form title.', 'אנא הזן כותרת לטופס.'), 'error');
     if (fields.length === 0) return showToast(t('Please add at least one field.', 'אנא הוסף לפחות שדה אחד.'), 'error');
-    if (fields.some(field => !String(field.label || '').trim())) return showToast('לכל שדה חייבת להיות תווית', 'error');
+    if (fields.some(field => !String(field.label || '').trim())) return showToast(t('Every field must have a label','לכל שדה חייבת להיות תווית'), 'error');
 
     setIsSaving(true);
     try {
       const payload = { title: title.trim(), description: description.trim() || null, fields, is_public: isPublic };
       if (editingFormId) {
         await updateForm(editingFormId, payload);
-        showToast('הטופס עודכן בהצלחה');
+        showToast(t('Form updated successfully','הטופס עודכן בהצלחה'));
       } else {
         await addForm(payload);
-        showToast('הטופס נוצר בהצלחה');
+        showToast(t('Form created successfully','הטופס נוצר בהצלחה'));
       }
       window.localStorage.removeItem('clinify_edit_form_id');
       navigate('forms');
     } catch (err) {
-      showToast(err.message || 'לא ניתן לשמור את הטופס', 'error');
+      showToast(err.message || t('Could not save form','לא ניתן לשמור את הטופס'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -95,20 +95,20 @@ const FormBuilder = ({ navigate }) => {
         <div className="flex items-center gap-4">
           <button onClick={() => { window.localStorage.removeItem('clinify_edit_form_id'); navigate('forms'); }} className="p-2 bg-white rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800">←</button>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{editingFormId ? 'עריכת טופס' : 'בונה טפסים'}</h2>
-            <p className="text-slate-500 text-sm mt-1">בנה טופס intake, הסכמה, מעקב או שאלון.</p>
+            <h2 className="text-2xl font-bold text-slate-900">{editingFormId ? t('Edit Form','עריכת טופס') : t('Form Builder','בונה טפסים')}</h2>
+            <p className="text-slate-500 text-sm mt-1">{t('Build an intake, consent, follow-up or questionnaire form.','בנה טופס intake, הסכמה, מעקב או שאלון.')}</p>
           </div>
         </div>
         <button onClick={handleSave} disabled={isSaving} className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold py-2.5 px-6 rounded-xl shadow-sm">
-          {isSaving ? 'שומר...' : editingFormId ? 'שמור שינויים' : 'שמור טופס'}
+          {isSaving ? t('Saving...','שומר...') : editingFormId ? t('Save Changes','שמור שינויים') : t('Save Form','שמור טופס')}
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-5">
           <div className="premium-panel p-6 rounded-2xl">
-            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="כותרת הטופס" className="w-full text-2xl font-bold text-slate-900 bg-transparent outline-none mb-2" />
-            <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="תיאור הטופס (אופציונלי)" rows={2} className="w-full text-sm text-slate-500 bg-transparent outline-none resize-none" />
+            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder={t("Form title","כותרת הטופס")} className="w-full text-2xl font-bold text-slate-900 bg-transparent outline-none mb-2" />
+            <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder={t("Form description (optional)","תיאור הטופס (אופציונלי)")} rows={2} className="w-full text-sm text-slate-500 bg-transparent outline-none resize-none" />
             <label className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-slate-600">
               <input type="checkbox" checked={isPublic} onChange={e=>setIsPublic(e.target.checked)} className="w-4 h-4 accent-violet-600" />
               טופס ציבורי שניתן לשתף בקישור
@@ -132,7 +132,7 @@ const FormBuilder = ({ navigate }) => {
 
                 <div className="grid md:grid-cols-2 gap-3">
                   <label>
-                    <span className="block text-[10px] font-bold text-slate-500 mb-1">תווית השדה</span>
+                    <span className="block text-[10px] font-bold text-slate-500 mb-1">{t('Field Label','תווית השדה')}</span>
                     <input value={field.label || ''} onChange={e=>updateField(field.id,'label',e.target.value)} className="work-input" />
                   </label>
                   {field.type !== 'checkbox' && (
@@ -145,7 +145,7 @@ const FormBuilder = ({ navigate }) => {
 
                 {field.type === 'dropdown' && (
                   <label className="block mt-3">
-                    <span className="block text-[10px] font-bold text-slate-500 mb-1">אפשרויות — מופרדות בפסיקים</span>
+                    <span className="block text-[10px] font-bold text-slate-500 mb-1">{t('Options — comma separated','אפשרויות — מופרדות בפסיקים')}</span>
                     <input value={(field.options || []).join(', ')} onChange={e=>updateField(field.id,'options',e.target.value.split(',').map(v=>v.trim()).filter(Boolean))} className="work-input" />
                   </label>
                 )}
@@ -157,13 +157,13 @@ const FormBuilder = ({ navigate }) => {
               </div>
             ))}
 
-            {fields.length===0 && <div className="py-14 text-center rounded-2xl border-2 border-dashed border-slate-200 text-sm text-slate-400">בחר שדות מהתפריט כדי להתחיל.</div>}
+            {fields.length===0 && <div className="py-14 text-center rounded-2xl border-2 border-dashed border-slate-200 text-sm text-slate-400">{t('Choose fields from the menu to get started.','בחר שדות מהתפריט כדי להתחיל.')}</div>}
           </div>
         </div>
 
         <div>
           <div className="premium-panel p-5 rounded-2xl sticky top-6">
-            <h3 className="font-extrabold text-slate-900 mb-4">הוסף שדה</h3>
+            <h3 className="font-extrabold text-slate-900 mb-4">{t('Add Field','הוסף שדה')}</h3>
             <div className="grid gap-2">
               {fieldTypes.map(type=>(
                 <button key={type} type="button" onClick={()=>addField(type)} className="w-full text-start px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-violet-50 hover:border-violet-200 text-xs font-bold text-slate-600 hover:text-violet-700">
