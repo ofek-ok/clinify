@@ -1,9 +1,11 @@
 import React, { useContext, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import { CheckCircle2, Clock3, AlertTriangle, FolderKanban } from 'lucide-react';
 
 export default function WorkDashboard() {
   const { tasks, projects, todayStr } = useContext(ClinicContext);
+  const { t } = useContext(LanguageContext);
 
   const metrics = useMemo(() => {
     const open = tasks.filter(t => t.status !== 'done');
@@ -21,10 +23,10 @@ export default function WorkDashboard() {
     .slice(0, 8), [tasks]);
 
   const cards = [
-    ['משימות פתוחות', metrics.open, Clock3],
-    ['באיחור', metrics.overdue, AlertTriangle],
-    ['חסומות', metrics.blocked, AlertTriangle],
-    ['פרויקטים פעילים', metrics.projects, FolderKanban]
+    [t('Open Tasks','משימות פתוחות'), metrics.open, Clock3],
+    [t('Overdue','באיחור'), metrics.overdue, AlertTriangle],
+    [t('Blocked','חסומות'), metrics.blocked, AlertTriangle],
+    [t('Active Projects','פרויקטים פעילים'), metrics.projects, FolderKanban]
   ];
 
   return (
@@ -43,7 +45,7 @@ export default function WorkDashboard() {
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <h3 className="font-bold text-sm mb-3">המשימות הקרובות</h3>
+          <h3 className="font-bold text-sm mb-3">{t('Upcoming Tasks','המשימות הקרובות')}</h3>
           <div className="space-y-2">
             {upcoming.map(t => (
               <div key={t.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-slate-50">
@@ -54,12 +56,12 @@ export default function WorkDashboard() {
                 <span className={`text-[11px] font-mono ${t.due_date < todayStr ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>{t.due_date}</span>
               </div>
             ))}
-            {upcoming.length === 0 && <p className="text-xs text-slate-500 py-5 text-center">אין משימות קרובות.</p>}
+            {upcoming.length === 0 && <p className="text-xs text-slate-500 py-5 text-center">{t('No upcoming tasks.','אין משימות קרובות.')}</p>}
           </div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <h3 className="font-bold text-sm mb-3">מצב פרויקטים</h3>
+          <h3 className="font-bold text-sm mb-3">{t('Project Status','מצב פרויקטים')}</h3>
           <div className="space-y-3">
             {projects.filter(p => p.status !== 'completed').slice(0,8).map(p => {
               const pt = tasks.filter(t => t.project_id === p.id);
@@ -70,7 +72,7 @@ export default function WorkDashboard() {
                 <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-violet-500" style={{width:`${pct}%`}} /></div>
               </div>;
             })}
-            {projects.filter(p => p.status !== 'completed').length === 0 && <p className="text-xs text-slate-500 py-5 text-center">אין פרויקטים פעילים.</p>}
+            {projects.filter(p => p.status !== 'completed').length === 0 && <p className="text-xs text-slate-500 py-5 text-center">{t('No active projects.','אין פרויקטים פעילים.')}</p>}
           </div>
         </div>
       </div>
