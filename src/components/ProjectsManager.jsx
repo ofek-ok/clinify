@@ -62,12 +62,12 @@ export default function ProjectsManager() {
     if (!deleteModalProj) return;
     try {
       await deleteProject(deleteModalProj.id);
-      showToast('הפרויקט נמחק');
+      showToast('הפרויקט הועבר לאשפה');
       if (selectedProject?.id === deleteModalProj.id) {
         setSelectedProject(null);
       }
     } catch (err) {
-      showToast('שגיאה במחיקת פרויקט', 'error');
+      showToast('שגיאה בהעברת הפרויקט לאשפה', 'error');
     } finally {
       setDeleteModalProj(null);
     }
@@ -279,7 +279,15 @@ export default function ProjectsManager() {
           title={`פרויקט: ${selectedProject.name}`}
           width="max-w-xl"
           footer={
-            <div className="flex justify-end items-center w-full">
+            <div className="flex items-center justify-between w-full gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteModalProj(selectedProject)}
+                className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100"
+              >
+                <Trash2 className="w-4 h-4" />
+                העבר לאשפה
+              </button>
               <button
                 onClick={() => setSelectedProject(null)}
                 className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -331,6 +339,17 @@ export default function ProjectsManager() {
           </div>
         </Drawer>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteModalProj)}
+        onClose={() => setDeleteModalProj(null)}
+        onConfirm={handleConfirmDelete}
+        title="להעביר את הפרויקט לאשפה?"
+        message={deleteModalProj ? `הפרויקט “${deleteModalProj.name}” יוסר מרשימת הפרויקטים ויישאר זמין לשחזור באשפה.` : ''}
+        confirmText="העבר לאשפה"
+        cancelText="ביטול"
+        isDanger
+      />
     </div>
   );
 }
