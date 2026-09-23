@@ -11,13 +11,29 @@ export default function WorkKanban() {
   const { showToast } = useToast();
   const { t, language } = useContext(LanguageContext);
   const systemOptionLabel = (type, value, fallback) => {
-    if (language === 'he') return fallback;
     const map = {
-      status: { todo:'To Do', in_progress:'In Progress', blocked:'Blocked', done:'Done' },
-      priority: { critical:'Critical', high:'High', medium:'Medium', low:'Low' },
-      area: { operations:'Operations', business:'Business', clinical:'Clinical' }
+      status: {
+        todo: { en: 'To Do', he: 'לביצוע' },
+        in_progress: { en: 'In Progress', he: 'בתהליך' },
+        blocked: { en: 'Blocked', he: 'חסום' },
+        done: { en: 'Done', he: 'הושלם' }
+      },
+      priority: {
+        critical: { en: 'Critical', he: 'קריטי' },
+        high: { en: 'High', he: 'גבוה' },
+        medium: { en: 'Medium', he: 'בינוני' },
+        low: { en: 'Low', he: 'נמוך' }
+      },
+      area: {
+        operations: { en: 'Operations', he: 'תפעול' },
+        business: { en: 'Business', he: 'עסקי' },
+        clinical: { en: 'Clinical', he: 'קליני' }
+      }
     };
-    return map[type]?.[value] || fallback;
+    const systemValue = map[type]?.[value];
+    if (!systemValue) return fallback;
+    const isSystemLabel = fallback === systemValue.he || fallback === systemValue.en;
+    return isSystemLabel ? systemValue[language] : fallback;
   };
 
   const statuses = useMemo(() => {
