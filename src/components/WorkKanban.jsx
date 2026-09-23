@@ -9,12 +9,22 @@ export default function WorkKanban() {
   const [projectFilter, setProjectFilter] = useState('');
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
+  const systemOptionLabel = (type, value, fallback) => {
+    if (language === 'he') return fallback;
+    const map = {
+      status: { todo:'To Do', in_progress:'In Progress', blocked:'Blocked', done:'Done' },
+      priority: { critical:'Critical', high:'High', medium:'Medium', low:'Low' },
+      area: { operations:'Operations', business:'Business', clinical:'Clinical' }
+    };
+    return map[type]?.[value] || fallback;
+  };
 
   const statuses = useMemo(() => {
     const configured = (workOptions || [])
       .filter(o => o.option_type === 'status' && o.is_active)
-      .sort((a,b) => a.sort_order - b.sort_order);
+      .sort((a,b) => a.sort_order - b.sort_order)
+      .map(o => ({ ...o, label: systemOptionLabel('status', o.value, o.label) }));
     if (configured.length) return configured;
     return [
       { value:'todo', label:t('To Do','לביצוע'), color:'#64748b' },
@@ -26,7 +36,8 @@ export default function WorkKanban() {
 
   const getOptions = (type) => (workOptions || [])
     .filter(o => o.option_type === type && o.is_active)
-    .sort((a,b) => a.sort_order - b.sort_order);
+    .sort((a,b) => a.sort_order - b.sort_order)
+    .map(o => ({ ...o, label: systemOptionLabel(type, o.value, o.label) }));
 
   const filteredTasks = useMemo(() => tasks.filter(task => {
     if (projectFilter && task.project_id !== projectFilter) return false;
