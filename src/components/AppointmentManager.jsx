@@ -162,7 +162,7 @@ const AppointmentManager = () => {
     const patient = patients.find(p => String(p.id) === String(appt.patient_id));
     const person = people.find(p => String(p.id) === String(appt.person_id)) || (patient ? people.find(p => String(p.id) === String(patient.person_id)) : null);
 
-    const defaultTitle = person ? `מעקב לאחר מפגש עם ${person.full_name}` : `מעקב טיפול`;
+    const defaultTitle = person ? t(`Follow-up after session with ${person.full_name}`, `מעקב לאחר מפגש עם ${person.full_name}`) : t('Treatment follow-up','מעקב טיפול');
     const defaultDate = getIsraelDateKey(new Date(Date.now() + 86400000 * 3));
 
     setSessionCompletionModal({
@@ -235,7 +235,7 @@ const AppointmentManager = () => {
 
   const handleDeleteAppointment = async (appt) => {
     const clientName = getAppointmentPersonName(appt);
-    const confirmed = window.confirm(`להעביר את התור של ${clientName} לאשפה? ניתן יהיה לשחזר אותו בהמשך.`);
+    const confirmed = window.confirm(t(`Move ${clientName}'s appointment to Trash? It can be restored later.`, `להעביר את התור של ${clientName} לאשפה? ניתן יהיה לשחזר אותו בהמשך.`));
     if (!confirmed) return;
 
     setDeletingAppointmentId(appt.id);
@@ -538,7 +538,7 @@ const AppointmentManager = () => {
                     className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none text-xs disabled:opacity-60"
                   >
                     {availableSlots.length === 0 ? (
-                      <option value="">אין שעות פנויות</option>
+                      <option value="">{t("No available times","אין שעות פנויות")}</option>
                     ) : (
                       availableSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)
                     )}
