@@ -87,50 +87,58 @@ export default function BusinessSettings({ activeFormSubTab }) {
               <p className="text-xs text-slate-500 mt-0.5">הגדר מתי העסק פתוח לקבלת תורים חדשים.</p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-start border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                    <th className="py-3 px-4 text-start font-bold">יום בשבוע</th>
-                    <th className="py-3 px-4 text-center font-bold">פתוח</th>
-                    <th className="py-3 px-4 text-start font-bold">שעת התחלה</th>
-                    <th className="py-3 px-4 text-start font-bold">שעת סיום</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {businessHours.map(hour => (
-                    <tr key={hour.dayOfWeek} className={`hover:bg-slate-100 ${!hour.isOpen ? 'opacity-50' : ''}`}>
-                      <td className="py-3 px-4 font-bold text-slate-900">{getDayName(hour.dayOfWeek)}</td>
-                      <td className="py-3 px-4 text-center">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {businessHours
+                .slice()
+                .sort((a, b) => a.dayIndex - b.dayIndex)
+                .map(hour => (
+                  <div
+                    key={hour.dayOfWeek}
+                    className={`rounded-2xl border p-4 transition ${hour.isOpen ? 'border-violet-200 bg-violet-50/40' : 'border-slate-200 bg-slate-50'}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-extrabold text-slate-900">יום {getDayName(hour.dayOfWeek)}</div>
+                        <div className="mt-1 text-[10px] text-slate-400">
+                          {hour.isOpen ? 'פתוח לקבלת תורים' : 'סגור'}
+                        </div>
+                      </div>
+
+                      <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-bold text-slate-600">
                         <input
                           type="checkbox"
                           checked={hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { isOpen: e.target.checked })}
-                          className="w-4 h-4 text-violet-500 bg-slate-50 border-slate-200 rounded focus:ring-violet-500"
+                          className="h-4 w-4 accent-violet-600"
                         />
-                      </td>
-                      <td className="py-3 px-4">
+                        פתוח
+                      </label>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <label>
+                        <span className="mb-1 block text-[10px] font-bold text-slate-400">פתיחה</span>
                         <input
                           type="time"
                           value={hour.startTime}
                           disabled={!hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { startTime: e.target.value })}
-                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 disabled:opacity-50 focus:outline-none"
+                          className="work-input disabled:cursor-not-allowed disabled:opacity-40"
                         />
-                      </td>
-                      <td className="py-3 px-4">
+                      </label>
+                      <label>
+                        <span className="mb-1 block text-[10px] font-bold text-slate-400">סגירה</span>
                         <input
                           type="time"
                           value={hour.endTime}
                           disabled={!hour.isOpen}
                           onChange={(e) => updateBusinessHour(hour.dayOfWeek, { endTime: e.target.value })}
-                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 disabled:opacity-50 focus:outline-none"
+                          className="work-input disabled:cursor-not-allowed disabled:opacity-40"
                         />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </label>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         )}
@@ -158,6 +166,38 @@ export default function BusinessSettings({ activeFormSubTab }) {
             <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4">
               <h3 className="text-xs font-bold text-slate-900">הגדרות דף זימון תורים</h3>
               
+              <div className="grid gap-3 md:grid-cols-3">
+                <SettingToggle
+                  label="דרישת אישור מדיניות ביטול"
+                  description="הלקוח חייב לסמן אישור לפני קביעת התור."
+                  checked={bookingSettings.requirePolicy}
+                  onChange={value => updateBookingSettings({ requirePolicy: value })}
+                />
+                <SettingToggle
+                  label="אפשר תשלום במקום"
+                  description="מציג אפשרות תשלום בקליניקה."
+                  checked={bookingSettings.allowPayAtClinic}
+                  onChange={value => updateBookingSettings({ allowPayAtClinic: value })}
+                />
+                <SettingToggle
+                  label="אפשר חבילות"
+                  description="מאפשר שימוש במוצרים/חבילות בזימון."
+                  checked={bookingSettings.allowPackages}
+                  onChange={value => updateBookingSettings({ allowPackages: value })}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-500">כתובת הקליניקה</label>
+                <input
+                  type="text"
+                  value={bookingSettings.clinicAddress}
+                  onChange={e => updateBookingSettings({ clinicAddress: e.target.value })}
+                  placeholder="הכתובת שתוצג ללקוח ותיכנס ליומן"
+                  className="work-input"
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
                   <label className="block text-slate-500 mb-1">הודעת ברכה בדף</label>
@@ -202,6 +242,11 @@ export default function BusinessSettings({ activeFormSubTab }) {
               <div>
                 <label className="block text-slate-500 mb-1">לוגו העסק הציבורי</label>
                 <div className="flex items-center space-x-3 space-x-reverse">
+                  {bookingSettings.logoUrl && (
+                    <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      <img src={bookingSettings.logoUrl} alt="לוגו העסק" className="h-full w-full object-cover" />
+                    </div>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
@@ -216,4 +261,24 @@ export default function BusinessSettings({ activeFormSubTab }) {
       </div>
     </div>
   );
+
+
+function SettingToggle({ label, description, checked, onChange }) {
+  return (
+    <label className={`cursor-pointer rounded-2xl border p-4 transition ${checked ? 'border-violet-200 bg-violet-50/50' : 'border-slate-200 bg-slate-50'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-extrabold text-slate-900">{label}</div>
+          <div className="mt-1 text-[10px] leading-4 text-slate-400">{description}</div>
+        </div>
+        <input
+          type="checkbox"
+          checked={Boolean(checked)}
+          onChange={e => onChange(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-violet-600"
+        />
+      </div>
+    </label>
+  );
+}
 }
