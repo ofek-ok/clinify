@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { Trash2 } from 'lucide-react';
@@ -20,6 +21,7 @@ const getIsraelDateKey = () => {
 export default function LeadsPipeline({ onSelectLead }) {
   const { leads, leadCommunications, addLead, updateLeadStatus, updateLeadFollowUp, addLeadCommunication, deleteLead } = useContext(ClinicContext);
   const { showToast } = useToast();
+  const { t } = useContext(LanguageContext);
   const todayKey = getIsraelDateKey();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,11 +47,11 @@ export default function LeadsPipeline({ onSelectLead }) {
   const [commNote, setCommNote] = useState('');
 
   const statusColumns = [
-    { id: 'new', title: 'חדש' },
-    { id: 'contacted', title: 'יצרנו קשר' },
-    { id: 'qualified', title: 'מתאים' },
-    { id: 'scheduled', title: 'נקבע תור' },
-    { id: 'lost', title: 'אבוד' }
+    { id: 'new', title: t('New','חדש') },
+    { id: 'contacted', title: t('Contacted','יצרנו קשר') },
+    { id: 'qualified', title: t('Qualified','מתאים') },
+    { id: 'scheduled', title: t('Scheduled','נקבע תור') },
+    { id: 'lost', title: t('Lost','אבוד') }
   ];
 
 
@@ -67,10 +69,10 @@ export default function LeadsPipeline({ onSelectLead }) {
 
   const getCommunicationTypeLabel = (type) => {
     const labels = {
-      call: 'שיחה',
+      call: t('Call','שיחה'),
       whatsapp: 'WhatsApp',
-      email: 'מייל',
-      note: 'הערה'
+      email: t('Email','מייל'),
+      note: t('Note','הערה')
     };
     return labels[type] || type;
   };
@@ -165,7 +167,7 @@ export default function LeadsPipeline({ onSelectLead }) {
     if (!lostModalLead) return;
     try {
       await updateLeadStatus(lostModalLead.id, 'lost');
-      await updateLeadFollowUp(lostModalLead.id, lostModalLead.follow_up_date, reason || 'לא מצוין');
+      await updateLeadFollowUp(lostModalLead.id, lostModalLead.follow_up_date, reason || t('Not specified','לא מצוין'));
       showToast('הליד עודכן כאבוד');
       if (selectedLead?.id === lostModalLead.id) {
         setSelectedLead(prev => ({ ...prev, status: 'lost', lost_reason: reason }));
@@ -218,7 +220,7 @@ export default function LeadsPipeline({ onSelectLead }) {
             <Search className="w-4 h-4 text-slate-500 absolute right-3 top-2.5" />
             <input
               type="text"
-              placeholder="חיפוש לפי שם, טלפון או אימייל..."
+              placeholder={t("Search by name, phone or email...","חיפוש לפי שם, טלפון או אימייל...")}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-lg pr-9 pl-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-violet-500"
@@ -231,7 +233,7 @@ export default function LeadsPipeline({ onSelectLead }) {
             onChange={e => setSourceFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
           >
-            <option value="all">כל המקורות</option>
+            <option value="all">{t('All Sources','כל המקורות')}</option>
             {sourcesList.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
@@ -241,7 +243,7 @@ export default function LeadsPipeline({ onSelectLead }) {
             onChange={e => setCampaignFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
           >
-            <option value="all">כל הקמפיינים</option>
+            <option value="all">{t('All Campaigns','כל הקמפיינים')}</option>
             {campaignsList.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -252,7 +254,7 @@ export default function LeadsPipeline({ onSelectLead }) {
           className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>ליד חדש</span>
+          <span>{t('New Lead','ליד חדש')}</span>
         </button>
       </div>
 
@@ -308,8 +310,8 @@ export default function LeadsPipeline({ onSelectLead }) {
                             : 'text-amber-600'
                         }`}>
                           {lead.follow_up_date < todayKey && !['lost', 'won'].includes(lead.status)
-                            ? 'מעקב באיחור: '
-                            : 'חזרה: '}
+                            ? t('Overdue follow-up: ','מעקב באיחור: ')
+                             : t('Follow-up: ','חזרה: ')}
                           {lead.follow_up_date}
                         </div>
                       )}
@@ -333,7 +335,7 @@ export default function LeadsPipeline({ onSelectLead }) {
         <div className="fixed bottom-6 end-6 z-[70]">
           <button type="button" onClick={() => setDeleteModalLead(selectedLead)}
             className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-600 shadow-lg hover:bg-rose-50">
-            <Trash2 className="h-4 w-4" /> העבר ליד לאשפה
+            <Trash2 className="h-4 w-4" /> {t('Move Lead to Trash','העבר ליד לאשפה')}
           </button>
         </div>
       )}
@@ -342,40 +344,40 @@ export default function LeadsPipeline({ onSelectLead }) {
       <Drawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
-        title="הוספת ליד חדש"
+        title={t("Add New Lead","הוספת ליד חדש")}
         footer={
           <>
             <button
               onClick={() => setIsAddDrawerOpen(false)}
               className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100"
             >
-              ביטול
+              {t('Cancel','ביטול')}
             </button>
             <button
               onClick={handleCreateLead}
               disabled={isSubmitting}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
             >
-              {isSubmitting ? 'שומר...' : 'שמור ליד'}
+              {isSubmitting ? t('Saving...','שומר...') : t('Save Lead','שמור ליד')}
             </button>
           </>
         }
       >
         <form onSubmit={handleCreateLead} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">שם מלא *</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Full Name *','שם מלא *')}</label>
             <input
               type="text"
               required
               value={newLeadName}
               onChange={e => setNewLeadName(e.target.value)}
-              placeholder="ישראל ישראלי"
+              placeholder={t("John Doe","ישראל ישראלי")}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">טלפון</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Phone','טלפון')}</label>
             <input
               type="tel"
               value={newLeadPhone}
@@ -385,10 +387,10 @@ export default function LeadsPipeline({ onSelectLead }) {
             />
           </div>
 
-          <p className="text-[11px] text-slate-500">יש להזין לפחות טלפון או דוא״ל.</p>
+          <p className="text-[11px] text-slate-500">{t('Enter at least a phone number or email.','יש להזין לפחות טלפון או דוא״ל.')}</p>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">דוא״ל</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Email','דוא״ל')}</label>
             <input
               type="email"
               value={newLeadEmail}
@@ -399,7 +401,7 @@ export default function LeadsPipeline({ onSelectLead }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">מקור פנייה</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Lead Source','מקור פנייה')}</label>
             <select
               value={newLeadSource}
               onChange={e => setNewLeadSource(e.target.value)}
@@ -408,19 +410,19 @@ export default function LeadsPipeline({ onSelectLead }) {
               <option value="Instagram">Instagram</option>
               <option value="Facebook">Facebook</option>
               <option value="Website">Website</option>
-              <option value="Referral">המלצה</option>
+              <option value="Referral">{t('Referral','המלצה')}</option>
               <option value="WhatsApp">WhatsApp</option>
-              <option value="Direct">ישיר</option>
+              <option value="Direct">{t('Direct','ישיר')}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">קמפיין</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">{t('Campaign','קמפיין')}</label>
             <input
               type="text"
               value={newLeadCampaign}
               onChange={e => setNewLeadCampaign(e.target.value)}
-              placeholder="שם קמפיין / Pre-Launch"
+              placeholder={t("Campaign name / Pre-Launch","שם קמפיין / Pre-Launch")}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-violet-500"
             />
           </div>
@@ -432,7 +434,7 @@ export default function LeadsPipeline({ onSelectLead }) {
         <Drawer
           isOpen={Boolean(selectedLead)}
           onClose={() => setSelectedLead(null)}
-          title={`כרטיס ליד: ${selectedLead.full_name}`}
+          title={`${t('Lead Card','כרטיס ליד')}: ${selectedLead.full_name}`}
           width="max-w-xl"
         >
           <div className="space-y-6">
@@ -445,7 +447,7 @@ export default function LeadsPipeline({ onSelectLead }) {
                     className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
                   >
                     <Phone className="w-3.5 h-3.5" />
-                    <span>התקשר</span>
+                    <span>{t('Call','התקשר')}</span>
                   </a>
                   <a
                     href={`https://wa.me/${formatWhatsAppPhone(selectedLead.phone)}`}
@@ -464,14 +466,14 @@ export default function LeadsPipeline({ onSelectLead }) {
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-medium py-2 rounded-lg flex items-center justify-center space-x-1 space-x-reverse"
                 >
                   <Mail className="w-3.5 h-3.5" />
-                  <span>מייל</span>
+                  <span>{t('Email','מייל')}</span>
                 </a>
               )}
             </div>
 
             {/* Editable Status */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">סטטוס פנייה</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t('Lead Status','סטטוס פנייה')}</label>
               <select
                 value={selectedLead.status || 'new'}
                 onChange={e => handleStatusChange(selectedLead, e.target.value)}
@@ -485,26 +487,26 @@ export default function LeadsPipeline({ onSelectLead }) {
 
             {/* Lead Metadata */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-              <h4 className="text-xs font-bold text-slate-700">פרטי פנייה</h4>
+              <h4 className="text-xs font-bold text-slate-700">{t('Lead Details','פרטי פנייה')}</h4>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-slate-500">שם: </span>
+                  <span className="text-slate-500">{t('Name:','שם: ')}</span>
                   <span className="text-slate-900 font-medium">{selectedLead.full_name}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">טלפון: </span>
+                  <span className="text-slate-500">{t('Phone:','טלפון: ')}</span>
                   <span className="text-slate-900 font-mono dir-ltr inline-block">{selectedLead.phone || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">דוא״ל: </span>
+                  <span className="text-slate-500">{t('Email:','דוא״ל: ')}</span>
                   <span className="text-slate-900 font-medium dir-ltr inline-block">{selectedLead.email || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">מקור: </span>
+                  <span className="text-slate-500">{t('Source:','מקור: ')}</span>
                   <span className="text-slate-900 font-medium">{selectedLead.source || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">קמפיין: </span>
+                  <span className="text-slate-500">{t('Campaign:','קמפיין: ')}</span>
                   <span className="text-slate-900 font-medium">{selectedLead.campaign || '-'}</span>
                 </div>
               </div>
@@ -512,7 +514,7 @@ export default function LeadsPipeline({ onSelectLead }) {
 
             {/* Follow-up Date */}
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">תאריך חזרה למעקב</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t('Follow-up Date','תאריך חזרה למעקב')}</label>
               <input
                 type="date"
                 value={selectedLead.follow_up_date || ''}
@@ -523,7 +525,7 @@ export default function LeadsPipeline({ onSelectLead }) {
 
             {/* Log Communication */}
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-slate-700">תיעוד תקשורת</h4>
+              <h4 className="text-xs font-bold text-slate-700">{t('Communication Log','תיעוד תקשורת')}</h4>
               <form onSubmit={handleLogComm} className="space-y-2">
                 <div className="flex space-x-2 space-x-reverse">
                   <select
@@ -531,14 +533,14 @@ export default function LeadsPipeline({ onSelectLead }) {
                     onChange={e => setCommType(e.target.value)}
                     className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900"
                   >
-                    <option value="call">שיחה</option>
-                    <option value="whatsapp">ווטסאפ</option>
-                    <option value="email">מייל</option>
-                    <option value="note">הערה</option>
+                    <option value="call">{t('Call','שיחה')}</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="email">{t('Email','מייל')}</option>
+                    <option value="note">{t('Note','הערה')}</option>
                   </select>
                   <input
                     type="text"
-                    placeholder="תיעוד סיכום שיחה..."
+                    placeholder={t("Communication summary...","תיעוד סיכום שיחה...")}
                     value={commNote}
                     onChange={e => setCommNote(e.target.value)}
                     className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
@@ -547,15 +549,15 @@ export default function LeadsPipeline({ onSelectLead }) {
                     type="submit"
                     className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg text-xs font-bold"
                   >
-                    שמור
+                    {t('Save','שמור')}
                   </button>
                 </div>
               </form>
 
               <div className="space-y-2 border-t border-slate-200 pt-3">
                 <div className="flex items-center justify-between">
-                  <h5 className="text-[11px] font-bold text-slate-600">היסטוריית תקשורת</h5>
-                  <span className="text-[10px] text-slate-400">{selectedLeadCommunications.length} רשומות</span>
+                  <h5 className="text-[11px] font-bold text-slate-600">{t('Communication History','היסטוריית תקשורת')}</h5>
+                  <span className="text-[10px] text-slate-400">{selectedLeadCommunications.length} {t('records','רשומות')}</span>
                 </div>
 
                 {selectedLeadCommunications.length === 0 ? (
@@ -590,11 +592,11 @@ export default function LeadsPipeline({ onSelectLead }) {
         isOpen={Boolean(lostModalLead)}
         onClose={() => setLostModalLead(null)}
         onConfirm={handleConfirmLost}
-        title="סיבת אובדן ליד"
-        confirmText="עדכן כאבוד"
+        title={t("Lost Lead Reason","סיבת אובדן ליד")}
+        confirmText={t("Mark as Lost","עדכן כאבוד")}
         inputField={{
-          label: "אנא ציין סיבה לאובדן הליד (למשל: מחיר, לא ענה, עבר מקום):",
-          placeholder: "סיבת אובדן...",
+          label: t("Please state why the lead was lost (e.g. price, no response, went elsewhere):","אנא ציין סיבה לאובדן הליד (למשל: מחיר, לא ענה, עבר מקום):"),
+          placeholder: t("Loss reason...","סיבת אובדן..."),
           required: true
         }}
       />
@@ -602,9 +604,9 @@ export default function LeadsPipeline({ onSelectLead }) {
         isOpen={Boolean(deleteModalLead)}
         onClose={() => setDeleteModalLead(null)}
         onConfirm={handleDeleteLead}
-        title="העברת ליד לאשפה"
-        message={deleteModalLead ? `להעביר את ${deleteModalLead.full_name || 'הליד'} לאשפה? ניתן לשחזר אותו ממסך האשפה.` : ''}
-        confirmText="העבר לאשפה"
+        title={t("Move Lead to Trash","העברת ליד לאשפה")}
+        message={deleteModalLead ? t(`Move ${deleteModalLead.full_name || 'the lead'} to Trash? It can be restored from Trash.`, `להעביר את ${deleteModalLead.full_name || 'הליד'} לאשפה? ניתן לשחזר אותו ממסך האשפה.`) : ''}
+        confirmText={t("Move to Trash","העבר לאשפה")}
       />
     </div>
   );
