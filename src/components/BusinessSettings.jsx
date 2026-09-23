@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import ServicesCatalog from './ServicesCatalog';
+import { LanguageContext } from '../context/LanguageContext';
 import { useToast } from './ui/Toast';
 import { Copy, ExternalLink, Upload } from 'lucide-react';
 
@@ -8,6 +9,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
   const [activeTab, setActiveTab] = useState(activeFormSubTab || 'services');
   const { businessHours, updateBusinessHour, bookingSettings, updateBookingSettings } = useContext(ClinicContext);
   const { showToast } = useToast();
+  const { t } = useContext(LanguageContext);
 
   useEffect(() => {
     if (activeFormSubTab) {
@@ -18,7 +20,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
   const copyBookingLink = () => {
     const link = `${window.location.origin}/book`;
     navigator.clipboard.writeText(link);
-    showToast('הקישור הציבורי לזימון תורים הועתק ללוח');
+    showToast(t('Public booking link copied', 'הקישור הציבורי לזימון תורים הועתק ללוח'));
   };
 
   const handleLogoUpload = (e) => {
@@ -27,7 +29,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
       const reader = new FileReader();
       reader.onloadend = () => {
         updateBookingSettings({ logoUrl: reader.result });
-        showToast('הלוגו עודכן');
+        showToast(t('Logo updated', 'הלוגו עודכן'));
       };
       reader.readAsDataURL(file);
     }
@@ -50,14 +52,14 @@ export default function BusinessSettings({ activeFormSubTab }) {
     <div className="space-y-6 dir-rtl text-start font-sans">
       {/* Settings Header */}
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">הגדרות</h1>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">{t('Settings', 'הגדרות')}</h1>
 
         <div className="flex max-w-full overflow-x-auto bg-white p-1 rounded-xl border border-slate-200">
           {[
-            { id: 'services', label: 'שירותים' },
-            { id: 'hours', label: 'שעות פעילות' },
-            { id: 'bookingPortal', label: 'זימון תורים' },
-            { id: 'businessDetails', label: 'פרטי העסק' }
+            { id: 'services', label: t('Services', 'שירותים') },
+            { id: 'hours', label: t('Business Hours', 'שעות פעילות') },
+            { id: 'bookingPortal', label: t('Booking Portal', 'זימון תורים') },
+            { id: 'businessDetails', label: t('Business Details', 'פרטי העסק') }
           ].map(tab => (
             <button
               key={tab.id}
@@ -83,8 +85,8 @@ export default function BusinessSettings({ activeFormSubTab }) {
         {activeTab === 'hours' && (
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs p-5 space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">שעות פעילות העסק</h3>
-              <p className="text-xs text-slate-500 mt-0.5">הגדר מתי העסק פתוח לקבלת תורים חדשים.</p>
+              <h3 className="text-sm font-bold text-slate-900">{t('Business Hours', 'שעות פעילות העסק')}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t('Set when the business is open for new appointments.', 'הגדר מתי העסק פתוח לקבלת תורים חדשים.')}</p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -98,9 +100,9 @@ export default function BusinessSettings({ activeFormSubTab }) {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="text-sm font-extrabold text-slate-900">יום {getDayName(hour.dayOfWeek)}</div>
+                        <div className="text-sm font-extrabold text-slate-900">{t('Day', 'יום')} {getDayName(hour.dayOfWeek)}</div>
                         <div className="mt-1 text-[10px] text-slate-400">
-                          {hour.isOpen ? 'פתוח לקבלת תורים' : 'סגור'}
+                          {hour.isOpen ? t('Open for bookings', 'פתוח לקבלת תורים') : t('Closed', 'סגור')}
                         </div>
                       </div>
 
@@ -117,7 +119,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
 
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <label>
-                        <span className="mb-1 block text-[10px] font-bold text-slate-400">פתיחה</span>
+                        <span className="mb-1 block text-[10px] font-bold text-slate-400">{t('Opens', 'פתיחה')}</span>
                         <input
                           type="time"
                           value={hour.startTime}
@@ -127,7 +129,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
                         />
                       </label>
                       <label>
-                        <span className="mb-1 block text-[10px] font-bold text-slate-400">סגירה</span>
+                        <span className="mb-1 block text-[10px] font-bold text-slate-400">{t('Closes', 'סגירה')}</span>
                         <input
                           type="time"
                           value={hour.endTime}
@@ -148,59 +150,59 @@ export default function BusinessSettings({ activeFormSubTab }) {
           <div className="space-y-4">
             <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-xs font-bold text-slate-900">כתובת דף הזימון הציבורי</h3>
+                <h3 className="text-xs font-bold text-slate-900">{t('Public booking URL', 'כתובת דף הזימון הציבורי')}</h3>
                 <p className="text-slate-500 text-xs font-mono dir-ltr text-right mt-0.5">{window.location.origin}/book</p>
               </div>
               <div className="flex space-x-2 space-x-reverse">
                 <button onClick={copyBookingLink} className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 space-x-reverse">
                   <Copy className="w-3.5 h-3.5" />
-                  <span>העתק קישור</span>
+                  <span>{t('Copy Link', 'העתק קישור')}</span>
                 </button>
                 <a href="/book" target="_blank" rel="noreferrer" className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1 space-x-reverse">
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>תצוגה</span>
+                  <span>{t('Preview', 'תצוגה')}</span>
                 </a>
               </div>
             </div>
 
             <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4">
-              <h3 className="text-xs font-bold text-slate-900">הגדרות דף זימון תורים</h3>
+              <h3 className="text-xs font-bold text-slate-900">{t('Booking Page Settings', 'הגדרות דף זימון תורים')}</h3>
               
               <div className="grid gap-3 md:grid-cols-3">
                 <SettingToggle
-                  label="דרישת אישור מדיניות ביטול"
-                  description="הלקוח חייב לסמן אישור לפני קביעת התור."
+                  label={t('Require cancellation policy acceptance', 'דרישת אישור מדיניות ביטול')}
+                  description={t('Client must accept before booking.', 'הלקוח חייב לסמן אישור לפני קביעת התור.')}
                   checked={bookingSettings.requirePolicy}
                   onChange={value => updateBookingSettings({ requirePolicy: value })}
                 />
                 <SettingToggle
-                  label="אפשר תשלום במקום"
-                  description="מציג אפשרות תשלום בקליניקה."
+                  label={t('Allow pay at clinic', 'אפשר תשלום במקום')}
+                  description={t('Shows an option to pay at the clinic.', 'מציג אפשרות תשלום בקליניקה.')}
                   checked={bookingSettings.allowPayAtClinic}
                   onChange={value => updateBookingSettings({ allowPayAtClinic: value })}
                 />
                 <SettingToggle
-                  label="אפשר חבילות"
-                  description="מאפשר שימוש במוצרים/חבילות בזימון."
+                  label={t('Allow packages', 'אפשר חבילות')}
+                  description={t('Allows packages/products in booking.', 'מאפשר שימוש במוצרים/חבילות בזימון.')}
                   checked={bookingSettings.allowPackages}
                   onChange={value => updateBookingSettings({ allowPackages: value })}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">כתובת הקליניקה</label>
+                <label className="mb-1 block text-xs font-bold text-slate-500">{t('Clinic Address', 'כתובת הקליניקה')}</label>
                 <input
                   type="text"
                   value={bookingSettings.clinicAddress}
                   onChange={e => updateBookingSettings({ clinicAddress: e.target.value })}
-                  placeholder="הכתובת שתוצג ללקוח ותיכנס ליומן"
+                  placeholder={t('Address shown to clients and calendar events', 'הכתובת שתוצג ללקוח ותיכנס ליומן')}
                   className="work-input"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block text-slate-500 mb-1">הודעת ברכה בדף</label>
+                  <label className="block text-slate-500 mb-1">{t('Welcome Message', 'הודעת ברכה בדף')}</label>
                   <textarea
                     rows={3}
                     value={bookingSettings.welcomeMessage}
@@ -210,7 +212,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
                 </div>
 
                 <div>
-                  <label className="block text-slate-500 mb-1">נוסח מדיניות הביטול</label>
+                  <label className="block text-slate-500 mb-1">{t('Cancellation Policy', 'נוסח מדיניות הביטול')}</label>
                   <textarea
                     rows={3}
                     value={bookingSettings.cancellationPolicyText}
@@ -227,13 +229,13 @@ export default function BusinessSettings({ activeFormSubTab }) {
         {activeTab === 'businessDetails' && (
           <div className="premium-panel p-5 rounded-2xl space-y-5 text-xs">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">פרטי העסק שיוצגו ללקוח</h3>
-              <p className="mt-1 text-[11px] text-slate-500">הפרטים כאן יוצגו בדף זימון התורים הציבורי.</p>
+              <h3 className="text-sm font-bold text-slate-900">{t('Public Business Details', 'פרטי העסק שיוצגו ללקוח')}</h3>
+              <p className="mt-1 text-[11px] text-slate-500">{t('These details are shown on the public booking page.', 'הפרטים כאן יוצגו בדף זימון התורים הציבורי.')}</p>
             </div>
             
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-slate-500 mb-1">שם העסק הציבורי</label>
+                <label className="block text-slate-500 mb-1">{t('Public Business Name', 'שם העסק הציבורי')}</label>
                 <input
                   type="text"
                   value={bookingSettings.businessName || ''}
@@ -244,7 +246,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1">טלפון ציבורי</label>
+                <label className="block text-slate-500 mb-1">{t('Public Phone', 'טלפון ציבורי')}</label>
                 <input
                   type="tel"
                   dir="ltr"
@@ -256,7 +258,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1">אימייל ציבורי</label>
+                <label className="block text-slate-500 mb-1">{t('Public Email', 'אימייל ציבורי')}</label>
                 <input
                   type="email"
                   dir="ltr"
@@ -268,7 +270,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1">אתר</label>
+                <label className="block text-slate-500 mb-1">{t('Website', 'אתר')}</label>
                 <input
                   type="url"
                   dir="ltr"
@@ -280,22 +282,22 @@ export default function BusinessSettings({ activeFormSubTab }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-slate-500 mb-1">כתובת הקליניקה</label>
+                <label className="block text-slate-500 mb-1">{t('Clinic Address', 'כתובת הקליניקה')}</label>
                 <input
                   type="text"
                   value={bookingSettings.clinicAddress || ''}
                   onChange={e => updateBookingSettings({ clinicAddress: e.target.value })}
-                  placeholder="כתובת שתוצג בדף הזימון ובאירוע היומן"
+                  placeholder={t('Address shown on booking page and calendar event', 'כתובת שתוצג בדף הזימון ובאירוע היומן')}
                   className="work-input"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-slate-500 mb-2">לוגו העסק הציבורי</label>
+                <label className="block text-slate-500 mb-2">{t('Public Business Logo', 'לוגו העסק הציבורי')}</label>
                 <div className="flex flex-wrap items-center gap-3">
                   {bookingSettings.logoUrl && (
                     <div className="h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                      <img src={bookingSettings.logoUrl} alt="לוגו העסק" className="h-full w-full object-cover" />
+                      <img src={bookingSettings.logoUrl} alt={t('Business logo', 'לוגו העסק')} className="h-full w-full object-cover" />
                     </div>
                   )}
                   <input
