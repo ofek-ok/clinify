@@ -87,11 +87,11 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f6f7fb] text-slate-900 font-sans text-start dir-rtl">
+    <div dir={language === 'he' ? 'rtl' : 'ltr'} className="flex h-screen overflow-hidden bg-[#f6f7fb] text-slate-900 font-sans text-start">
       {isSidebarOpen && (
         <button
           type="button"
-          aria-label="סגור תפריט"
+          aria-label={t('Close menu','סגור תפריט')}
           className="fixed inset-0 z-40 bg-slate-950/45 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -160,13 +160,13 @@ const Layout = () => {
         <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4 lg:hidden">
           <button
             type="button"
-            aria-label="פתח תפריט"
+            aria-label={t('Open menu','פתח תפריט')}
             onClick={() => setIsSidebarOpen(true)}
             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="mr-3 flex items-center gap-2">
+          <div className="ms-3 flex items-center gap-2">
             <img src="/clinify-logo.png" alt="Clinify" className="h-6 w-6 object-contain" />
             <span className="text-sm font-semibold text-slate-900">Clinify</span>
           </div>
