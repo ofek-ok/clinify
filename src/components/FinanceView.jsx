@@ -2,7 +2,7 @@ import React, { useState, useContext, useMemo } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
 import Drawer from './ui/Drawer';
 import { useToast } from './ui/Toast';
-import { Plus, Wallet, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function FinanceView({ initialTab = 'overview' }) {
@@ -14,6 +14,8 @@ export default function FinanceView({ initialTab = 'overview' }) {
     appointments,
     addPayment,
     addExpense,
+    updatePayment,
+    updateExpense,
     updatePaymentStatus,
     deletePayment,
     deleteExpense,
@@ -39,6 +41,12 @@ export default function FinanceView({ initialTab = 'overview' }) {
   const [expDate, setExpDate] = useState(todayStr);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
 
   // Current Month Operational Context Metrics
   const currentMonthMetrics = useMemo(() => {
@@ -95,6 +103,51 @@ export default function FinanceView({ initialTab = 'overview' }) {
     return months;
   }, [payments, expenses]);
 
+  const filteredPayments = useMemo(() => payments
+    .filter(p => {
+      if (paymentStatusFilter !== 'all' && p.status !== paymentStatusFilter) return false;
+      if (paymentMethodFilter !== 'all' && p.payment_method !== paymentMethodFilter) return false;
+      if (!searchTerm.trim()) return true;
+      const pat = patients.find(patient => patient.id === p.patient_id || patient.person_id === p.person_id);
+      const haystack = [pat?.full_name, p.payment_method, p.amount, p.status].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(searchTerm.toLowerCase());
+    })
+    .sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at)),
+  [payments, patients, paymentStatusFilter, paymentMethodFilter, searchTerm]);
+
+  const filteredExpenses = useMemo(() => expenses
+    .filter(e => {
+      if (expenseCategoryFilter !== 'all' && e.category !== expenseCategoryFilter) return false;
+      if (!searchTerm.trim()) return true;
+      const haystack = [e.title, e.category, e.payment_method, e.amount].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(searchTerm.toLowerCase());
+    })
+    .sort((a,b) => new Date(b.expense_date || b.created_at) - new Date(a.expense_date || a.created_at)),
+  [expenses, expenseCategoryFilter, searchTerm]);
+
+  const paymentMethods = useMemo(() => Array.from(new Set(payments.map(p => p.payment_method).filter(Boolean))), [payments]);
+  const expenseCategories = useMemo(() => Array.from(new Set(expenses.map(e => e.category).filter(Boolean))), [expenses]);
+
+  const openPaymentDrawer = (payment = null) => {
+    setEditingPaymentId(payment?.id || null);
+    setPayPatientId(payment?.patient_id || '');
+    setPayAmount(payment?.amount || '');
+    setPayMethod(payment?.payment_method || 'Credit Card');
+    setPayStatus(payment?.status || 'paid');
+    setPayDate((payment?.payment_date || todayStr || '').split('T')[0]);
+    setIsPaymentDrawerOpen(true);
+  };
+
+  const openExpenseDrawer = (expense = null) => {
+    setEditingExpenseId(expense?.id || null);
+    setExpDescription(expense?.title || expense?.description || '');
+    setExpCategory(expense?.category || 'ציוד קליני');
+    setExpAmount(expense?.amount || '');
+    setExpMethod(expense?.payment_method || 'Credit Card');
+    setExpDate((expense?.expense_date || todayStr || '').split('T')[0]);
+    setIsExpenseDrawerOpen(true);
+  };
+
   const handleCreatePayment = async (e) => {
     e.preventDefault();
     if (!payPatientId || !payAmount) {
@@ -103,15 +156,22 @@ export default function FinanceView({ initialTab = 'overview' }) {
     }
     setIsSubmitting(true);
     try {
-      await addPayment({
+      const payload = {
         patient_id: payPatientId,
         amount: parseFloat(payAmount),
         payment_method: payMethod,
         status: payStatus,
         payment_date: payDate || todayStr
-      });
-      showToast('התשלום נרשם בהצלחה');
+      };
+      if (editingPaymentId) {
+        await updatePayment(editingPaymentId, payload);
+        showToast('התשלום עודכן בהצלחה');
+      } else {
+        await addPayment(payload);
+        showToast('התשלום נרשם בהצלחה');
+      }
       setIsPaymentDrawerOpen(false);
+      setEditingPaymentId(null);
       setPayAmount('');
     } catch (err) {
       showToast(err.message || 'שגיאה ברשום תשלום', 'error');
@@ -128,15 +188,22 @@ export default function FinanceView({ initialTab = 'overview' }) {
     }
     setIsSubmitting(true);
     try {
-      await addExpense({
+      const payload = {
         title: expDescription.trim(),
         category: expCategory,
         amount: parseFloat(expAmount),
         payment_method: expMethod,
         expense_date: expDate || todayStr
-      });
-      showToast('ההוצאה נרשמה בהצלחה');
+      };
+      if (editingExpenseId) {
+        await updateExpense(editingExpenseId, payload);
+        showToast('ההוצאה עודכנה בהצלחה');
+      } else {
+        await addExpense(payload);
+        showToast('ההוצאה נרשמה בהצלחה');
+      }
       setIsExpenseDrawerOpen(false);
+      setEditingExpenseId(null);
       setExpDescription('');
       setExpAmount('');
     } catch (err) {
@@ -222,10 +289,25 @@ export default function FinanceView({ initialTab = 'overview' }) {
       {/* INCOME TAB */}
       {activeTab === 'income' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
-            <span className="text-xs text-slate-500">רשימת הכנסות ותשלומים</span>
+          <div className="flex flex-wrap justify-between items-center gap-3 bg-white p-3 rounded-xl border border-slate-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="חיפוש..." className="h-9 w-48 rounded-lg border border-slate-200 bg-slate-50 pr-8 pl-2 text-xs outline-none" />
+              </div>
+              <select value={paymentStatusFilter} onChange={e => setPaymentStatusFilter(e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs">
+                <option value="all">כל הסטטוסים</option>
+                <option value="paid">שולם</option>
+                <option value="pending">ממתין</option>
+                <option value="refunded">הוחזר</option>
+              </select>
+              <select value={paymentMethodFilter} onChange={e => setPaymentMethodFilter(e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs">
+                <option value="all">כל האמצעים</option>
+                {paymentMethods.map(method => <option key={method} value={method}>{method}</option>)}
+              </select>
+            </div>
             <button
-              onClick={() => setIsPaymentDrawerOpen(true)}
+              onClick={() => openPaymentDrawer()}
               className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse"
             >
               <Plus className="w-4 h-4" />
@@ -246,10 +328,10 @@ export default function FinanceView({ initialTab = 'overview' }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {payments.length === 0 ? (
+                {filteredPayments.length === 0 ? (
                   <tr><td colSpan={6} className="py-8 text-center text-slate-500">אין תשלומים רשומים.</td></tr>
                 ) : (
-                  payments.map(p => {
+                  filteredPayments.map(p => {
                     const pat = patients.find(patient => patient.id === p.patient_id || patient.person_id === p.person_id);
                     return (
                       <tr key={p.id} className="hover:bg-slate-100">
@@ -272,9 +354,14 @@ export default function FinanceView({ initialTab = 'overview' }) {
                           >
                             <option value="paid">שולם</option>
                             <option value="pending">ממתין</option>
+                            <option value="refunded">הוחזר</option>
                           </select>
                         </td>
                         <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                          <button type="button" onClick={() => openPaymentDrawer(p)} className="p-1.5 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50" title="עריכה">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             type="button"
                             onClick={async () => {
@@ -286,10 +373,12 @@ export default function FinanceView({ initialTab = 'overview' }) {
                                 showToast(err.message || 'לא ניתן למחוק את התשלום', 'error');
                               }
                             }}
-                            className="text-[11px] font-bold text-rose-700 hover:underline"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                            title="העבר לאשפה"
                           >
-                            מחיקה
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -304,10 +393,19 @@ export default function FinanceView({ initialTab = 'overview' }) {
       {/* EXPENSES TAB */}
       {activeTab === 'expenses' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
-            <span className="text-xs text-slate-500">רשימת הוצאות</span>
+          <div className="flex flex-wrap justify-between items-center gap-3 bg-white p-3 rounded-xl border border-slate-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="חיפוש..." className="h-9 w-48 rounded-lg border border-slate-200 bg-slate-50 pr-8 pl-2 text-xs outline-none" />
+              </div>
+              <select value={expenseCategoryFilter} onChange={e => setExpenseCategoryFilter(e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs">
+                <option value="all">כל הקטגוריות</option>
+                {expenseCategories.map(category => <option key={category} value={category}>{category}</option>)}
+              </select>
+            </div>
             <button
-              onClick={() => setIsExpenseDrawerOpen(true)}
+              onClick={() => openExpenseDrawer()}
               className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 space-x-reverse"
             >
               <Plus className="w-4 h-4" />
@@ -328,10 +426,10 @@ export default function FinanceView({ initialTab = 'overview' }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {expenses.length === 0 ? (
+                {filteredExpenses.length === 0 ? (
                   <tr><td colSpan={6} className="py-8 text-center text-slate-500">אין הוצאות רשומות.</td></tr>
                 ) : (
-                  expenses.map(e => (
+                  filteredExpenses.map(e => (
                     <tr key={e.id} className="hover:bg-slate-100">
                       <td className="py-3 px-4 font-bold text-slate-900">{e.title || e.description || '-'}</td>
                       <td className="py-3 px-4 text-slate-700">{e.category || '-'}</td>
@@ -339,6 +437,10 @@ export default function FinanceView({ initialTab = 'overview' }) {
                       <td className="py-3 px-4 font-bold text-rose-400">₪{e.amount}</td>
                       <td className="py-3 px-4 text-slate-500">{e.payment_method || '-'}</td>
                       <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                        <button type="button" onClick={() => openExpenseDrawer(e)} className="p-1.5 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50" title="עריכה">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={async () => {
@@ -350,10 +452,12 @@ export default function FinanceView({ initialTab = 'overview' }) {
                               showToast(err.message || 'לא ניתן למחוק את ההוצאה', 'error');
                             }
                           }}
-                          className="text-[11px] font-bold text-rose-700 hover:underline"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                          title="העבר לאשפה"
                         >
-                          מחיקה
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -368,12 +472,12 @@ export default function FinanceView({ initialTab = 'overview' }) {
       <Drawer
         isOpen={isPaymentDrawerOpen}
         onClose={() => setIsPaymentDrawerOpen(false)}
-        title="רישום תשלום חדש"
+        title={editingPaymentId ? "עריכת תשלום" : "רישום תשלום חדש"}
         footer={
           <>
             <button onClick={() => setIsPaymentDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">ביטול</button>
             <button onClick={handleCreatePayment} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50">
-              {isSubmitting ? 'שומר...' : 'שמור תשלום'}
+              {isSubmitting ? 'שומר...' : editingPaymentId ? 'שמור שינויים' : 'שמור תשלום'}
             </button>
           </>
         }
@@ -408,6 +512,18 @@ export default function FinanceView({ initialTab = 'overview' }) {
             <select value={payStatus} onChange={e => setPayStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
               <option value="paid">שולם</option>
               <option value="pending">ממתין לגבייה</option>
+              <option value="refunded">הוחזר</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">אמצעי תשלום</label>
+            <select value={expMethod} onChange={e => setExpMethod(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none">
+              <option value="Credit Card">כרטיס אשראי</option>
+              <option value="Bank Transfer">העברה בנקאית</option>
+              <option value="Cash">מזומן</option>
+              <option value="PayBox">PayBox</option>
+              <option value="תשלום במקום">תשלום במקום</option>
             </select>
           </div>
 
@@ -422,12 +538,12 @@ export default function FinanceView({ initialTab = 'overview' }) {
       <Drawer
         isOpen={isExpenseDrawerOpen}
         onClose={() => setIsExpenseDrawerOpen(false)}
-        title="רישום הוצאה חדשה"
+        title={editingExpenseId ? "עריכת הוצאה" : "רישום הוצאה חדשה"}
         footer={
           <>
             <button onClick={() => setIsExpenseDrawerOpen(false)} className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-900 bg-slate-100">ביטול</button>
             <button onClick={handleCreateExpense} disabled={isSubmitting} className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50">
-              {isSubmitting ? 'שומר...' : 'שמור הוצאה'}
+              {isSubmitting ? 'שומר...' : editingExpenseId ? 'שמור שינויים' : 'שמור הוצאה'}
             </button>
           </>
         }
