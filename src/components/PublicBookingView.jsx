@@ -11,8 +11,8 @@ const PublicBookingView = () => {
     allow_packages: true,
     allow_pay_at_clinic: true,
     require_policy: true,
-    cancellation_policy_text: 'ביטול תור יתאפשר עד 24 שעות מראש.',
-    welcome_message: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
+    cancellation_policy_text: t('Appointments can be cancelled up to 24 hours in advance.','ביטול תור יתאפשר עד 24 שעות מראש.'),
+    welcome_message: t('Welcome to the public booking page. Please choose a service and a convenient time.','ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.'),
     clinic_address: '',
     logo_url: '',
     business_name: 'Okonski Performance',
@@ -146,7 +146,7 @@ const PublicBookingView = () => {
     } catch (err) {
       console.error("Booking submission error:", err);
       let errorMsg = err.message || t('Error completing booking.', 'ארעה שגיאה ברישום התור.');
-      if (errorMsg.includes('אינו פנוי') || errorMsg.includes('תפוס') || errorMsg.toLowerCase().includes('overlap')) {
+      if (errorMsg.includes('אינו פנוי') || errorMsg.includes('תפוס') || errorMsg.toLowerCase().includes('not available') || errorMsg.toLowerCase().includes('overlap')) {
         errorMsg = t('This slot is no longer available. Please select another time.', 'המועד כבר תפוס. חזרנו לבחירת שעה אחרת.');
         setSelectedSlot('');
         setStep(2);
@@ -276,7 +276,7 @@ const PublicBookingView = () => {
                 </button>
                 <div>
                   <h2 className="text-lg font-extrabold text-slate-800 tracking-tight">{t('Step 2: Select Date & Open Time Slot', 'שלב 2: בחר תאריך ושעה פנויה')}</h2>
-                  <p className="text-xs text-violet-600 font-bold mt-0.5">{selectedService?.name} ({selectedService?.duration_minutes} דק')</p>
+                  <p className="text-xs text-violet-600 font-bold mt-0.5">{selectedService?.name} ({selectedService?.duration_minutes} {t('min','דק')})</p>
                 </div>
               </div>
               <span className="text-xs font-bold text-slate-400">2 / 3</span>
