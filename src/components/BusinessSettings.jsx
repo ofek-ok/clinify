@@ -225,25 +225,76 @@ export default function BusinessSettings({ activeFormSubTab }) {
 
         {/* TAB 4: Business Details */}
         {activeTab === 'businessDetails' && (
-          <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4 text-xs">
-            <h3 className="text-xs font-bold text-slate-900">פרטי העסק והמותג</h3>
+          <div className="premium-panel p-5 rounded-2xl space-y-5 text-xs">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">פרטי העסק שיוצגו ללקוח</h3>
+              <p className="mt-1 text-[11px] text-slate-500">הפרטים כאן יוצגו בדף זימון התורים הציבורי.</p>
+            </div>
             
-            <div className="space-y-3 max-w-md">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-slate-500 mb-1">שם העסק הציבורי</label>
                 <input
                   type="text"
-                  readOnly
-                  value="Okonski Performance"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold"
+                  value={bookingSettings.businessName || ''}
+                  onChange={e => updateBookingSettings({ businessName: e.target.value })}
+                  placeholder="Okonski Performance"
+                  className="work-input font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1">לוגו העסק הציבורי</label>
-                <div className="flex items-center space-x-3 space-x-reverse">
+                <label className="block text-slate-500 mb-1">טלפון ציבורי</label>
+                <input
+                  type="tel"
+                  dir="ltr"
+                  value={bookingSettings.publicPhone || ''}
+                  onChange={e => updateBookingSettings({ publicPhone: e.target.value })}
+                  placeholder="050-000-0000"
+                  className="work-input text-end"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-500 mb-1">אימייל ציבורי</label>
+                <input
+                  type="email"
+                  dir="ltr"
+                  value={bookingSettings.publicEmail || ''}
+                  onChange={e => updateBookingSettings({ publicEmail: e.target.value })}
+                  placeholder="hello@example.com"
+                  className="work-input text-end"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-500 mb-1">אתר</label>
+                <input
+                  type="url"
+                  dir="ltr"
+                  value={bookingSettings.publicWebsite || ''}
+                  onChange={e => updateBookingSettings({ publicWebsite: e.target.value })}
+                  placeholder="https://..."
+                  className="work-input text-end"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-slate-500 mb-1">כתובת הקליניקה</label>
+                <input
+                  type="text"
+                  value={bookingSettings.clinicAddress || ''}
+                  onChange={e => updateBookingSettings({ clinicAddress: e.target.value })}
+                  placeholder="כתובת שתוצג בדף הזימון ובאירוע היומן"
+                  className="work-input"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-slate-500 mb-2">לוגו העסק הציבורי</label>
+                <div className="flex flex-wrap items-center gap-3">
                   {bookingSettings.logoUrl && (
-                    <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <div className="h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-white">
                       <img src={bookingSettings.logoUrl} alt="לוגו העסק" className="h-full w-full object-cover" />
                     </div>
                   )}
@@ -251,7 +302,7 @@ export default function BusinessSettings({ activeFormSubTab }) {
                     type="file"
                     accept="image/*"
                     onChange={handleLogoUpload}
-                    className="text-xs text-slate-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-900 hover:file:bg-slate-700 cursor-pointer"
+                    className="text-xs text-slate-500 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 cursor-pointer"
                   />
                 </div>
               </div>
