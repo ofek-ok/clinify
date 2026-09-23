@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
@@ -7,6 +8,7 @@ const key=d=>d.toISOString().slice(0,10);
 
 export default function WorkTimeline() {
   const { tasks, projects } = useContext(ClinicContext);
+  const { t, language } = useContext(LanguageContext);
   const [offset,setOffset]=useState(0);
   const [projectFilter,setProjectFilter]=useState('');
   const [statusFilter,setStatusFilter]=useState('');
@@ -27,23 +29,23 @@ export default function WorkTimeline() {
     <div className="space-y-3">
       <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3">
         <div>
-          <div className="text-xs font-bold text-slate-900">Timeline · 14 ימים</div>
-          <div className="text-[11px] text-slate-500">תאריכי התחלה ויעד של המשימות</div>
+          <div className="text-xs font-bold text-slate-900">{t('Timeline · 14 days','Timeline · 14 ימים')}</div>
+          <div className="text-[11px] text-slate-500">{t('Task start and due dates','תאריכי התחלה ויעד של המשימות')}</div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select value={projectFilter} onChange={e=>setProjectFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-[11px]">
-            <option value="">כל הפרויקטים</option>
+            <option value="">{t('All Projects','כל הפרויקטים')}</option>
             {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-[11px]">
-            <option value="">כל הסטטוסים</option>
-            <option value="todo">לביצוע</option>
-            <option value="in_progress">בתהליך</option>
-            <option value="blocked">חסום</option>
-            <option value="done">הושלם</option>
+            <option value="">{t('All Statuses','כל הסטטוסים')}</option>
+            <option value="todo">{t('To Do','לביצוע')}</option>
+            <option value="in_progress">{t('In Progress','בתהליך')}</option>
+            <option value="blocked">{t('Blocked','חסום')}</option>
+            <option value="done">{t('Done','הושלם')}</option>
           </select>
           <button onClick={()=>setOffset(v=>v-1)} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronRight className="w-4 h-4"/></button>
-          <button onClick={()=>setOffset(0)} className="px-2 py-1 text-[11px] font-bold text-violet-700">היום</button>
+          <button onClick={()=>setOffset(0)} className="px-2 py-1 text-[11px] font-bold text-violet-700">{t('Today','היום')}</button>
           <button onClick={()=>setOffset(v=>v+1)} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronLeft className="w-4 h-4"/></button>
         </div>
       </div>
@@ -51,8 +53,8 @@ export default function WorkTimeline() {
       <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
         <div className="min-w-[1100px]">
           <div className="grid border-b border-slate-200 bg-slate-50" style={{gridTemplateColumns:'220px repeat(14,minmax(60px,1fr))'}}>
-            <div className="p-2 text-[11px] font-bold text-slate-500 border-l border-slate-200">משימה</div>
-            {days.map(d=><div key={key(d)} className="p-2 text-center text-[10px] border-l border-slate-200 text-slate-500">{d.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})}</div>)}
+            <div className="p-2 text-[11px] font-bold text-slate-500 border-l border-slate-200">{t('Task','משימה')}</div>
+            {days.map(d=><div key={key(d)} className="p-2 text-center text-[10px] border-l border-slate-200 text-slate-500">{d.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US',{day:'2-digit',month:'2-digit'})}</div>)}
           </div>
           <div className="divide-y divide-slate-100">
             {datedTasks.map(task => {
@@ -63,7 +65,7 @@ export default function WorkTimeline() {
                 <div key={task.id} className="grid min-h-12" style={{gridTemplateColumns:'220px repeat(14,minmax(60px,1fr))'}}>
                   <div className="p-2 border-l border-slate-200">
                     <div className="text-[11px] font-bold text-slate-900 truncate">{task.title}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{project?.name || 'ללא פרויקט'}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{project?.name || t('No Project','ללא פרויקט')}</div>
                   </div>
                   {days.map(d=>{
                     const k=key(d);
@@ -73,7 +75,7 @@ export default function WorkTimeline() {
                 </div>
               );
             })}
-            {datedTasks.length===0 && <div className="p-8 text-center text-xs text-slate-500">אין משימות עם תאריכים.</div>}
+            {datedTasks.length===0 && <div className="p-8 text-center text-xs text-slate-500">{t('No tasks with dates.','אין משימות עם תאריכים.')}</div>}
           </div>
         </div>
       </div>
