@@ -146,8 +146,10 @@ const PublicBookingView = () => {
     } catch (err) {
       console.error("Booking submission error:", err);
       let errorMsg = err.message || t('Error completing booking.', 'ארעה שגיאה ברישום התור.');
-      if (errorMsg.includes('אינו פנוי')) {
-        errorMsg = t('This slot is no longer available. Please select another time.', 'מועד זה תפוס. אנא בחר שעה אחרת.');
+      if (errorMsg.includes('אינו פנוי') || errorMsg.includes('תפוס') || errorMsg.toLowerCase().includes('overlap')) {
+        errorMsg = t('This slot is no longer available. Please select another time.', 'המועד כבר תפוס. חזרנו לבחירת שעה אחרת.');
+        setSelectedSlot('');
+        setStep(2);
       }
       setBookingError(errorMsg);
     } finally {
