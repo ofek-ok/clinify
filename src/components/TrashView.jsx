@@ -20,7 +20,8 @@ const TABLES = [
   ['patient_packages', 'חבילות'],
   ['lead_communications', 'תקשורות'],
   ['patient_clinical_notes', 'הערות קליניות'],
-  ['patient_documents', 'מסמכים']
+  ['patient_documents', 'מסמכים'],
+  ['calendar_blocks', 'חסימות יומן']
 ];
 
 const getRecordTitle = (table, row) => {
@@ -110,8 +111,8 @@ export default function TrashView() {
           <h1 className="text-xl font-bold text-slate-900">אשפה</h1>
           <p className="mt-1 text-xs text-slate-500">רשומות שנמחקו נשמרות כאן וניתנות לשחזור.</p>
         </div>
-        <button type="button" onClick={loadTrash} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
-          <RefreshCw className="h-4 w-4" />
+        <button type="button" onClick={loadTrash} disabled={loading} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           רענון
         </button>
       </div>
