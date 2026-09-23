@@ -1147,7 +1147,12 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const updatePayment = async (paymentId, updates) => {
-    const { data, error } = await supabase.from('payments').update(updates).eq('id', paymentId).select();
+    const payload = { ...updates };
+    if (updates.patient_id) {
+      const patient = patients.find(p => p.id === updates.patient_id);
+      if (patient?.person_id) payload.person_id = patient.person_id;
+    }
+    const { data, error } = await supabase.from('payments').update(payload).eq('id', paymentId).select();
     if (error) {
       console.error("Error updating payment:", error);
       throw error;
