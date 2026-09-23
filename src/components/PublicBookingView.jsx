@@ -14,7 +14,11 @@ const PublicBookingView = () => {
     cancellation_policy_text: 'ביטול תור יתאפשר עד 24 שעות מראש.',
     welcome_message: 'ברוכים הבאים לעמוד זימון התורים הציבורי. אנא בחרו שירות ומועד נוח.',
     clinic_address: '',
-    logo_url: ''
+    logo_url: '',
+    business_name: 'Okonski Performance',
+    public_phone: '',
+    public_email: '',
+    public_website: ''
   });
 
   const [step, setStep] = useState(1); // 1: Service, 2: Date/Slot, 3: Patient Info, 4: Confirmation
@@ -47,7 +51,7 @@ const PublicBookingView = () => {
             .eq('type', 'service')
             .is('deleted_at', null),
           supabase.from('business_hours').select('day_index, day_of_week, is_open, start_time, end_time'),
-          supabase.from('booking_settings').select('allow_packages, allow_pay_at_clinic, require_policy, cancellation_policy_text, welcome_message, clinic_address, logo_url').maybeSingle()
+          supabase.from('booking_settings').select('allow_packages, allow_pay_at_clinic, require_policy, cancellation_policy_text, welcome_message, clinic_address, logo_url, business_name, public_phone, public_email, public_website').maybeSingle()
         ]);
 
         if (servicesRes.data) setServices(servicesRes.data);
@@ -203,7 +207,7 @@ const PublicBookingView = () => {
               <img src={bookingSettings.logo_url} alt="Clinic Logo" className="w-full h-full object-cover" />
             </div>
           )}
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Okonski Performance</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{bookingSettings.business_name || 'Okonski Performance'}</h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1.5 font-medium max-w-md mx-auto">
             {bookingSettings.welcome_message || t('Online Appointment Booking Portal', 'פורטל זימון תורים עצמאי לקליניקה')}
           </p>
