@@ -9,7 +9,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const { 
     people, patients, leads, appointments, payments, tasks,
     forms, formSubmissions, leadCommunications,
-    addPatient, updatePatient, deletePatient, deletePerson, addClinicalNote,
+    addPatient, updatePatient, deletePatient, deletePerson, addClinicalNote, softDeleteRecord,
     addLeadCommunication, updateLeadFollowUp, addTask, updateTaskStatus, deleteTask,
     getServiceName
   } = useContext(ClinicContext);
@@ -123,6 +123,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const [noteMode, setNoteMode] = useState('soap');
   const [simpleNoteText, setSimpleNoteText] = useState('');
   const [soapForm, setSoapForm] = useState({ subjective: '', objective: '', assessment: '', plan: '' });
+  const [isSavingClinicalNote, setIsSavingClinicalNote] = useState(false);
   const [commType, setCommType] = useState('call');
   const [commNote, setCommNote] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -190,10 +191,27 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
       noteContent = simpleNoteText.trim();
     }
 
-    await addClinicalNote(patient.id, noteContent);
-    showToast('הערה נשמרה בהצלחה!');
-    setSimpleNoteText('');
-    setSoapForm({ subjective: '', objective: '', assessment: '', plan: '' });
+    setIsSavingClinicalNote(true);
+    try {
+      await addClinicalNote(patient.id, noteContent);
+      showToast('תרשומת הטיפול נשמרה');
+      setSimpleNoteText('');
+      setSoapForm({ subjective: '', objective: '', assessment: '', plan: '' });
+    } catch (err) {
+      showToast(err.message || 'לא ניתן לשמור את תרשומת הטיפול', 'error');
+    } finally {
+      setIsSavingClinicalNote(false);
+    }
+  };
+
+  const handleDeleteClinicalNote = async (note) => {
+    if (!window.confirm('להעביר את תרשומת הטיפול לאשפה?')) return;
+    try {
+      await softDeleteRecord('patient_clinical_notes', note.id);
+      showToast('תרשומת הטיפול הועברה לאשפה');
+    } catch (err) {
+      showToast(err.message || 'לא ניתן להעביר את התרשומת לאשפה', 'error');
+    }
   };
 
   const handleAddComm = async (e) => {
@@ -791,8 +809,8 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           />
                         )}
 
-                        <button type="submit" className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
-                          {t('Save Note', 'שמור תרשומת')}
+                        <button type="submit" disabled={isSavingClinicalNote} className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer">
+                          {isSavingClinicalNote ? t('Saving...', 'שומר...') : t('Save Note', 'שמור תרשומת')}
                         </button>
                       </form>
                     </div>
@@ -807,7 +825,10 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                           <div key={note.id} className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2">
                             <div className="flex justify-between items-center text-[10px] text-slate-500">
                               <span className="font-bold text-slate-700">{note.author || 'מטפל'}</span>
-                              <span>{new Date(note.created_at).toLocaleString('he-IL')}</span>
+                              <div className="flex items-center gap-2">
+                                <span>{new Date(note.created_at).toLocaleString('he-IL')}</span>
+                                <button type="button" onClick={() => handleDeleteClinicalNote(note)} className="font-bold text-rose-600 hover:text-rose-700">אשפה</button>
+                              </div>
                             </div>
                             {renderNoteContent(note.content)}
                           </div>
