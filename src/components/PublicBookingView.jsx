@@ -487,8 +487,7 @@ const PublicBookingView = () => {
                   setSelectedService(null);
                   setSelectedDate('');
                   setSelectedSlot('');
-                  setPatientInfo({ phone: '', fullName: '', email: '', notes: '', acceptedTerms: false, usePackage: false });
-                  setActivePackageInfo(null);
+                  setPatientInfo({ phone: '', fullName: '', email: '', notes: '', acceptedTerms: false });
                 }}
                 className="text-xs text-slate-400 hover:text-slate-600 font-bold underline cursor-pointer"
               >
