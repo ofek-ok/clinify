@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { ClinicContext } from '../context/ClinicContext';
+import { LanguageContext } from '../context/LanguageContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
@@ -29,6 +30,7 @@ export default function TaskManagement() {
   } = useContext(ClinicContext);
 
   const { showToast } = useToast();
+  const { t } = useContext(LanguageContext);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('all');
@@ -65,23 +67,23 @@ export default function TaskManagement() {
   };
 
   const statusOptions = configuredOptions('status', [
-    { id: 'todo', label: 'לביצוע', color: '#64748b' },
-    { id: 'in_progress', label: 'בתהליך', color: '#3b82f6' },
-    { id: 'blocked', label: 'חסום', color: '#f43f5e' },
-    { id: 'done', label: 'הושלם', color: '#8b5cf6' }
+    { id: 'todo', label: t('To Do','לביצוע'), color: '#64748b' },
+    { id: 'in_progress', label: t('In Progress','בתהליך'), color: '#3b82f6' },
+    { id: 'blocked', label: t('Blocked','חסום'), color: '#f43f5e' },
+    { id: 'done', label: t('Done','הושלם'), color: '#8b5cf6' }
   ]);
 
   const priorityOptions = configuredOptions('priority', [
-    { id: 'critical', label: 'קריטי', color: '#e11d48' },
-    { id: 'high', label: 'גבוה', color: '#f59e0b' },
-    { id: 'medium', label: 'בינוני', color: '#3b82f6' },
-    { id: 'low', label: 'נמוך', color: '#64748b' }
+    { id: 'critical', label: t('Critical','קריטי'), color: '#e11d48' },
+    { id: 'high', label: t('High','גבוה'), color: '#f59e0b' },
+    { id: 'medium', label: t('Medium','בינוני'), color: '#3b82f6' },
+    { id: 'low', label: t('Low','נמוך'), color: '#64748b' }
   ]);
 
   const areaOptions = configuredOptions('area', [
-    { id: 'operations', label: 'תפעול', color: '#64748b' },
-    { id: 'business', label: 'עסקי', color: '#8b5cf6' },
-    { id: 'clinical', label: 'קליני', color: '#8b5cf6' }
+    { id: 'operations', label: t('Operations','תפעול'), color: '#64748b' },
+    { id: 'business', label: t('Business','עסקי'), color: '#8b5cf6' },
+    { id: 'clinical', label: t('Clinical','קליני'), color: '#8b5cf6' }
   ]);
 
   const managedLabels = configuredOptions('label', []);
@@ -131,7 +133,7 @@ export default function TaskManagement() {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      showToast('אנא הזן כותרת משימה', 'error');
+      showToast(t('Please enter a task title','אנא הזן כותרת משימה'), 'error');
       return;
     }
 
@@ -153,7 +155,7 @@ export default function TaskManagement() {
         dependency_task_id: dependencyTaskId || null
       });
 
-      showToast('המשימה נוצרה בהצלחה');
+      showToast(t('Task created successfully','המשימה נוצרה בהצלחה'));
       setIsAddDrawerOpen(false);
       setTitle('');
       setDescription('');
@@ -161,7 +163,7 @@ export default function TaskManagement() {
       setEstimatedMinutes('');
       setDependencyTaskId('');
     } catch (err) {
-      showToast(err.message || 'שגיאה ביצירת המשימה', 'error');
+      showToast(err.message || t('Could not create task','שגיאה ביצירת המשימה'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -174,7 +176,7 @@ export default function TaskManagement() {
       await updateTask(selectedTask.id, updates);
       setSelectedTask(prev => ({ ...prev, ...updates }));
     } catch (err) {
-      showToast(err.message || 'לא ניתן לעדכן את המשימה', 'error');
+      showToast(err.message || t('Could not update task','לא ניתן לעדכן את המשימה'), 'error');
     }
   };
 
@@ -185,7 +187,7 @@ export default function TaskManagement() {
         setSelectedTask(prev => ({ ...prev, status: newStatus }));
       }
     } catch (err) {
-      showToast('שגיאה בעדכון סטטוס', 'error');
+      showToast(t('Could not update status','שגיאה בעדכון סטטוס'), 'error');
     }
   };
 
@@ -196,7 +198,7 @@ export default function TaskManagement() {
         setSelectedTask(prev => ({ ...prev, priority: newPriority }));
       }
     } catch (err) {
-      showToast('שגיאה בעדכון עדיפות', 'error');
+      showToast(t('Could not update priority','שגיאה בעדכון עדיפות'), 'error');
     }
   };
 
@@ -204,10 +206,10 @@ export default function TaskManagement() {
     if (!deleteModalTask) return;
     try {
       await deleteTask(deleteModalTask.id);
-      showToast('המשימה הועברה לאשפה');
+      showToast(t('Task moved to Trash','המשימה הועברה לאשפה'));
       if (selectedTask?.id === deleteModalTask.id) setSelectedTask(null);
     } catch (err) {
-      showToast(err.message || 'שגיאה במחיקת המשימה', 'error');
+      showToast(err.message || t('Could not move task to Trash','שגיאה במחיקת המשימה'), 'error');
     } finally {
       setDeleteModalTask(null);
     }
@@ -216,25 +218,25 @@ export default function TaskManagement() {
   const resolveRelatedEntity = (task) => {
     if (task.patient_id) {
       const patient = patients.find(item => item.id === task.patient_id);
-      return patient ? patient.full_name : 'לקוח';
+      return patient ? patient.full_name : t('Client','לקוח');
     }
     if (task.content_item_id) {
       const item = contentItems.find(content => content.id === task.content_item_id);
-      return item ? item.title : 'תוכן';
+      return item ? item.title : t('Content','תוכן');
     }
     return '-';
   };
 
   const quickFilters = [
-    { id: 'all', label: 'הכול' },
-    { id: 'today', label: 'היום' },
-    { id: 'week', label: 'השבוע' },
-    { id: 'overdue', label: 'באיחור' },
-    { id: 'blocked', label: 'חסום' }
+    { id: 'all', label: t('All','הכול') },
+    { id: 'today', label: t('Today','היום') },
+    { id: 'week', label: t('This Week','השבוע') },
+    { id: 'overdue', label: t('Overdue','באיחור') },
+    { id: 'blocked', label: t('Blocked','חסום') }
   ];
 
   return (
-    <div className="space-y-4 dir-rtl text-start">
+    <div className="space-y-4 text-start">
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center">
@@ -242,7 +244,7 @@ export default function TaskManagement() {
               <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="חיפוש משימה..."
+                placeholder={t("Search tasks...","חיפוש משימה...")}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pr-9 pl-3 text-xs text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-500/10"
@@ -268,7 +270,7 @@ export default function TaskManagement() {
               className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition ${showAdvancedFilters || activeAdvancedFilterCount ? 'border-violet-200 bg-violet-50 text-violet-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
             >
               <SlidersHorizontal className="h-4 w-4" />
-              סינון
+              {t('Filter','סינון')}
               {activeAdvancedFilterCount > 0 && (
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] text-white">
                   {activeAdvancedFilterCount}
@@ -283,30 +285,30 @@ export default function TaskManagement() {
             className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-violet-600 hover:shadow-md"
           >
             <Plus className="h-4 w-4" />
-            משימה חדשה
+            {t('New Task','משימה חדשה')}
           </button>
         </div>
 
         {showAdvancedFilters && (
           <div className="border-t border-slate-100 bg-slate-50/70 p-4">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <FilterSelect label="פרויקט" value={projectFilter} onChange={setProjectFilter}>
-                <option value="">כל הפרויקטים</option>
+              <FilterSelect label={t("Project","פרויקט")} value={projectFilter} onChange={setProjectFilter}>
+                <option value="">{t("All Projects","כל הפרויקטים")}</option>
                 {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
               </FilterSelect>
 
-              <FilterSelect label="סטטוס" value={statusFilter} onChange={setStatusFilter}>
-                <option value="">כל הסטטוסים</option>
+              <FilterSelect label={t("Status","סטטוס")} value={statusFilter} onChange={setStatusFilter}>
+                <option value="">{t("All Statuses","כל הסטטוסים")}</option>
                 {statusOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </FilterSelect>
 
-              <FilterSelect label="עדיפות" value={priorityFilter} onChange={setPriorityFilter}>
-                <option value="">כל העדיפויות</option>
+              <FilterSelect label={t("Priority","עדיפות")} value={priorityFilter} onChange={setPriorityFilter}>
+                <option value="">{t("All Priorities","כל העדיפויות")}</option>
                 {priorityOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </FilterSelect>
 
-              <FilterSelect label="תחום" value={areaFilter} onChange={setAreaFilter}>
-                <option value="">כל התחומים</option>
+              <FilterSelect label={t("Area","תחום")} value={areaFilter} onChange={setAreaFilter}>
+                <option value="">{t("All Areas","כל התחומים")}</option>
                 {areaOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </FilterSelect>
 
@@ -318,7 +320,7 @@ export default function TaskManagement() {
                   className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <X className="h-4 w-4" />
-                  נקה סינון
+                  {t('Clear Filters','נקה סינון')}
                 </button>
               </div>
             </div>
@@ -329,12 +331,12 @@ export default function TaskManagement() {
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div>
-            <p className="text-xs font-bold text-slate-900">{filteredTasks.length} משימות</p>
-            <p className="mt-0.5 text-[10px] text-slate-400">עריכה ישירה מתוך הטבלה</p>
+            <p className="text-xs font-bold text-slate-900">{filteredTasks.length} {t('tasks','משימות')}</p>
+            <p className="mt-0.5 text-[10px] text-slate-400">{t('Edit directly from the table','עריכה ישירה מתוך הטבלה')}</p>
           </div>
           <div className="hidden items-center gap-2 text-[10px] text-slate-400 sm:flex">
             <span className="h-2 w-2 rounded-full bg-violet-500" />
-            השינויים נשמרים אוטומטית
+            {t('Changes save automatically','השינויים נשמרים אוטומטית')}
           </div>
         </div>
 
@@ -342,15 +344,15 @@ export default function TaskManagement() {
           <table className="w-full min-w-[1180px] border-collapse text-start">
             <thead className="bg-slate-50/90">
               <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-3 text-start">משימה</th>
-                <th className="px-3 py-3 text-start">סטטוס</th>
-                <th className="px-3 py-3 text-start">עדיפות</th>
-                <th className="px-3 py-3 text-start">פרויקט</th>
-                <th className="px-3 py-3 text-start">תאריך יעד</th>
-                <th className="px-3 py-3 text-start">קשור ל־</th>
-                <th className="px-3 py-3 text-start">תחום</th>
-                <th className="px-3 py-3 text-start">תגיות</th>
-                <th className="sticky left-0 bg-slate-50/95 px-3 py-3 text-center">פעולות</th>
+                <th className="px-4 py-3 text-start">{t('Task','משימה')}</th>
+                <th className="px-3 py-3 text-start">{t('Status','סטטוס')}</th>
+                <th className="px-3 py-3 text-start">{t('Priority','עדיפות')}</th>
+                <th className="px-3 py-3 text-start">{t('Project','פרויקט')}</th>
+                <th className="px-3 py-3 text-start">{t('Due Date','תאריך יעד')}</th>
+                <th className="px-3 py-3 text-start">{t('Related To','קשור ל־')}</th>
+                <th className="px-3 py-3 text-start">{t('Area','תחום')}</th>
+                <th className="px-3 py-3 text-start">{t('Labels','תגיות')}</th>
+                <th className="sticky left-0 bg-slate-50/95 px-3 py-3 text-center">{t('Actions','פעולות')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -361,8 +363,8 @@ export default function TaskManagement() {
                       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
                         <FolderKanban className="h-5 w-5 text-slate-400" />
                       </div>
-                      <p className="font-bold text-slate-700">אין משימות להצגה</p>
-                      <p className="mt-1 text-[11px] text-slate-400">נסה לשנות את הסינון או ליצור משימה חדשה.</p>
+                      <p className="font-bold text-slate-700">{t('No tasks to display','אין משימות להצגה')}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">{t('Try changing the filters or create a new task.','נסה לשנות את הסינון או ליצור משימה חדשה.')}</p>
                     </div>
                   </td>
                 </tr>
@@ -416,7 +418,7 @@ export default function TaskManagement() {
                           onChange={e => updateTask(task.id, { project_id: e.target.value || null })}
                           className="h-8 max-w-[190px] rounded-lg border border-transparent bg-transparent px-2 text-[11px] font-medium text-slate-600 outline-none transition hover:border-slate-200 hover:bg-white focus:border-violet-300"
                         >
-                          <option value="">ללא פרויקט</option>
+                          <option value="">{t("No Project","ללא פרויקט")}</option>
                           {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
                         </select>
                       </td>
@@ -462,7 +464,7 @@ export default function TaskManagement() {
                       <td className="sticky left-0 bg-white/95 px-3 py-3 text-center backdrop-blur group-hover:bg-slate-50/95" onClick={e => e.stopPropagation()}>
                         <button
                           type="button"
-                          title="העבר לאשפה"
+                          title={t("Move to Trash","העבר לאשפה")}
                           onClick={() => setDeleteModalTask(task)}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"
                         >
@@ -481,7 +483,7 @@ export default function TaskManagement() {
       <Drawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
-        title="משימה חדשה"
+        title={t("New Task","משימה חדשה")}
         width="max-w-xl"
         footer={
           <>
@@ -490,7 +492,7 @@ export default function TaskManagement() {
               onClick={() => setIsAddDrawerOpen(false)}
               className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
             >
-              ביטול
+              {t('Cancel','ביטול')}
             </button>
             <button
               type="button"
@@ -498,72 +500,72 @@ export default function TaskManagement() {
               disabled={isSubmitting}
               className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-violet-600 disabled:opacity-50"
             >
-              {isSubmitting ? 'שומר...' : 'צור משימה'}
+              {isSubmitting ? t('Saving...','שומר...') : t('Create Task','צור משימה')}
             </button>
           </>
         }
       >
         <form onSubmit={handleCreateTask} className="space-y-5">
-          <Field label="כותרת משימה *">
+          <Field label={t("Task Title *","כותרת משימה *")}>
             <input
               type="text"
               required
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="מה צריך לקרות?"
+              placeholder={t("What needs to happen?","מה צריך לקרות?")}
               className="work-input"
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="סטטוס">
+            <Field label={t("Status","סטטוס")}>
               <select value={status} onChange={e => setStatus(e.target.value)} className="work-input">
                 {statusOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
             </Field>
-            <Field label="עדיפות">
+            <Field label={t("Priority","עדיפות")}>
               <select value={priority} onChange={e => setPriority(e.target.value)} className="work-input">
                 {priorityOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
             </Field>
           </div>
 
-          <Field label="תיאור">
+          <Field label={t("Description","תיאור")}>
             <textarea
               rows={4}
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="פרטים, תוצאה רצויה, הערות..."
+              placeholder={t("Details, desired outcome, notes...","פרטים, תוצאה רצויה, הערות...")}
               className="work-input resize-none"
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="תאריך התחלה">
+            <Field label={t("Start Date","תאריך התחלה")}>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="work-input" />
             </Field>
-            <Field label="תאריך יעד">
+            <Field label={t("Due Date","תאריך יעד")}>
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="work-input" />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="תחום">
+            <Field label={t("Area","תחום")}>
               <select value={area} onChange={e => setArea(e.target.value)} className="work-input">
                 {areaOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
             </Field>
-            <Field label="הערכת זמן">
-              <input type="number" min="0" value={estimatedMinutes} onChange={e => setEstimatedMinutes(e.target.value)} placeholder="60 דקות" className="work-input" />
+            <Field label={t("Time Estimate","הערכת זמן")}>
+              <input type="number" min="0" value={estimatedMinutes} onChange={e => setEstimatedMinutes(e.target.value)} placeholder={t("60 minutes","60 דקות")} className="work-input" />
             </Field>
           </div>
 
-          <Field label="תגיות">
+          <Field label={t("Labels","תגיות")}>
             <input
               list="managed-work-labels"
               value={labels}
               onChange={e => setLabels(e.target.value)}
-              placeholder="למשל: שיווק, דחוף, אתר"
+              placeholder={t("e.g. marketing, urgent, website","למשל: שיווק, דחוף, אתר")}
               className="work-input"
             />
             <datalist id="managed-work-labels">
@@ -571,23 +573,23 @@ export default function TaskManagement() {
             </datalist>
           </Field>
 
-          <Field label="פרויקט">
+          <Field label={t("Project","פרויקט")}>
             <select value={projectId} onChange={e => setProjectId(e.target.value)} className="work-input">
-              <option value="">ללא פרויקט</option>
+              <option value="">{t("No Project","ללא פרויקט")}</option>
               {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
             </select>
           </Field>
 
-          <Field label="תלויה במשימה">
+          <Field label={t("Depends on Task","תלויה במשימה")}>
             <select value={dependencyTaskId} onChange={e => setDependencyTaskId(e.target.value)} className="work-input">
-              <option value="">ללא תלות</option>
+              <option value="">{t("No Dependency","ללא תלות")}</option>
               {tasks.filter(task => task.status !== 'done').map(task => <option key={task.id} value={task.id}>{task.title}</option>)}
             </select>
           </Field>
 
-          <Field label="קשור ללקוח">
+          <Field label={t("Related Client","קשור ללקוח")}>
             <select value={patientId} onChange={e => setPatientId(e.target.value)} className="work-input">
-              <option value="">ללא שיוך ללקוח</option>
+              <option value="">{t("No Client","ללא שיוך ללקוח")}</option>
               {patients.map(patient => <option key={patient.id} value={patient.id}>{patient.full_name}</option>)}
             </select>
           </Field>
@@ -607,21 +609,21 @@ export default function TaskManagement() {
               className="mr-auto inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
             >
               <Trash2 className="h-4 w-4" />
-              העבר לאשפה
+              {t('Move to Trash','העבר לאשפה')}
             </button>
             <button
               type="button"
               onClick={() => setSelectedTask(null)}
               className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-violet-600"
             >
-              סגור
+              {t('Close','סגור')}
             </button>
           </>
         }
       >
         {selectedTask && (
           <div className="space-y-5">
-            <Field label="כותרת משימה">
+            <Field label={t("Task Title","כותרת משימה")}>
               <input
                 type="text"
                 value={selectedTask.title || ''}
@@ -635,7 +637,7 @@ export default function TaskManagement() {
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="סטטוס">
+              <Field label={t("Status","סטטוס")}>
                 <select
                   value={selectedTask.status || 'todo'}
                   onChange={e => handleInlineStatusChange(selectedTask, e.target.value)}
@@ -644,7 +646,7 @@ export default function TaskManagement() {
                   {statusOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
               </Field>
-              <Field label="עדיפות">
+              <Field label={t("Priority","עדיפות")}>
                 <select
                   value={selectedTask.priority || 'medium'}
                   onChange={e => handleInlinePriorityChange(selectedTask, e.target.value)}
@@ -655,7 +657,7 @@ export default function TaskManagement() {
               </Field>
             </div>
 
-            <Field label="תיאור">
+            <Field label={t("Description","תיאור")}>
               <textarea
                 rows={5}
                 value={selectedTask.description || ''}
@@ -666,7 +668,7 @@ export default function TaskManagement() {
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="תאריך התחלה">
+              <Field label={t("Start Date","תאריך התחלה")}>
                 <input
                   type="date"
                   value={selectedTask.start_date || ''}
@@ -674,7 +676,7 @@ export default function TaskManagement() {
                   className="work-input"
                 />
               </Field>
-              <Field label="תאריך יעד">
+              <Field label={t("Due Date","תאריך יעד")}>
                 <input
                   type="date"
                   value={selectedTask.due_date || ''}
@@ -685,17 +687,17 @@ export default function TaskManagement() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="פרויקט">
+              <Field label={t("Project","פרויקט")}>
                 <select
                   value={selectedTask.project_id || ''}
                   onChange={e => updateSelectedTaskField('project_id', e.target.value || null)}
                   className="work-input"
                 >
-                  <option value="">ללא פרויקט</option>
+                  <option value="">{t("No Project","ללא פרויקט")}</option>
                   {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
                 </select>
               </Field>
-              <Field label="תחום">
+              <Field label={t("Area","תחום")}>
                 <select
                   value={selectedTask.area || 'operations'}
                   onChange={e => updateSelectedTaskField('area', e.target.value)}
@@ -707,7 +709,7 @@ export default function TaskManagement() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="הערכת זמן">
+              <Field label={t("Time Estimate","הערכת זמן")}>
                 <input
                   type="number"
                   min="0"
@@ -716,7 +718,7 @@ export default function TaskManagement() {
                   className="work-input"
                 />
               </Field>
-              <Field label="תגיות">
+              <Field label={t("Labels","תגיות")}>
                 <input
                   value={(selectedTask.labels || []).join(', ')}
                   onChange={e => setSelectedTask(prev => ({
@@ -730,9 +732,9 @@ export default function TaskManagement() {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500">
-              סטטוס: <strong className="text-slate-700">{optionLabel(statusOptions, selectedTask.status, 'לביצוע')}</strong>
+              {t('Status:','סטטוס:')} <strong className="text-slate-700">{optionLabel(statusOptions, selectedTask.status, t('To Do','לביצוע'))}</strong>
               {' · '}
-              עדיפות: <strong className="text-slate-700">{optionLabel(priorityOptions, selectedTask.priority, 'בינוני')}</strong>
+              {t('Priority:','עדיפות:')} <strong className="text-slate-700">{optionLabel(priorityOptions, selectedTask.priority, t('Medium','בינוני'))}</strong>
             </div>
           </div>
         )}
@@ -742,10 +744,10 @@ export default function TaskManagement() {
         isOpen={Boolean(deleteModalTask)}
         onClose={() => setDeleteModalTask(null)}
         onConfirm={handleConfirmDelete}
-        title="להעביר את המשימה לאשפה?"
-        message={deleteModalTask ? `המשימה “${deleteModalTask.title}” תוסר מהלוח ותישאר זמינה לשחזור באשפה.` : ''}
-        confirmText="העבר לאשפה"
-        cancelText="ביטול"
+        title={t("Move task to Trash?","להעביר את המשימה לאשפה?")}
+        message={deleteModalTask ? t(`Task “${deleteModalTask.title}” will be removed from the board and remain available in Trash.`, `המשימה “${deleteModalTask.title}” תוסר מהלוח ותישאר זמינה לשחזור באשפה.`) : ''}
+        confirmText={t("Move to Trash","העבר לאשפה")}
+        cancelText={t("Cancel","ביטול")}
         isDanger
       />
     </div>
