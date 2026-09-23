@@ -9,7 +9,7 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
   const { 
     people, patients, leads, appointments, payments, tasks,
     forms, formSubmissions, leadCommunications,
-    addPatient, updatePatient, deletePatient, deletePerson, addClinicalNote, softDeleteRecord,
+    addPatient, updatePatient, deletePatient, deletePerson, deleteLead, addClinicalNote, softDeleteRecord,
     addLeadCommunication, updateLeadFollowUp, addTask, updateTaskStatus, deleteTask,
     getServiceName
   } = useContext(ClinicContext);
@@ -227,8 +227,10 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
     const confirmed = window.confirm(`להעביר את ${person.full_name || 'הלקוח'} לאשפה? הרשומות המקושרות יישארו במערכת וניתן לשחזר את הלקוח מהאשפה.`);
     if (!confirmed) return;
     try {
+      if (lead?.id) await deleteLead(lead.id);
       if (patient?.id) await deletePatient(patient.id);
       if (personId) await deletePerson(personId);
+      showToast('הלקוח והרשומות הפעילות שלו הועברו לאשפה');
       onClose?.();
     } catch (err) {
       console.error(err);
