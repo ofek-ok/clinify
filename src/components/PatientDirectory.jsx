@@ -6,7 +6,7 @@ import { Search } from 'lucide-react';
 
 const BUSINESS_TIME_ZONE = 'Asia/Jerusalem';
 
-const formatDateTime = (value) => {
+const formatDateTime = (value, language = 'he') => {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
@@ -21,7 +21,7 @@ const formatDateTime = (value) => {
   });
 };
 
-const formatDate = (value) => {
+const formatDate = (value, language = 'he') => {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
@@ -186,7 +186,7 @@ export default function PatientDirectory() {
                     </td>
 
                     <td className="px-4 py-3.5 text-slate-600">
-                      {formatDate(client.customer_since)}
+                      {formatDate(client.customer_since, language)}
                     </td>
 
                     <td className="px-4 py-3.5">
@@ -202,11 +202,11 @@ export default function PatientDirectory() {
                     </td>
 
                     <td className="px-4 py-3.5 font-medium text-slate-700">
-                      {formatDateTime(client.nextAppointment?.appointment_date)}
+                      {formatDateTime(client.nextAppointment?.appointment_date, language)}
                     </td>
 
                     <td className="px-4 py-3.5 text-slate-500">
-                      {formatDateTime(client.lastCompletedAppointment?.appointment_date)}
+                      {formatDateTime(client.lastCompletedAppointment?.appointment_date, language)}
                     </td>
 
                     <td className="px-4 py-3.5 font-bold text-violet-600" dir="ltr">
