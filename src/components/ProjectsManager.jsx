@@ -26,6 +26,7 @@ export default function ProjectsManager() {
   const [dueDate, setDueDate] = useState('');
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projectStatusFilter, setProjectStatusFilter] = useState('all');
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) || null;
 
@@ -74,6 +75,19 @@ export default function ProjectsManager() {
     const done = list.filter(task => task.status === 'done').length;
     return { total:list.length, done, pct:list.length ? Math.round(done / list.length * 100) : 0 };
   };
+
+  const projectCost = (projectId) =>
+    projectTasks(projectId).reduce((sum, task) => sum + Number(task.cost_amount || 0), 0);
+
+  const projectStatusLabel = (value) =>
+    value === 'planned' ? t('To Do','לביצוע') :
+    value === 'active' ? t('In Progress','בתהליך') :
+    value === 'blocked' ? t('On Hold','מושהה') :
+    t('Completed','הושלם');
+
+  const filteredProjects = projects.filter(project =>
+    projectStatusFilter === 'all' ? true : project.status === projectStatusFilter
+  );
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
@@ -141,25 +155,46 @@ export default function ProjectsManager() {
         </div>
       </section>
 
+      <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
+        {[
+          ['all', t('All','הכול')],
+          ['planned', t('To Do','לביצוע')],
+          ['active', t('In Progress','בתהליך')],
+          ['blocked', t('On Hold','מושהה')],
+          ['completed', t('Completed','הושלם')]
+        ].map(([value,label]) => (
+          <button key={value} type="button" onClick={() => setProjectStatusFilter(value)}
+            className={`shrink-0 rounded-xl border px-3 py-2 text-[11px] font-bold transition ${projectStatusFilter===value ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-3">
-        {projects.map(project => {
+        {filteredProjects.map(project => {
           const progress = progressFor(project.id);
           const nextDeadline = projectTasks(project.id).filter(task => task.status !== 'done' && task.due_date).sort((a,b)=>a.due_date.localeCompare(b.due_date))[0];
+          const totalCost = projectCost(project.id);
           return (
             <button key={project.id} onClick={() => setSelectedProjectId(project.id)} className="group w-full rounded-2xl border border-slate-200 bg-white p-4 text-start shadow-sm transition hover:border-violet-200 hover:shadow-md">
-              <div className="grid gap-4 lg:grid-cols-[minmax(240px,1.4fr)_110px_160px_170px_36px] lg:items-center">
+              <div className="grid gap-4 lg:grid-cols-[minmax(220px,1.35fr)_110px_145px_130px_165px_36px] lg:items-center">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-extrabold text-slate-950">{project.name}</div>
                   <div className="mt-1 truncate text-[10px] text-slate-400">{project.objective || t('No objective defined','לא הוגדר יעד')}</div>
                 </div>
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{t('Status','סטטוס')}</div>
-                  <div className="mt-1 text-[11px] font-bold text-slate-700">{project.status === 'active' ? t('Active','פעיל') : project.status === 'planned' ? t('Planned','מתוכנן') : project.status === 'completed' ? t('Completed','הושלם') : t('Blocked','חסום')}</div>
+                  <div className="mt-1 text-[11px] font-bold text-slate-700">{projectStatusLabel(project.status)}</div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between text-[9px] font-bold text-slate-400"><span>{t('Progress','התקדמות')}</span><span>{progress.pct}%</span></div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-violet-500" style={{width:`${progress.pct}%`}} /></div>
                   <div className="mt-1 text-[9px] text-slate-400">{progress.done}/{progress.total} {t('tasks done','משימות הושלמו')}</div>
+                </div>
+                <div>
+                  <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{t('Tracked Cost','עלות מתועדת')}</div>
+                  <div className="mt-1 text-[12px] font-extrabold text-slate-800">₪{totalCost.toLocaleString(language === 'he' ? 'he-IL' : 'en-US')}</div>
+                  <div className="mt-1 text-[9px] text-slate-400">{t('Operational tracking, not accounting','מעקב ניהולי, לא הנהלת חשבונות')}</div>
                 </div>
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{t('Next Deadline','הדדליין הבא')}</div>
@@ -171,7 +206,7 @@ export default function ProjectsManager() {
             </button>
           );
         })}
-        {projects.length === 0 && <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center text-xs text-slate-400">{t('No projects yet','אין עדיין פרויקטים')}</div>}
+        {filteredProjects.length === 0 && <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center text-xs text-slate-400">{t('No projects in this status','אין פרויקטים בסטטוס הזה')}</div>}
       </div>
 
       <Drawer isOpen={isAddDrawerOpen} onClose={() => setIsAddDrawerOpen(false)} title={t('Create New Project','יצירת פרויקט חדש')} width="max-w-xl"
@@ -184,7 +219,7 @@ export default function ProjectsManager() {
           <Field label={t('Goal / Objective','יעד / מטרה')}><textarea rows={3} value={objective} onChange={e=>setObjective(e.target.value)} className="work-input resize-none" /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={t('Area','תחום')}><select value={area} onChange={e=>setArea(e.target.value)} className="work-input"><option value="business">{t('Business','עסקי')}</option><option value="clinical">{t('Clinical','קליני')}</option><option value="operations">{t('Operations','תפעול')}</option></select></Field>
-            <Field label={t('Status','סטטוס')}><select value={status} onChange={e=>setStatus(e.target.value)} className="work-input"><option value="planned">{t('Planned','מתוכנן')}</option><option value="active">{t('Active','פעיל')}</option><option value="blocked">{t('Blocked','חסום')}</option><option value="completed">{t('Completed','הושלם')}</option></select></Field>
+            <Field label={t('Status','סטטוס')}><select value={status} onChange={e=>setStatus(e.target.value)} className="work-input"><option value="planned">{t('To Do','לביצוע')}</option><option value="active">{t('In Progress','בתהליך')}</option><option value="blocked">{t('On Hold','מושהה')}</option><option value="completed">{t('Completed','הושלם')}</option></select></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label={t('Start Date','תאריך התחלה')}><input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} className="work-input" /></Field>
@@ -202,7 +237,7 @@ export default function ProjectsManager() {
           <div className="space-y-5">
             <div className="grid gap-3 md:grid-cols-[1.5fr_150px_150px]">
               <Field label={t('Project Name','שם הפרויקט')}><input value={selectedProject.name} onChange={e=>updateProject(selectedProject.id,{name:e.target.value})} className="work-input font-bold" /></Field>
-              <Field label={t('Status','סטטוס')}><select value={selectedProject.status} onChange={e=>updateProject(selectedProject.id,{status:e.target.value})} className="work-input"><option value="planned">{t('Planned','מתוכנן')}</option><option value="active">{t('Active','פעיל')}</option><option value="blocked">{t('Blocked','חסום')}</option><option value="completed">{t('Completed','הושלם')}</option></select></Field>
+              <Field label={t('Status','סטטוס')}><select value={selectedProject.status} onChange={e=>updateProject(selectedProject.id,{status:e.target.value})} className="work-input"><option value="planned">{t('To Do','לביצוע')}</option><option value="active">{t('In Progress','בתהליך')}</option><option value="blocked">{t('On Hold','מושהה')}</option><option value="completed">{t('Completed','הושלם')}</option></select></Field>
               <Field label={t('Project Deadline','דדליין פרויקט')}><input type="date" value={selectedProject.due_date || ''} onChange={e=>updateProject(selectedProject.id,{due_date:e.target.value || null})} className="work-input" /></Field>
             </div>
 
@@ -221,7 +256,7 @@ export default function ProjectsManager() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] border-collapse text-start">
                   <thead><tr className="border-b border-slate-200 bg-slate-50 text-[9px] font-extrabold uppercase tracking-wide text-slate-400">
-                    <th className="px-3 py-2.5 text-start">{t('Task','משימה')}</th><th className="px-3 py-2.5 text-start">{t('Status','סטטוס')}</th><th className="px-3 py-2.5 text-start">{t('Priority','עדיפות')}</th><th className="px-3 py-2.5 text-start">{t('Deadline','דדליין')}</th><th className="px-3 py-2.5 text-start">{t('Start','התחלה')}</th><th className="w-12 px-3 py-2.5"></th>
+                    <th className="px-3 py-2.5 text-start">{t('Task','משימה')}</th><th className="px-3 py-2.5 text-start">{t('Status','סטטוס')}</th><th className="px-3 py-2.5 text-start">{t('Priority','עדיפות')}</th><th className="px-3 py-2.5 text-start">{t('Cost','עלות')}</th><th className="px-3 py-2.5 text-start">{t('Deadline','דדליין')}</th><th className="px-3 py-2.5 text-start">{t('Start','התחלה')}</th><th className="w-12 px-3 py-2.5"></th>
                   </tr></thead>
                   <tbody className="divide-y divide-slate-100">
                     {projectTasks(selectedProject.id).map(task => (
@@ -229,12 +264,13 @@ export default function ProjectsManager() {
                         <td className="px-3 py-2.5"><input value={task.title} onChange={e=>updateTask(task.id,{title:e.target.value})} className={`w-full min-w-[220px] bg-transparent text-xs font-bold outline-none ${task.status==='done'?'text-slate-400 line-through':'text-slate-800'}`} /></td>
                         <td className="px-3 py-2.5"><select value={task.status || 'todo'} onChange={e=>updateTask(task.id,{status:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold">{statusOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
                         <td className="px-3 py-2.5"><select value={task.priority || 'medium'} onChange={e=>updateTask(task.id,{priority:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold">{priorityOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
+                        <td className="px-3 py-2.5"><div className="flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2 text-[10px]"><span className="me-1 text-slate-400">₪</span><input type="number" min="0" step="1" value={task.cost_amount || ''} onChange={e=>updateTask(task.id,{cost_amount:Number(e.target.value || 0)})} className="w-20 bg-transparent outline-none" /></div></td>
                         <td className="px-3 py-2.5"><input type="date" value={task.due_date || ''} onChange={e=>updateTask(task.id,{due_date:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px]" /></td>
                         <td className="px-3 py-2.5"><input type="date" value={task.start_date || ''} onChange={e=>updateTask(task.id,{start_date:e.target.value || null})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px]" /></td>
                         <td className="px-3 py-2.5"><button onClick={()=>setDeleteModalTask(task)} title={t('Move to Trash','העבר לאשפה')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></td>
                       </tr>
                     ))}
-                    {projectTasks(selectedProject.id).length===0 && <tr><td colSpan={6} className="py-10 text-center text-xs text-slate-400">{t('No tasks in this project yet. Add the first one above.','אין עדיין משימות בפרויקט. הוסף את הראשונה למעלה.')}</td></tr>}
+                    {projectTasks(selectedProject.id).length===0 && <tr><td colSpan={7} className="py-10 text-center text-xs text-slate-400">{t('No tasks in this project yet. Add the first one above.','אין עדיין משימות בפרויקט. הוסף את הראשונה למעלה.')}</td></tr>}
                   </tbody>
                 </table>
               </div>
