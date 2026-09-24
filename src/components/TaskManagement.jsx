@@ -81,6 +81,7 @@ export default function TaskManagement() {
   const [startDate, setStartDate] = useState('');
   const [labels, setLabels] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState('');
+  const [costAmount, setCostAmount] = useState('');
   const [dependencyTaskId, setDependencyTaskId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -178,6 +179,7 @@ export default function TaskManagement() {
         start_date: startDate || null,
         labels: labels.split(',').map(v => v.trim()).filter(Boolean),
         estimated_minutes: estimatedMinutes ? Number(estimatedMinutes) : null,
+        cost_amount: costAmount ? Number(costAmount) : 0,
         dependency_task_id: dependencyTaskId || null
       });
 
@@ -187,6 +189,7 @@ export default function TaskManagement() {
       setDescription('');
       setLabels('');
       setEstimatedMinutes('');
+      setCostAmount('');
       setDependencyTaskId('');
     } catch (err) {
       showToast(err.message || t('Could not create task','שגיאה ביצירת המשימה'), 'error');
@@ -375,6 +378,7 @@ export default function TaskManagement() {
                 <th className="px-3 py-3 text-start">{t('Priority','עדיפות')}</th>
                 <th className="px-3 py-3 text-start">{t('Project','פרויקט')}</th>
                 <th className="px-3 py-3 text-start">{t('Due Date','תאריך יעד')}</th>
+                <th className="px-3 py-3 text-start">{t('Cost','עלות')}</th>
                 <th className="px-3 py-3 text-start">{t('Related To','קשור ל־')}</th>
                 <th className="px-3 py-3 text-start">{t('Area','תחום')}</th>
                 <th className="px-3 py-3 text-start">{t('Labels','תגיות')}</th>
@@ -384,7 +388,7 @@ export default function TaskManagement() {
             <tbody className="divide-y divide-slate-100 text-xs">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center">
+                  <td colSpan={10} className="px-4 py-16 text-center">
                     <div className="mx-auto flex max-w-xs flex-col items-center">
                       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
                         <FolderKanban className="h-5 w-5 text-slate-400" />
@@ -458,6 +462,13 @@ export default function TaskManagement() {
                             onChange={e => updateTask(task.id, { due_date: e.target.value })}
                             className="w-[105px] bg-transparent text-[11px] outline-none"
                           />
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <div className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2 text-[10px] text-slate-600">
+                          <span className="me-1 text-slate-400">₪</span>
+                          <input type="number" min="0" step="1" value={task.cost_amount || ''} onChange={e => updateTask(task.id, { cost_amount: Number(e.target.value || 0) })} className="w-20 bg-transparent outline-none" />
                         </div>
                       </td>
 
@@ -583,6 +594,9 @@ export default function TaskManagement() {
             </Field>
             <Field label={t("Time Estimate","הערכת זמן")}>
               <input type="number" min="0" value={estimatedMinutes} onChange={e => setEstimatedMinutes(e.target.value)} placeholder={t("60 minutes","60 דקות")} className="work-input" />
+            </Field>
+            <Field label={t("Cost (₪)","עלות (₪)")}>
+              <input type="number" min="0" step="1" value={costAmount} onChange={e => setCostAmount(e.target.value)} placeholder="0" className="work-input" />
             </Field>
           </div>
 
@@ -741,6 +755,16 @@ export default function TaskManagement() {
                   min="0"
                   value={selectedTask.estimated_minutes || ''}
                   onChange={e => updateSelectedTaskField('estimated_minutes', e.target.value ? Number(e.target.value) : null)}
+                  className="work-input"
+                />
+              </Field>
+              <Field label={t("Cost (₪)","עלות (₪)")}>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={selectedTask.cost_amount || ''}
+                  onChange={e => updateSelectedTaskField('cost_amount', Number(e.target.value || 0))}
                   className="work-input"
                 />
               </Field>
