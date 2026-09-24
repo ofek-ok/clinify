@@ -1021,6 +1021,7 @@ export const ClinicProvider = ({ children }) => {
       start_date: task.start_date || null,
       labels: Array.isArray(task.labels) ? task.labels : [],
       estimated_minutes: task.estimated_minutes ? Number(task.estimated_minutes) : null,
+      cost_amount: Number(task.cost_amount || 0),
       sort_order: Number(task.sort_order || 0)
     };
 
