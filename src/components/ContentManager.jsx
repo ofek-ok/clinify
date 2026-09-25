@@ -6,7 +6,7 @@ import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
 import {
   Plus, Trash2, Search, CalendarDays, Columns3, List,
-  Pencil, Filter, ExternalLink
+  Pencil, Filter, ExternalLink, Megaphone, Users, Wallet, Link2
 } from 'lucide-react';
 
 const STATUS_COLUMNS = [
@@ -68,11 +68,18 @@ const STAGES = [
 ];
 
 export default function ContentManager() {
-  const { contentItems, projects, addContentItem, updateContentItem, deleteContentItem } = useContext(ClinicContext);
+  const { contentItems, campaigns, leads, projects, addCampaign, updateCampaign, deleteCampaign, addContentItem, updateContentItem, deleteContentItem } = useContext(ClinicContext);
   const { showToast } = useToast();
   const { t } = useContext(LanguageContext);
 
   const [view, setView] = useState('kanban');
+  const [section, setSection] = useState('content');
+  const [campaignDrawerOpen, setCampaignDrawerOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
+  const [deleteCampaignModal, setDeleteCampaignModal] = useState(null);
+  const [campaignSubmitting, setCampaignSubmitting] = useState(false);
+  const emptyCampaign = { name:'', status:'planned', objective:'awareness', audience:'both', start_date:'', end_date:'', budget:'', cta:'', destination_url:'', utm_campaign:'', notes:'' };
+  const [campaignForm, setCampaignForm] = useState(emptyCampaign);
   const [platformFilter, setPlatformFilter] = useState('all');
   const [campaignFilter, setCampaignFilter] = useState('all');
   const [audienceFilter, setAudienceFilter] = useState('all');
@@ -100,9 +107,73 @@ export default function ContentManager() {
   const [form, setForm] = useState(emptyForm);
 
   const campaignsList = useMemo(
-    () => Array.from(new Set(contentItems.map(i => i.campaign).filter(Boolean))).sort(),
-    [contentItems]
+    () => Array.from(new Set([
+      ...(campaigns || []).map(campaign => campaign.name),
+      ...contentItems.map(i => i.campaign).filter(Boolean)
+    ])).sort(),
+    [campaigns, contentItems]
   );
+
+  const campaignLeadCount = campaign =>
+    (leads || []).filter(lead =>
+      String(lead.utm_campaign || '').toLowerCase() === String(campaign.utm_campaign || '').toLowerCase() ||
+      String(lead.campaign || '').toLowerCase() === String(campaign.name || '').toLowerCase()
+    ).length;
+
+  const campaignContentCount = campaign =>
+    contentItems.filter(item => String(item.campaign || '').toLowerCase() === String(campaign.name || '').toLowerCase()).length;
+
+  const slugifyCampaign = value => String(value || '')
+    .trim().toLowerCase()
+    .replace(/[^a-z0-9\u0590-\u05ff]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const openNewCampaign = () => {
+    setEditingCampaign(null);
+    setCampaignForm(emptyCampaign);
+    setCampaignDrawerOpen(true);
+  };
+
+  const openEditCampaign = campaign => {
+    setEditingCampaign(campaign);
+    setCampaignForm({
+      name:campaign.name || '', status:campaign.status || 'planned',
+      objective:campaign.objective || 'awareness', audience:campaign.audience || 'both',
+      start_date:campaign.start_date || '', end_date:campaign.end_date || '',
+      budget:campaign.budget || '', cta:campaign.cta || '',
+      destination_url:campaign.destination_url || '', utm_campaign:campaign.utm_campaign || '',
+      notes:campaign.notes || ''
+    });
+    setCampaignDrawerOpen(true);
+  };
+
+  const saveCampaign = async () => {
+    if (!campaignForm.name.trim() || !campaignForm.utm_campaign.trim()) {
+      showToast(t('Campaign name and UTM campaign are required','שם קמפיין ו-UTM Campaign הם שדות חובה'),'error');
+      return;
+    }
+    setCampaignSubmitting(true);
+    try {
+      const payload = { ...campaignForm, name:campaignForm.name.trim(), utm_campaign:campaignForm.utm_campaign.trim(), budget:Number(campaignForm.budget || 0) };
+      if (editingCampaign) await updateCampaign(editingCampaign.id, payload);
+      else await addCampaign(payload);
+      showToast(editingCampaign ? t('Campaign updated','הקמפיין עודכן') : t('Campaign created','הקמפיין נוצר'));
+      setCampaignDrawerOpen(false); setEditingCampaign(null); setCampaignForm(emptyCampaign);
+    } catch (err) {
+      showToast(err.message || t('Could not save campaign','לא ניתן לשמור את הקמפיין'),'error');
+    } finally { setCampaignSubmitting(false); }
+  };
+
+  const confirmDeleteCampaign = async () => {
+    if (!deleteCampaignModal) return;
+    try {
+      await deleteCampaign(deleteCampaignModal.id);
+      showToast(t('Campaign moved to Trash','הקמפיין הועבר לאשפה'));
+      setCampaignDrawerOpen(false); setEditingCampaign(null);
+    } catch (err) {
+      showToast(err.message || t('Could not delete campaign','לא ניתן למחוק את הקמפיין'),'error');
+    } finally { setDeleteCampaignModal(null); }
+  };
 
   const filteredItems = useMemo(() => contentItems.filter(item => {
     const q = searchTerm.trim().toLowerCase();
@@ -209,6 +280,21 @@ export default function ContentManager() {
 
   return (
     <div className="space-y-4 dir-rtl text-start">
+      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        <button type="button" onClick={()=>setSection('content')} className={`rounded-lg px-4 py-2 text-xs font-bold transition ${section==='content'?'bg-violet-600 text-white':'text-slate-500 hover:bg-slate-50'}`}>{t('Content','תוכן')}</button>
+        <button type="button" onClick={()=>setSection('campaigns')} className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${section==='campaigns'?'bg-violet-600 text-white':'text-slate-500 hover:bg-slate-50'}`}><Megaphone className="h-3.5 w-3.5"/>{t('Campaigns','קמפיינים')}</button>
+      </div>
+
+      {section==='campaigns' ? (
+        <CampaignsPanel
+          campaigns={campaigns || []}
+          leads={leads || []}
+          contentItems={contentItems}
+          onNew={openNewCampaign}
+          onEdit={openEditCampaign}
+          t={t}
+        />
+      ) : <>
       <section className="premium-panel rounded-2xl overflow-hidden">
         <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
@@ -360,6 +446,42 @@ export default function ContentManager() {
         </section>
       )}
 
+      </>}
+
+      <Drawer
+        isOpen={campaignDrawerOpen}
+        onClose={()=>{setCampaignDrawerOpen(false);setEditingCampaign(null);}}
+        title={editingCampaign ? t('Edit Campaign','עריכת קמפיין') : t('New Campaign','קמפיין חדש')}
+        width="max-w-2xl"
+        footer={<>
+          {editingCampaign && <button type="button" onClick={()=>setDeleteCampaignModal(editingCampaign)} className="mr-auto inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700"><Trash2 className="h-4 w-4"/>{t('Move to Trash','העבר לאשפה')}</button>}
+          <button type="button" onClick={()=>setCampaignDrawerOpen(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">{t('Cancel','ביטול')}</button>
+          <button type="button" onClick={saveCampaign} disabled={campaignSubmitting} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{campaignSubmitting?t('Saving...','שומר...'):t('Save Campaign','שמור קמפיין')}</button>
+        </>}
+      >
+        <div className="space-y-4">
+          <Field label={t('Campaign Name *','שם הקמפיין *')}><input value={campaignForm.name} onChange={e=>setCampaignForm(prev=>({...prev,name:e.target.value,utm_campaign:prev.utm_campaign||slugifyCampaign(e.target.value)}))} className="work-input" /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('Status','סטטוס')}><select value={campaignForm.status} onChange={e=>setCampaignForm({...campaignForm,status:e.target.value})} className="work-input"><option value="planned">{t('Planned','מתוכנן')}</option><option value="active">{t('Active','פעיל')}</option><option value="paused">{t('Paused','מושהה')}</option><option value="completed">{t('Completed','הושלם')}</option></select></Field>
+            <Field label={t('Budget (₪)','תקציב (₪)')}><input type="number" min="0" value={campaignForm.budget} onChange={e=>setCampaignForm({...campaignForm,budget:e.target.value})} className="work-input"/></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('Objective','מטרה')}><select value={campaignForm.objective} onChange={e=>setCampaignForm({...campaignForm,objective:e.target.value})} className="work-input">{OBJECTIVES.map(([id,en,he])=><option key={id} value={id}>{t(en,he)}</option>)}</select></Field>
+            <Field label={t('Audience','קהל יעד')}><select value={campaignForm.audience} onChange={e=>setCampaignForm({...campaignForm,audience:e.target.value})} className="work-input">{AUDIENCES.map(([id,en,he])=><option key={id} value={id}>{t(en,he)}</option>)}</select></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('Start Date','תאריך התחלה')}><input type="date" value={campaignForm.start_date} onChange={e=>setCampaignForm({...campaignForm,start_date:e.target.value})} className="work-input"/></Field>
+            <Field label={t('End Date','תאריך סיום')}><input type="date" value={campaignForm.end_date} onChange={e=>setCampaignForm({...campaignForm,end_date:e.target.value})} className="work-input"/></Field>
+          </div>
+          <Field label="UTM Campaign *"><input value={campaignForm.utm_campaign} onChange={e=>setCampaignForm({...campaignForm,utm_campaign:e.target.value})} className="work-input" placeholder="performance_list"/></Field>
+          <Field label={t('Destination URL','קישור יעד')}><input type="url" value={campaignForm.destination_url} onChange={e=>setCampaignForm({...campaignForm,destination_url:e.target.value})} className="work-input" placeholder="https://..."/></Field>
+          <Field label="CTA"><input value={campaignForm.cta} onChange={e=>setCampaignForm({...campaignForm,cta:e.target.value})} className="work-input"/></Field>
+          <Field label={t('Notes','הערות')}><textarea rows={3} value={campaignForm.notes} onChange={e=>setCampaignForm({...campaignForm,notes:e.target.value})} className="work-input resize-none"/></Field>
+        </div>
+      </Drawer>
+
+      <ConfirmModal isOpen={Boolean(deleteCampaignModal)} onClose={()=>setDeleteCampaignModal(null)} onConfirm={confirmDeleteCampaign} title={t('Move campaign to Trash?','להעביר את הקמפיין לאשפה?')} message={deleteCampaignModal?.name || ''} confirmText={t('Move to Trash','העבר לאשפה')} cancelText={t('Cancel','ביטול')} isDanger />
+
       <Drawer
         isOpen={isDrawerOpen}
         onClose={()=>{setIsDrawerOpen(false);setEditingItem(null);}}
@@ -428,7 +550,10 @@ export default function ContentManager() {
               <input type="date" value={form.publish_date} onChange={e=>setForm({...form,publish_date:e.target.value})} className="work-input"/>
             </Field>
             <Field label={t("Campaign","קמפיין")}>
-              <input value={form.campaign} onChange={e=>setForm({...form,campaign:e.target.value})} className="work-input" placeholder={t("e.g. Launch Jan 2027","למשל: Launch Jan 2027")}/>
+              <select value={form.campaign} onChange={e=>setForm({...form,campaign:e.target.value})} className="work-input">
+                <option value="">{t('No Campaign','ללא קמפיין')}</option>
+                {campaignsList.map(name=><option key={name} value={name}>{name}</option>)}
+              </select>
             </Field>
           </div>
 
@@ -458,6 +583,35 @@ export default function ContentManager() {
     </div>
   );
 }
+
+function CampaignsPanel({ campaigns, leads, contentItems, onNew, onEdit, t }) {
+  const statusLabel = status => status==='active' ? t('Active','פעיל') : status==='paused' ? t('Paused','מושהה') : status==='completed' ? t('Completed','הושלם') : t('Planned','מתוכנן');
+  const leadCount = campaign => leads.filter(lead => String(lead.utm_campaign||'').toLowerCase()===String(campaign.utm_campaign||'').toLowerCase() || String(lead.campaign||'').toLowerCase()===String(campaign.name||'').toLowerCase()).length;
+  const contentCount = campaign => contentItems.filter(item => String(item.campaign||'').toLowerCase()===String(campaign.name||'').toLowerCase()).length;
+  return <section className="space-y-4">
+    <div className="premium-panel flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div><h1 className="flex items-center gap-2 text-xl font-extrabold text-slate-950"><Megaphone className="h-5 w-5 text-violet-600"/>{t('Campaigns','קמפיינים')}</h1><p className="mt-1 text-xs text-slate-500">{t('Create marketing campaigns and connect content, traffic and leads.','צור קמפיינים שיווקיים וחבר אליהם תוכן, תנועה ולידים.')}</p></div>
+      <button onClick={onNew} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white hover:bg-violet-500"><Plus className="h-4 w-4"/>{t('New Campaign','קמפיין חדש')}</button>
+    </div>
+    <div className="grid gap-3 xl:grid-cols-2">
+      {campaigns.map(campaign => <button key={campaign.id} onClick={()=>onEdit(campaign)} className="rounded-2xl border border-slate-200 bg-white p-4 text-start shadow-sm transition hover:border-violet-200 hover:shadow-md">
+        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-sm font-extrabold text-slate-900">{campaign.name}</h3><p className="mt-1 font-mono text-[10px] text-violet-600">utm_campaign={campaign.utm_campaign}</p></div><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{statusLabel(campaign.status)}</span></div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <Metric icon={Users} label={t('Leads','לידים')} value={leadCount(campaign)} />
+          <Metric icon={List} label={t('Content','תוכן')} value={contentCount(campaign)} />
+          <Metric icon={Wallet} label={t('Budget','תקציב')} value={`₪${Number(campaign.budget||0).toLocaleString()}`} />
+        </div>
+        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[10px] text-slate-400"><span>{campaign.start_date||'-'} → {campaign.end_date||'-'}</span>{campaign.destination_url && <span className="inline-flex items-center gap-1 text-violet-600"><Link2 className="h-3 w-3"/>{t('Landing','יעד')}</span>}</div>
+      </button>)}
+      {!campaigns.length && <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center"><Megaphone className="mx-auto h-8 w-8 text-slate-300"/><p className="mt-3 text-sm font-bold text-slate-700">{t('No campaigns yet','אין עדיין קמפיינים')}</p><button onClick={onNew} className="mt-3 text-xs font-bold text-violet-600">{t('Create the first campaign','צור את הקמפיין הראשון')}</button></div>}
+    </div>
+  </section>;
+}
+
+function Metric({icon:Icon,label,value}) {
+  return <div className="rounded-xl bg-slate-50 p-3"><div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400"><Icon className="h-3 w-3"/>{label}</div><div className="mt-1 text-sm font-extrabold text-slate-900">{value}</div></div>;
+}
+
 
 function Field({label,children}) {
   return <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-500">{label}</span>{children}</label>;
