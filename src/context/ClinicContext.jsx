@@ -104,6 +104,7 @@ export const ClinicProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [contentItems, setContentItems] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [forms, setForms] = useState([]);
@@ -149,6 +150,7 @@ export const ClinicProvider = ({ children }) => {
     setTasks([]);
     setProjects([]);
     setContentItems([]);
+    setCampaigns([]);
     setPayments([]);
     setExpenses([]);
     setForms([]);
@@ -219,7 +221,7 @@ export const ClinicProvider = ({ children }) => {
     try {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
-        tasksRes, projectsRes, contentItemsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes,
+        tasksRes, projectsRes, contentItemsRes, campaignsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes,
         clinicalNotesRes, patientDocumentsRes, calendarBlocksRes, workOptionsRes
       ] = await Promise.all([
         supabase.from('people').select('*').is('deleted_at', null),
@@ -230,6 +232,7 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('tasks').select('*').is('deleted_at', null),
         supabase.from('projects').select('*').is('deleted_at', null),
         supabase.from('content_items').select('*').is('deleted_at', null),
+        supabase.from('campaigns').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
         supabase.from('payments').select('*').is('deleted_at', null),
         supabase.from('forms').select('*').is('deleted_at', null),
         supabase.from('form_submissions').select('*').is('deleted_at', null),
@@ -252,6 +255,7 @@ export const ClinicProvider = ({ children }) => {
       if (tasksRes.data) setTasks(tasksRes.data);
       if (projectsRes.data) setProjects(projectsRes.data);
       if (contentItemsRes.data) setContentItems(contentItemsRes.data);
+      if (campaignsRes.data) setCampaigns(campaignsRes.data);
       if (paymentsRes.data) setPayments(paymentsRes.data);
       if (formsRes.data) setForms(formsRes.data);
       if (formSubRes.data) setFormSubmissions(formSubRes.data);
@@ -321,6 +325,7 @@ export const ClinicProvider = ({ children }) => {
       tasks: setTasks,
       projects: setProjects,
       content_items: setContentItems,
+      campaigns: setCampaigns,
       payments: setPayments,
       expenses: setExpenses,
       forms: setForms,
@@ -338,7 +343,7 @@ export const ClinicProvider = ({ children }) => {
   const softDeleteRecord = async (table, id) => {
     const allowedTables = new Set([
       'people','patients','services','appointments','leads','tasks','projects',
-      'content_items','payments','expenses','forms','form_submissions',
+      'content_items','campaigns','payments','expenses','forms','form_submissions',
       'patient_packages','lead_communications','patient_clinical_notes',
       'patient_documents','calendar_blocks'
     ]);
@@ -1074,6 +1079,45 @@ export const ClinicProvider = ({ children }) => {
     return data;
   };
 
+  // Marketing Campaigns
+  const addCampaign = async (campaign) => {
+    const payload = {
+      name: campaign.name.trim(),
+      status: campaign.status || 'planned',
+      objective: campaign.objective || null,
+      audience: campaign.audience || null,
+      start_date: campaign.start_date || null,
+      end_date: campaign.end_date || null,
+      budget: Number(campaign.budget || 0),
+      cta: campaign.cta || null,
+      destination_url: campaign.destination_url || null,
+      utm_campaign: campaign.utm_campaign.trim(),
+      notes: campaign.notes || null,
+      updated_at: new Date().toISOString()
+    };
+    const { data, error } = await supabase.from('campaigns').insert([payload]).select();
+    if (error) throw error;
+    if (data?.[0]) {
+      setCampaigns(prev => [data[0], ...prev]);
+      return data[0];
+    }
+    return null;
+  };
+
+  const updateCampaign = async (campaignId, updates) => {
+    const payload = { ...updates, updated_at: new Date().toISOString() };
+    if (Object.prototype.hasOwnProperty.call(payload, 'budget')) payload.budget = Number(payload.budget || 0);
+    const { data, error } = await supabase.from('campaigns').update(payload).eq('id', campaignId).select();
+    if (error) throw error;
+    if (data?.[0]) {
+      setCampaigns(prev => prev.map(campaign => campaign.id === campaignId ? data[0] : campaign));
+      return data[0];
+    }
+    return null;
+  };
+
+  const deleteCampaign = async (campaignId) => softDeleteRecord('campaigns', campaignId);
+
   // Content OS (Block 4)
   const addContentItem = async (item) => {
     const payload = {
@@ -1696,7 +1740,7 @@ export const ClinicProvider = ({ children }) => {
       session, user, signOut, isLoading,
       people, upsertPerson, getPersonName,
       patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
-      tasks, projects, contentItems, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks, workOptions,
+      tasks, projects, contentItems, campaigns, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks, workOptions,
 
       addPatient, updatePatient, deletePatient, deletePerson, addClinicalNote, addPatientDocument, addLeadCommunication, updateLeadFollowUp,
       addService, updateService, deleteService, addAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus, addLead, deleteLead,
@@ -1704,6 +1748,7 @@ export const ClinicProvider = ({ children }) => {
       addProject, updateProject, deleteProject,
       addTask, updateTask, updateTaskStatus, deleteTask,
       subscribePerformanceList,
+      addCampaign, updateCampaign, deleteCampaign,
       addContentItem, updateContentItem, deleteContentItem,
       addPayment, updatePayment, deletePayment, updatePaymentStatus, 
       addExpense, updateExpense, deleteExpense, 
