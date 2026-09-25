@@ -12,7 +12,9 @@ import {
   X,
   CalendarDays,
   Tag,
-  FolderKanban
+  FolderKanban,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 export default function TaskManagement() {
@@ -84,6 +86,7 @@ export default function TaskManagement() {
   const [costAmount, setCostAmount] = useState('');
   const [dependencyTaskId, setDependencyTaskId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [collapsedStatusGroups, setCollapsedStatusGroups] = useState({});
 
   const configuredOptions = (type, fallback) => {
     const values = (workOptions || [])
@@ -147,6 +150,30 @@ export default function TaskManagement() {
       return true;
     });
   }, [tasks, searchTerm, projectFilter, statusFilter, priorityFilter, areaFilter, filterMode, todayStr]);
+
+  const groupedTasksByStatus = useMemo(() => {
+    const groups = statusOptions.map(option => ({
+      ...option,
+      tasks: filteredTasks.filter(task => (task.status || 'todo') === option.id)
+    }));
+
+    const known = new Set(statusOptions.map(option => option.id));
+    const unknown = filteredTasks.filter(task => !known.has(task.status || 'todo'));
+    if (unknown.length) {
+      groups.push({
+        id: '__other__',
+        label: t('Other','אחר'),
+        color: '#94a3b8',
+        tasks: unknown
+      });
+    }
+
+    return groups;
+  }, [filteredTasks, statusOptions, language]);
+
+  const toggleStatusGroup = (groupId) => {
+    setCollapsedStatusGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   const activeAdvancedFilterCount = [projectFilter, statusFilter, priorityFilter, areaFilter].filter(Boolean).length;
 
@@ -357,11 +384,11 @@ export default function TaskManagement() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
           <div>
             <p className="text-xs font-bold text-slate-900">{filteredTasks.length} {t('tasks','משימות')}</p>
-            <p className="mt-0.5 text-[10px] text-slate-400">{t('Edit directly from the table','עריכה ישירה מתוך הטבלה')}</p>
+            <p className="mt-0.5 text-[10px] text-slate-400">{t('Grouped by status · edit directly in each group','מקובץ לפי סטטוס · עריכה ישירה בתוך כל קבוצה')}</p>
           </div>
           <div className="hidden items-center gap-2 text-[10px] text-slate-400 sm:flex">
             <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -369,152 +396,190 @@ export default function TaskManagement() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] border-collapse text-start">
-            <thead className="bg-slate-50/90">
-              <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-3 text-start">{t('Task','משימה')}</th>
-                <th className="px-3 py-3 text-start">{t('Status','סטטוס')}</th>
-                <th className="px-3 py-3 text-start">{t('Priority','עדיפות')}</th>
-                <th className="px-3 py-3 text-start">{t('Project','פרויקט')}</th>
-                <th className="px-3 py-3 text-start">{t('Due Date','תאריך יעד')}</th>
-                <th className="px-3 py-3 text-start">{t('Cost','עלות')}</th>
-                <th className="px-3 py-3 text-start">{t('Related To','קשור ל־')}</th>
-                <th className="px-3 py-3 text-start">{t('Area','תחום')}</th>
-                <th className="px-3 py-3 text-start">{t('Labels','תגיות')}</th>
-                <th className="sticky left-0 bg-slate-50/95 px-3 py-3 text-center">{t('Actions','פעולות')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredTasks.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-16 text-center">
-                    <div className="mx-auto flex max-w-xs flex-col items-center">
-                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-                        <FolderKanban className="h-5 w-5 text-slate-400" />
+        {filteredTasks.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-16 text-center">
+            <div className="mx-auto flex max-w-xs flex-col items-center">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                <FolderKanban className="h-5 w-5 text-slate-400" />
+              </div>
+              <p className="font-bold text-slate-700">{t('No tasks to display','אין משימות להצגה')}</p>
+              <p className="mt-1 text-[11px] text-slate-400">{t('Try changing the filters or create a new task.','נסה לשנות את הסינון או ליצור משימה חדשה.')}</p>
+            </div>
+          </div>
+        ) : (
+          groupedTasksByStatus.map(group => {
+            const isCollapsed = Boolean(collapsedStatusGroups[group.id]);
+            return (
+              <section key={group.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+                <button
+                  type="button"
+                  onClick={() => toggleStatusGroup(group.id)}
+                  className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-start transition hover:bg-slate-50"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: group.color || '#64748b' }} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="truncate text-sm font-extrabold text-slate-900">{group.label}</h3>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{group.tasks.length}</span>
                       </div>
-                      <p className="font-bold text-slate-700">{t('No tasks to display','אין משימות להצגה')}</p>
-                      <p className="mt-1 text-[11px] text-slate-400">{t('Try changing the filters or create a new task.','נסה לשנות את הסינון או ליצור משימה חדשה.')}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-400">
+                        {group.tasks.reduce((sum, task) => sum + Number(task.cost_amount || 0), 0) > 0
+                          ? `₪${group.tasks.reduce((sum, task) => sum + Number(task.cost_amount || 0), 0).toLocaleString(language === 'he' ? 'he-IL' : 'en-US')} · `
+                          : ''}
+                        {group.tasks.filter(task => task.due_date && task.due_date < todayStr && task.status !== 'done').length} {t('overdue','באיחור')}
+                      </p>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredTasks.map(task => {
-                  const isOverdue = task.due_date && task.due_date < todayStr && task.status !== 'done';
-                  const isDone = task.status === 'done';
+                  </div>
+                  {isCollapsed ? <ChevronRight className="h-4 w-4 text-slate-400 rtl:rotate-180" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                </button>
 
-                  return (
-                    <tr
-                      key={task.id}
-                      onClick={() => setSelectedTask(task)}
-                      className="group cursor-pointer transition hover:bg-slate-50/80"
-                    >
-                      <td className="max-w-[280px] px-4 py-3.5">
-                        <div className="flex items-start gap-3">
-                          <span
-                            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: optionColor(statusOptions, task.status || 'todo') }}
-                          />
-                          <div className="min-w-0">
-                            <p className={`truncate font-bold ${isDone ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                              {task.title}
-                            </p>
-                            {task.description && (
-                              <p className="mt-1 max-w-[240px] truncate text-[10px] text-slate-400">{task.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+                {!isCollapsed && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1180px] border-collapse text-start">
+                      <thead className="bg-slate-50/90">
+                        <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          <th className="px-4 py-3 text-start">{t('Task','משימה')}</th>
+                          <th className="px-3 py-3 text-start">{t('Status','סטטוס')}</th>
+                          <th className="px-3 py-3 text-start">{t('Priority','עדיפות')}</th>
+                          <th className="px-3 py-3 text-start">{t('Project','פרויקט')}</th>
+                          <th className="px-3 py-3 text-start">{t('Due Date','תאריך יעד')}</th>
+                          <th className="px-3 py-3 text-start">{t('Cost','עלות')}</th>
+                          <th className="px-3 py-3 text-start">{t('Related To','קשור ל־')}</th>
+                          <th className="px-3 py-3 text-start">{t('Area','תחום')}</th>
+                          <th className="px-3 py-3 text-start">{t('Labels','תגיות')}</th>
+                          <th className="sticky left-0 bg-slate-50/95 px-3 py-3 text-center">{t('Actions','פעולות')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {group.tasks.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} className="px-4 py-8 text-center text-[11px] text-slate-400">
+                              {t('No tasks in this status','אין משימות בסטטוס הזה')}
+                            </td>
+                          </tr>
+                        ) : (
+                          group.tasks.map(task => {
+                            const isOverdue = task.due_date && task.due_date < todayStr && task.status !== 'done';
+                            const isDone = task.status === 'done';
 
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <ChipSelect
-                          value={task.status || 'todo'}
-                          options={statusOptions}
-                          onChange={value => handleInlineStatusChange(task, value)}
-                        />
-                      </td>
+                            return (
+                              <tr
+                                key={task.id}
+                                onClick={() => setSelectedTask(task)}
+                                className="group cursor-pointer transition hover:bg-slate-50/80"
+                              >
+                                <td className="max-w-[280px] px-4 py-3.5">
+                                  <div className="flex items-start gap-3">
+                                    <span
+                                      className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                                      style={{ backgroundColor: optionColor(statusOptions, task.status || 'todo') }}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className={`truncate font-bold ${isDone ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                                        {task.title}
+                                      </p>
+                                      {task.description && (
+                                        <p className="mt-1 max-w-[240px] truncate text-[10px] text-slate-400">{task.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
 
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <ChipSelect
-                          value={task.priority || 'medium'}
-                          options={priorityOptions}
-                          onChange={value => handleInlinePriorityChange(task, value)}
-                        />
-                      </td>
+                                <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                                  <ChipSelect
+                                    value={task.status || 'todo'}
+                                    options={statusOptions}
+                                    onChange={value => handleInlineStatusChange(task, value)}
+                                  />
+                                </td>
 
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <select
-                          value={task.project_id || ''}
-                          onChange={e => updateTask(task.id, { project_id: e.target.value || null })}
-                          className="h-8 max-w-[190px] rounded-lg border border-transparent bg-transparent px-2 text-[11px] font-medium text-slate-600 outline-none transition hover:border-slate-200 hover:bg-white focus:border-violet-300"
-                        >
-                          <option value="">{t("No Project","ללא פרויקט")}</option>
-                          {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
-                        </select>
-                      </td>
+                                <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                                  <ChipSelect
+                                    value={task.priority || 'medium'}
+                                    options={priorityOptions}
+                                    onChange={value => handleInlinePriorityChange(task, value)}
+                                  />
+                                </td>
 
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <div className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${isOverdue ? 'bg-rose-50 text-rose-700' : 'text-slate-500'}`}>
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          <input
-                            type="date"
-                            value={task.due_date || ''}
-                            onChange={e => updateTask(task.id, { due_date: e.target.value })}
-                            className="w-[105px] bg-transparent text-[11px] outline-none"
-                          />
-                        </div>
-                      </td>
+                                <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                                  <select
+                                    value={task.project_id || ''}
+                                    onChange={e => updateTask(task.id, { project_id: e.target.value || null })}
+                                    className="h-8 max-w-[190px] rounded-lg border border-transparent bg-transparent px-2 text-[11px] font-medium text-slate-600 outline-none transition hover:border-slate-200 hover:bg-white focus:border-violet-300"
+                                  >
+                                    <option value="">{t('No Project','ללא פרויקט')}</option>
+                                    {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+                                  </select>
+                                </td>
 
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <div className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2 text-[10px] text-slate-600">
-                          <span className="me-1 text-slate-400">₪</span>
-                          <input type="number" min="0" step="1" value={task.cost_amount || ''} onChange={e => updateTask(task.id, { cost_amount: Number(e.target.value || 0) })} className="w-20 bg-transparent outline-none" />
-                        </div>
-                      </td>
+                                <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                                  <div className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${isOverdue ? 'bg-rose-50 text-rose-700' : 'text-slate-500'}`}>
+                                    <CalendarDays className="h-3.5 w-3.5" />
+                                    <input
+                                      type="date"
+                                      value={task.due_date || ''}
+                                      onChange={e => updateTask(task.id, { due_date: e.target.value })}
+                                      className="w-[105px] bg-transparent text-[11px] outline-none"
+                                    />
+                                  </div>
+                                </td>
 
-                      <td className="px-3 py-3 text-[11px] text-slate-500">{resolveRelatedEntity(task)}</td>
+                                <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                                  <div className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2 text-[10px] text-slate-600">
+                                    <span className="me-1 text-slate-400">₪</span>
+                                    <input type="number" min="0" step="1" value={task.cost_amount || ''} onChange={e => updateTask(task.id, { cost_amount: Number(e.target.value || 0) })} className="w-20 bg-transparent outline-none" />
+                                  </div>
+                                </td>
 
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        <ChipSelect
-                          value={task.area || 'operations'}
-                          options={areaOptions}
-                          onChange={value => updateTask(task.id, { area: value })}
-                        />
-                      </td>
+                                <td className="px-3 py-3 text-[11px] text-slate-500">{resolveRelatedEntity(task)}</td>
 
-                      <td className="px-3 py-3">
-                        <div className="flex max-w-[180px] flex-wrap gap-1">
-                          {(task.labels || []).slice(0, 3).map(label => (
-                            <span key={label} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-600">
-                              <Tag className="h-2.5 w-2.5" />
-                              {label}
-                            </span>
-                          ))}
-                          {(task.labels || []).length > 3 && (
-                            <span className="rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-400">
-                              +{task.labels.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                                <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                                  <ChipSelect
+                                    value={task.area || 'operations'}
+                                    options={areaOptions}
+                                    onChange={value => updateTask(task.id, { area: value })}
+                                  />
+                                </td>
 
-                      <td className="sticky left-0 bg-white/95 px-3 py-3 text-center backdrop-blur group-hover:bg-slate-50/95" onClick={e => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          title={t("Move to Trash","העבר לאשפה")}
-                          onClick={() => setDeleteModalTask(task)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                                <td className="px-3 py-3">
+                                  <div className="flex max-w-[180px] flex-wrap gap-1">
+                                    {(task.labels || []).slice(0, 3).map(label => (
+                                      <span key={label} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-600">
+                                        <Tag className="h-2.5 w-2.5" />
+                                        {label}
+                                      </span>
+                                    ))}
+                                    {(task.labels || []).length > 3 && (
+                                      <span className="rounded-md bg-slate-100 px-1.5 py-1 text-[9px] font-semibold text-slate-400">
+                                        +{task.labels.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                <td className="sticky left-0 bg-white/95 px-3 py-3 text-center backdrop-blur group-hover:bg-slate-50/95" onClick={e => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    title={t('Move to Trash','העבר לאשפה')}
+                                    onClick={() => setDeleteModalTask(task)}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            );
+          })
+        )}
       </section>
 
       <Drawer
