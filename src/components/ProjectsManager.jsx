@@ -4,7 +4,7 @@ import { LanguageContext } from '../context/LanguageContext';
 import Drawer from './ui/Drawer';
 import ConfirmModal from './ui/ConfirmModal';
 import { useToast } from './ui/Toast';
-import { CalendarDays, ChevronRight, CirclePlus, FolderKanban, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, CirclePlus, FolderKanban, Plus, Trash2 } from 'lucide-react';
 
 export default function ProjectsManager() {
   const {
@@ -27,6 +27,7 @@ export default function ProjectsManager() {
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectStatusFilter, setProjectStatusFilter] = useState('all');
+  const [expandedTasks, setExpandedTasks] = useState({});
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) || null;
 
@@ -70,8 +71,28 @@ export default function ProjectsManager() {
     .filter(task => task.project_id === projectId)
     .sort((a,b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')));
 
+  const rootProjectTasks = (projectId) => projectTasks(projectId).filter(task => !task.dependency_task_id);
+  const subtasksFor = (taskId) => tasks
+    .filter(task => task.dependency_task_id === taskId)
+    .sort((a,b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+  const addSubtask = async (parentTask) => {
+    const title = window.prompt(t('Subtask name','שם תת־המשימה'));
+    if (!title?.trim()) return;
+    try {
+      await addTask({
+        title:title.trim(), project_id:parentTask.project_id, dependency_task_id:parentTask.id,
+        area:parentTask.area || selectedProject?.area || 'business', status:'todo', priority:'medium',
+        start_date:parentTask.start_date || todayStr, due_date:parentTask.due_date || selectedProject?.due_date || todayStr,
+        sort_order:(subtasksFor(parentTask.id).length + 1) * 10
+      });
+      setExpandedTasks(prev => ({...prev,[parentTask.id]:true}));
+      showToast(t('Subtask added','תת־המשימה נוספה'));
+    } catch (err) { showToast(err.message || t('Could not add subtask','לא ניתן להוסיף תת־משימה'),'error'); }
+  };
+
   const progressFor = (projectId) => {
-    const list = projectTasks(projectId);
+    const list = rootProjectTasks(projectId);
     const done = list.filter(task => task.status === 'done').length;
     return { total:list.length, done, pct:list.length ? Math.round(done / list.length * 100) : 0 };
   };
@@ -173,7 +194,7 @@ export default function ProjectsManager() {
       <div className="grid gap-3">
         {filteredProjects.map(project => {
           const progress = progressFor(project.id);
-          const nextDeadline = projectTasks(project.id).filter(task => task.status !== 'done' && task.due_date).sort((a,b)=>a.due_date.localeCompare(b.due_date))[0];
+          const nextDeadline = rootProjectTasks(project.id).filter(task => task.status !== 'done' && task.due_date).sort((a,b)=>a.due_date.localeCompare(b.due_date))[0];
           const totalCost = projectCost(project.id);
           return (
             <button key={project.id} onClick={() => setSelectedProjectId(project.id)} className="group w-full rounded-2xl border border-slate-200 bg-white p-4 text-start shadow-sm transition hover:border-violet-200 hover:shadow-md">
@@ -259,18 +280,41 @@ export default function ProjectsManager() {
                     <th className="px-3 py-2.5 text-start">{t('Task','משימה')}</th><th className="px-3 py-2.5 text-start">{t('Status','סטטוס')}</th><th className="px-3 py-2.5 text-start">{t('Priority','עדיפות')}</th><th className="px-3 py-2.5 text-start">{t('Cost','עלות')}</th><th className="px-3 py-2.5 text-start">{t('Deadline','דדליין')}</th><th className="px-3 py-2.5 text-start">{t('Start','התחלה')}</th><th className="w-12 px-3 py-2.5"></th>
                   </tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {projectTasks(selectedProject.id).map(task => (
-                      <tr key={task.id} className="group hover:bg-slate-50/70">
-                        <td className="px-3 py-2.5"><input value={task.title} onChange={e=>updateTask(task.id,{title:e.target.value})} className={`w-full min-w-[220px] bg-transparent text-xs font-bold outline-none ${task.status==='done'?'text-slate-400 line-through':'text-slate-800'}`} /></td>
-                        <td className="px-3 py-2.5"><select value={task.status || 'todo'} onChange={e=>updateTask(task.id,{status:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold">{statusOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
-                        <td className="px-3 py-2.5"><select value={task.priority || 'medium'} onChange={e=>updateTask(task.id,{priority:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold">{priorityOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
-                        <td className="px-3 py-2.5"><div className="flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2 text-[10px]"><span className="me-1 text-slate-400">₪</span><input type="number" min="0" step="1" value={task.cost_amount || ''} onChange={e=>updateTask(task.id,{cost_amount:Number(e.target.value || 0)})} className="w-20 bg-transparent outline-none" /></div></td>
-                        <td className="px-3 py-2.5"><input type="date" value={task.due_date || ''} onChange={e=>updateTask(task.id,{due_date:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px]" /></td>
-                        <td className="px-3 py-2.5"><input type="date" value={task.start_date || ''} onChange={e=>updateTask(task.id,{start_date:e.target.value || null})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px]" /></td>
-                        <td className="px-3 py-2.5"><button onClick={()=>setDeleteModalTask(task)} title={t('Move to Trash','העבר לאשפה')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></td>
-                      </tr>
-                    ))}
-                    {projectTasks(selectedProject.id).length===0 && <tr><td colSpan={7} className="py-10 text-center text-xs text-slate-400">{t('No tasks in this project yet. Add the first one above.','אין עדיין משימות בפרויקט. הוסף את הראשונה למעלה.')}</td></tr>}
+                    {rootProjectTasks(selectedProject.id).map(task => {
+                      const children = subtasksFor(task.id);
+                      const expanded = expandedTasks[task.id];
+                      const childDone = children.filter(s => s.status === 'done').length;
+                      return <React.Fragment key={task.id}>
+                        <tr className="group hover:bg-slate-50/70">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <button type="button" onClick={()=>setExpandedTasks(prev=>({...prev,[task.id]:!prev[task.id]}))} className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${children.length?'text-slate-500 hover:bg-slate-100':'text-slate-200'}`} disabled={!children.length}>{expanded?<ChevronDown className="h-4 w-4"/>:<ChevronRight className="h-4 w-4 rtl:rotate-180"/>}</button>
+                              <div className="min-w-0 flex-1">
+                                <input value={task.title} onChange={e=>updateTask(task.id,{title:e.target.value})} className={`w-full min-w-[190px] bg-transparent text-xs font-bold outline-none ${task.status==='done'?'text-slate-400 line-through':'text-slate-800'}`} />
+                                <button type="button" onClick={()=>addSubtask(task)} className="mt-1 text-[9px] font-bold text-violet-600 hover:text-violet-800">+ {t('Add subtask','הוסף תת־משימה')}</button>
+                                {children.length>0 && <span className="ms-2 text-[9px] text-slate-400">{childDone}/{children.length}</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5"><select value={task.status || 'todo'} onChange={e=>updateTask(task.id,{status:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold">{statusOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
+                          <td className="px-3 py-2.5"><select value={task.priority || 'medium'} onChange={e=>updateTask(task.id,{priority:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold">{priorityOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
+                          <td className="px-3 py-2.5"><div className="flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2 text-[10px]"><span className="me-1 text-slate-400">₪</span><input type="number" min="0" step="1" value={task.cost_amount || ''} onChange={e=>updateTask(task.id,{cost_amount:Number(e.target.value || 0)})} className="w-20 bg-transparent outline-none" /></div></td>
+                          <td className="px-3 py-2.5"><input type="date" value={task.due_date || ''} onChange={e=>updateTask(task.id,{due_date:e.target.value})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px]" /></td>
+                          <td className="px-3 py-2.5"><input type="date" value={task.start_date || ''} onChange={e=>updateTask(task.id,{start_date:e.target.value || null})} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px]" /></td>
+                          <td className="px-3 py-2.5"><button onClick={()=>setDeleteModalTask(task)} title={t('Move to Trash','העבר לאשפה')} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></td>
+                        </tr>
+                        {expanded && children.map(sub => <tr key={sub.id} className="bg-violet-50/30 hover:bg-violet-50/60">
+                          <td className="py-2 pe-3 ps-12"><div className="flex items-center gap-2"><span className="text-violet-300">↳</span><input value={sub.title} onChange={e=>updateTask(sub.id,{title:e.target.value})} className={`w-full bg-transparent text-[11px] outline-none ${sub.status==='done'?'text-slate-400 line-through':'text-slate-700'}`} /></div></td>
+                          <td className="px-3 py-2"><select value={sub.status || 'todo'} onChange={e=>updateTask(sub.id,{status:e.target.value})} className="h-7 rounded-lg border border-violet-100 bg-white px-2 text-[9px] font-bold">{statusOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
+                          <td className="px-3 py-2"><select value={sub.priority || 'medium'} onChange={e=>updateTask(sub.id,{priority:e.target.value})} className="h-7 rounded-lg border border-violet-100 bg-white px-2 text-[9px]">{priorityOptions.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></td>
+                          <td className="px-3 py-2 text-[9px] text-slate-400">—</td>
+                          <td className="px-3 py-2"><input type="date" value={sub.due_date || ''} onChange={e=>updateTask(sub.id,{due_date:e.target.value})} className="h-7 rounded-lg border border-violet-100 bg-white px-2 text-[9px]" /></td>
+                          <td className="px-3 py-2"><input type="date" value={sub.start_date || ''} onChange={e=>updateTask(sub.id,{start_date:e.target.value || null})} className="h-7 rounded-lg border border-violet-100 bg-white px-2 text-[9px]" /></td>
+                          <td className="px-3 py-2"><button onClick={()=>setDeleteModalTask(sub)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3 w-3"/></button></td>
+                        </tr>)}
+                      </React.Fragment>;
+                    })}
+                    {rootProjectTasks(selectedProject.id).length===0 && <tr><td colSpan={7} className="py-10 text-center text-xs text-slate-400">{t('No tasks in this project yet. Add the first one above.','אין עדיין משימות בפרויקט. הוסף את הראשונה למעלה.')}</td></tr>}
                   </tbody>
                 </table>
               </div>
