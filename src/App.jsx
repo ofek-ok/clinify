@@ -49,12 +49,25 @@ class ErrorBoundary extends Component {
 }
 
 const MainAppRoute = () => {
-  const { isLoading } = useContext(ClinicContext);
+  const { isLoading, dataLoadError, refreshData } = useContext(ClinicContext);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 text-center font-sans">
         <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (dataLoadError) {
+    return (
+      <div dir="rtl" className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 font-sans">
+        <div role="alert" className="bg-slate-900 border border-amber-500/40 rounded-2xl p-8 max-w-lg w-full space-y-5 text-center">
+          <h1 className="text-xl font-bold">החיבור לנתוני Clinify אינו זמין</h1>
+          <p className="text-slate-300 text-sm leading-relaxed">{dataLoadError}</p>
+          <p className="text-slate-400 text-xs">המידע לא נטען. לא ניתן לקבוע מכך שהרשומות נמחקו. פעולות עריכה מושבתות עד לחידוש החיבור.</p>
+          <button onClick={refreshData} className="bg-violet-600 hover:bg-violet-500 rounded-xl px-6 py-3 font-semibold">נסה להתחבר מחדש</button>
+        </div>
       </div>
     );
   }
