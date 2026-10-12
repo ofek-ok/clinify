@@ -94,6 +94,7 @@ export const ClinicProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoadError, setDataLoadError] = useState(null);
   
   const [people, setPeople] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -218,6 +219,7 @@ export const ClinicProvider = ({ children }) => {
 
   const fetchInitialData = async () => {
     setIsLoading(true);
+    setDataLoadError(null);
     try {
       const [
         peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, 
@@ -246,6 +248,13 @@ export const ClinicProvider = ({ children }) => {
         supabase.from('calendar_blocks').select('*').is('deleted_at', null).eq('busy', true),
         supabase.from('work_options').select('*').order('option_type').order('sort_order')
       ]);
+
+      const responses = { peopleRes, patientsRes, servicesRes, appointmentsRes, leadsRes, tasksRes, projectsRes, contentItemsRes, campaignsRes, paymentsRes, formsRes, formSubRes, expensesRes, bookingSetRes, packagesRes, hoursRes, leadCommsRes, clinicalNotesRes, patientDocumentsRes, calendarBlocksRes, workOptionsRes };
+      const failed = Object.entries(responses).filter(([, response]) => response?.error);
+      if (failed.length) {
+        const details = failed.map(([name, response]) => `${name}: ${response.error.message}`).join('; ');
+        throw new Error(`Data loading failed: ${details}`);
+      }
 
       if (peopleRes.data) setPeople(peopleRes.data);
       if (patientsRes.data) setPatients(patientsRes.data);
@@ -302,6 +311,7 @@ export const ClinicProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Error fetching internal OP OS data:", error);
+      setDataLoadError(lt("Could not load CRM data. Your records may still be safely stored. Please retry.", "לא ניתן לטעון נתונים מהשרת. אין להסיק שהרשומות נמחקו. נסה שוב."));
     } finally {
       setIsLoading(false);
     }
@@ -1737,7 +1747,7 @@ export const ClinicProvider = ({ children }) => {
 
   return (
     <ClinicContext.Provider value={{
-      session, user, signOut, isLoading,
+      session, user, signOut, isLoading, dataLoadError,
       people, upsertPerson, getPersonName,
       patients: enrichedPatients, services, businessHours, appointments, leads: enrichedLeads,
       tasks, projects, contentItems, campaigns, payments, expenses, forms, formSubmissions, leadCommunications, bookingSettings, patientPackages, calendarBlocks, workOptions,
