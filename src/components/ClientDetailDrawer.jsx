@@ -475,6 +475,61 @@ const ClientDetailDrawer = ({ item, type = 'patient', onClose }) => {
                   </div>
                 </div>
 
+                {lead && (lead.topic || (lead.pain_level !== null && lead.pain_level !== undefined) || lead.note || lead.campaign) && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+                    <h4 className="font-extrabold text-sm text-slate-800 flex items-center gap-2">
+                      <span className="text-violet-500">⚡</span>
+                      {t('Inquiry & Treatment Assessment', 'פרטי פנייה והערכת עומס מהאתר')}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      {lead.topic && (
+                        <div>
+                          <span className="text-slate-500 font-semibold">{t('Inquiry Topic', 'תחום פנייה')}:</span>
+                          <p className="font-bold text-slate-800">{lead.topic}</p>
+                        </div>
+                      )}
+                      {lead.pain_level !== null && lead.pain_level !== undefined && (
+                        <div>
+                          <span className="text-slate-500 font-semibold">{t('Pain / Load Level', 'מדד כאב / עומס')}:</span>
+                          <p className={`font-bold inline-block px-2 py-0.5 rounded-md text-[11px] ${
+                            Number(lead.pain_level) <= 3 
+                              ? 'bg-emerald-100 text-emerald-800' 
+                              : Number(lead.pain_level) <= 6 
+                              ? 'bg-amber-100 text-amber-800' 
+                              : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {lead.pain_level} / 10
+                          </p>
+                        </div>
+                      )}
+                      {lead.campaign && (
+                        <div>
+                          <span className="text-slate-500 font-semibold">{t('Campaign', 'קמפיין')}:</span>
+                          <p className="font-bold text-slate-800">{lead.campaign}</p>
+                        </div>
+                      )}
+                      {lead.utm_source && (
+                        <div>
+                          <span className="text-slate-500 font-semibold">{t('UTM Source', 'מקור שיווקי')}:</span>
+                          <p className="font-bold text-slate-800">{lead.utm_source} {lead.utm_medium ? `(${lead.utm_medium})` : ''}</p>
+                        </div>
+                      )}
+                      {lead.marketing_consent !== undefined && (
+                        <div className="col-span-2">
+                          <span className="text-slate-500 font-semibold">{t('Marketing Consent', 'אישור דיוור וקשר')}:</span>
+                          <span className="mr-2 font-bold text-emerald-600">✓ {t('Approved', 'מאושר')}</span>
+                        </div>
+                      )}
+                      {lead.note && (
+                        <div className="col-span-2 pt-1 border-t border-slate-100">
+                          <span className="text-slate-500 font-semibold">{t('Visitor Note', 'הערת הפונה')}:</span>
+                          <p className="font-medium text-slate-700 bg-slate-50 p-2.5 rounded-xl mt-1 leading-relaxed whitespace-pre-wrap">{lead.note}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {!patient && (
                   <div className="p-5 bg-violet-50/60 border border-violet-200 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>

@@ -894,17 +894,32 @@ export const ClinicProvider = ({ children }) => {
       };
     }
 
+    // Build tags from topic, pain_level, marketing_consent, note without schema change
+    const combinedTags = Array.isArray(input.tags) ? [...input.tags] : [];
+    if (input.topic && !combinedTags.some(t => t.startsWith('topic:'))) {
+      combinedTags.push(`topic:${input.topic}`);
+    }
+    if (input.pain_level !== undefined && input.pain_level !== null && input.pain_level !== '' && !combinedTags.some(t => t.startsWith('pain_level:'))) {
+      combinedTags.push(`pain_level:${input.pain_level}`);
+    }
+    if (input.marketing_consent !== undefined && !combinedTags.some(t => t.startsWith('consent:'))) {
+      combinedTags.push(`consent:${input.marketing_consent}`);
+    }
+    if (input.note && !combinedTags.some(t => t.startsWith('note:'))) {
+      combinedTags.push(`note:${input.note}`);
+    }
+
     const leadPayload = {
       person_id: person.id,
-      source: input.source || 'Website',
+      source: input.source || input.utm_source || 'Website',
       status: input.status || 'new',
       follow_up_date: input.follow_up_date || null,
       lost_reason: input.lost_reason || null,
-      campaign: input.campaign || 'General Inquiries',
+      campaign: input.campaign || input.utm_campaign || 'General Inquiries',
       utm_source: input.utm_source || null,
       utm_medium: input.utm_medium || null,
-      utm_campaign: input.utm_campaign || null,
-      tags: Array.isArray(input.tags) ? input.tags : null
+      utm_campaign: input.utm_campaign || input.campaign || null,
+      tags: combinedTags.length > 0 ? combinedTags : null
     };
 
     const { data, error } = await supabase.from('leads').insert([leadPayload]).select();
@@ -914,6 +929,16 @@ export const ClinicProvider = ({ children }) => {
     }
     if (data && data[0]) {
       setLeads(prev => [...prev, data[0]]);
+
+      // If a note was provided, automatically log it as an initial communication note
+      if (input.note) {
+        try {
+          await addLeadCommunication(data[0].id, 'note', `הערת פנייה מהאתר: ${input.note}`);
+        } catch (commErr) {
+          console.warn("Could not auto-log communication note:", commErr);
+        }
+      }
+
       return {
         ...data[0],
         full_name: person.full_name || '',
@@ -1496,6 +1521,53 @@ export const ClinicProvider = ({ children }) => {
     const peopleMap = new Map(people.map(p => [p.id, p]));
     return leads.map(l => {
       const person = peopleMap.get(l.person_id) || {};
+
+      // Parse structured tags if present
+      const tagsList = Array.isArray(l.tags) ? l.tags : [];
+      let parsedTopic = l.topic || '';
+      let parsedPainLevel = l.pain_level !== undefined && l.pain_level !== null ? Number(l.pain_level) : null;
+      let parsedConsent = l.marketing_consent !== undefined ? l.marketing_consent : null;
+      let parsedNote = l.note || '';
+
+      tagsList.forEach(tag => {
+        if (typeof tag !== 'string') return;
+        if (!parsedTopic) {
+          if (tag.startsWith('topic:')) parsedTopic = tag.slice(6).trim();
+          else if (tag.startsWith('תחום:')) parsedTopic = tag.slice(5).trim();
+        }
+        if (parsedPainLevel === null) {
+          if (tag.startsWith('pain_level:')) {
+            const val = Number(tag.slice(11).trim());
+            if (!Number.isNaN(val)) parsedPainLevel = val;
+          } else if (tag.startsWith('כאב:')) {
+            const val = Number(tag.slice(4).trim());
+            if (!Number.isNaN(val)) parsedPainLevel = val;
+          } else if (tag.startsWith('עומס:')) {
+            const val = Number(tag.slice(5).trim());
+            if (!Number.isNaN(val)) parsedPainLevel = val;
+          }
+        }
+        if (parsedConsent === null) {
+          if (tag.startsWith('consent:')) parsedConsent = tag.slice(8).trim() === 'true';
+          else if (tag === 'אישור דיוור' || tag === 'marketing_consent') parsedConsent = true;
+        }
+        if (!parsedNote) {
+          if (tag.startsWith('note:')) parsedNote = tag.slice(5).trim();
+          else if (tag.startsWith('הערה:')) parsedNote = tag.slice(5).trim();
+        }
+      });
+
+      // Also parse topic / pain from source if present (e.g. from okonski-performance fallback "אתר • פציעת ספורט • עומס 7/10")
+      if (!parsedTopic && l.source && l.source.includes('•')) {
+        const parts = l.source.split('•').map(p => p.trim());
+        const matchedTopic = parts.find(p => ['פציעת ספורט', 'כאבי גב וצוואר', 'עומס משרדי', 'תחזוקה והתאוששות', 'שיפור תנועה'].some(t => p.includes(t)));
+        if (matchedTopic) parsedTopic = matchedTopic;
+      }
+      if (parsedPainLevel === null && l.source && l.source.includes('עומס')) {
+        const match = l.source.match(/עומס\s*(\d+)\/10/);
+        if (match) parsedPainLevel = Number(match[1]);
+      }
+
       return {
         ...l,
         full_name: person.full_name || '',
@@ -1503,7 +1575,14 @@ export const ClinicProvider = ({ children }) => {
         normalized_phone: person.normalized_phone || '',
         email: person.email || '',
         normalized_email: person.normalized_email || '',
-        client_status: person.client_status || 'lead'
+        client_status: person.client_status || 'lead',
+        topic: parsedTopic,
+        pain_level: parsedPainLevel,
+        marketing_consent: parsedConsent !== null ? parsedConsent : true,
+        note: parsedNote,
+        utm_source: l.utm_source || '',
+        utm_medium: l.utm_medium || '',
+        utm_campaign: l.utm_campaign || l.campaign || ''
       };
     });
   }, [leads, people]);
